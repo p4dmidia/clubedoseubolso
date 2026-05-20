@@ -1,0 +1,86 @@
+Affiliate (Fiel): [
+  {
+    "id": "1ecc7ca1-b1e6-4a4f-91dc-42793b67e037",
+    "full_name": "fiel 01",
+    "email": "fiel01@gmail.com",
+    "referral_code": "fiel01",
+    "sponsor_id": "ffab0c91-8110-4a87-8d79-50d71b631af2",
+    "user_id": "7e57d5d8-f44c-46ed-8c14-46e191321620"
+  }
+]
+Affiliate (Gilgal): [
+  {
+    "id": "481274fd-8f4e-4e48-8a15-c9a669ac2999",
+    "full_name": "Gilgal  Miss\u00f5es e Evangelismo",
+    "email": "gilgalmissoes@gmail.com",
+    "referral_code": "Gilgalmissoes",
+    "sponsor_id": "25c7ed99-773d-423c-b2b0-2d1816caee27",
+    "user_id": "5d15d1ed-0965-4442-af2f-10f1d50cf3e4"
+  }
+]
+Profile (Fiel): [
+  {
+    "id": "7e57d5d8-f44c-46ed-8c14-46e191321620",
+    "mocha_user_id": null,
+    "cpf": "92142321335",
+    "role": "affiliate",
+    "is_active": true,
+    "sponsor_id": "b95451a8-7ed5-431a-8514-741fc95562f6",
+    "company_name": null,
+    "created_at": "2026-03-28T00:22:45.111258+00:00",
+    "updated_at": "2026-03-28T00:22:45.111258+00:00",
+    "email": "fiel01@gmail.com",
+    "organization_id": "5111af72-27a5-41fd-8ed9-8c51b78b4fdd",
+    "avatar_url": null,
+    "referrer_id": "b95451a8-7ed5-431a-8514-741fc95562f6",
+    "registration_type": "business",
+    "status": "active",
+    "cnpj": null,
+    "total_sales": 0.0,
+    "rank": "Consultor",
+    "leadership_bonus_total": 0.0,
+    "login": "fiel01",
+    "balance": 0.0,
+    "total_earnings": 0.0,
+    "monthly_commission_total": 0.0,
+    "last_commission_reset": "2026-03-28T00:22:45.10831+00:00",
+    "last_activation_at": null,
+    "whatsapp": "41998727353",
+    "full_name": "fiel 01",
+    "city": null,
+    "pix_key": null
+  }
+]
+Profile (Gilgal): [
+  {
+    "id": "5d15d1ed-0965-4442-af2f-10f1d50cf3e4",
+    "mocha_user_id": null,
+    "cpf": null,
+    "role": "affiliate",
+    "is_active": true,
+    "sponsor_id": "f5b2a147-0ada-4b24-a1dd-025556c0c9e0",
+    "company_name": null,
+    "created_at": "2026-03-27T23:27:45.458885+00:00",
+    "updated_at": "2026-03-27T23:27:45.458885+00:00",
+    "email": "gilgalmissoes@gmail.com",
+    "organization_id": "5111af72-27a5-41fd-8ed9-8c51b78b4fdd",
+    "avatar_url": null,
+    "referrer_id": "f5b2a147-0ada-4b24-a1dd-025556c0c9e0",
+    "registration_type": "business",
+    "status": "active",
+    "cnpj": "63.755.873/0001-24",
+    "total_sales": 0.0,
+    "rank": "Consultor",
+    "leadership_bonus_total": 0.0,
+    "login": "Gilgalmissoes",
+    "balance": 0.0,
+    "total_earnings": 0.0,
+    "monthly_commission_total": 0.0,
+    "last_commission_reset": "2026-03-27T23:27:45.457783+00:00",
+    "last_activation_at": null,
+    "whatsapp": "41902834287",
+    "full_name": "Gilgal  Miss\u00f5es e Evangelismo",
+    "city": null,
+    "pix_key": null
+  }
+]

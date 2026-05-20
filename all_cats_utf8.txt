@@ -1,0 +1,59 @@
+﻿--- Listing all categories ---
+ID: 1, Name: ACESSËRIOS, Parent: None
+ID: 25, Name: ACESSËRIOS FEMININOS, Parent: 24
+ID: 50, Name: BASE BOX, Parent: 49
+ID: 6, Name: BERMUDAS, Parent: 5
+ID: 44, Name: BERMUDAS FEMININAS, Parent: 42
+ID: 16, Name: BLAZERS, Parent: 12
+ID: 26, Name: BOLSAS, Parent: 25
+ID: 30, Name: BOTAS, Parent: 29
+ID: 52, Name: CABECEIRAS, Parent: 49
+ID: 19, Name: CALÃADO MASCULINO, Parent: None
+ID: 29, Name: CALÃADOS, Parent: 24
+ID: 8, Name: CALÃAS, Parent: 5
+ID: 45, Name: CALÃAS FEMININAS, Parent: 42
+ID: 49, Name: CAMA, Parent: None
+ID: 9, Name: CAMISA POLO, Parent: 5
+ID: 10, Name: CAMISA SOCIAL MANGA CURTA, Parent: 5
+ID: 11, Name: CAMISA SOCIAL MANGA LONGA, Parent: 5
+ID: 7, Name: CAMISETAS, Parent: 5
+ID: 43, Name: CAMISETAS FEMININAS, Parent: 42
+ID: 2, Name: CARTEIRAS, Parent: 1
+ID: 27, Name: CARTEIRAS FEMININAS, Parent: 25
+ID: 23, Name: CHINELOS, Parent: 19
+ID: 31, Name: CHINELOS FEMININOS, Parent: 29
+ID: 3, Name: CINTOS, Parent: 1
+ID: 28, Name: CINTOS FEMININOS, Parent: 25
+ID: 55, Name: CLASSE A, Parent: 54
+ID: 53, Name: COLCHıES EST┴TICOS, Parent: 49
+ID: 54, Name: COLCHıES TERAP╩UTICOS, Parent: 49
+ID: 57, Name: CONSËRCIO, Parent: None
+ID: 24, Name: FEMININO, Parent: None
+ID: 14, Name: FIO INDIANO, Parent: 12
+ID: 56, Name: HAIFLEX, Parent: 54
+ID: 48, Name: LINGERIE, Parent: 42
+ID: 17, Name: MARESIAS, Parent: 16
+ID: 13, Name: MICROFIBRA, Parent: 12
+ID: 32, Name: MOCASSIM, Parent: 29
+ID: 33, Name: MULES, Parent: 29
+ID: 58, Name: OFERTAS, Parent: None
+ID: 34, Name: PANTUFAS, Parent: 29
+ID: 15, Name: POLIVISCOSE, Parent: 12
+ID: 4, Name: PULSEIRAS, Parent: 1
+ID: 35, Name: RASTEIRAS, Parent: 29
+ID: 46, Name: SAIAS, Parent: 42
+ID: 37, Name: SAND┴LIAS, Parent: 29
+ID: 20, Name: SAPAT╩NIS, Parent: 19
+ID: 36, Name: SAPATILHAS, Parent: 29
+ID: 22, Name: SAPATO SOCIAL, Parent: 19
+ID: 18, Name: SARJA, Parent: 16
+ID: 38, Name: SCARPIN, Parent: 29
+ID: 39, Name: TAMANCOS, Parent: 29
+ID: 21, Name: T╩NIS, Parent: 19
+ID: 40, Name: T╩NIS CASUAL, Parent: 29
+ID: 41, Name: T╩NIS ESPORTIVO, Parent: 29
+ID: 12, Name: TERNOS & BLAZERS, Parent: 5
+ID: 51, Name: TRAVESSEIROS, Parent: 49
+ID: 47, Name: VESTIDOS, Parent: 42
+ID: 42, Name: VESTU┴RIO FEMININOS, Parent: 24
+ID: 5, Name: VESTU┴RIO MASCULINO, Parent: None

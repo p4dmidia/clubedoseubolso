@@ -1,0 +1,70 @@
+﻿
+--- STARTING DEEP DIAGNOSIS ---
+1. Checking commission_configs...
+Commission Config 'geral' found:
+{
+    "key":  "geral",
+    "type":  "percent",
+    "active_generations":  7,
+    "levels":  [
+                   {
+                       "level":  1,
+                       "value":  10
+                   },
+                   {
+                       "level":  2,
+                       "value":  3
+                   },
+                   {
+                       "level":  3,
+                       "value":  2
+                   },
+                   {
+                       "level":  4,
+                       "value":  2
+                   },
+                   {
+                       "level":  5,
+                       "value":  2
+                   },
+                   {
+                       "level":  6,
+                       "value":  2
+                   },
+                   {
+                       "level":  7,
+                       "value":  2
+                   }
+               ],
+    "updated_at":  "2026-03-19T15:41:46.249+00:00",
+    "organization_id":  "5111af72-27a5-41fd-8ed9-8c51b78b4fdd"
+}
+
+2. Checking for failing order updates (Testing up to 5 orders)...
+
+Testing Order: ORD-5331 (Customer: Fiel, Referral: fiel01)
+!!! FAILURE DETECTED on Order ORD-5331 !!!
+PostgREST Error Detail:
+
+
+Testing Order: ORD-6389 (Customer: clodair taborda de Faria, Referral: )
+!!! FAILURE DETECTED on Order ORD-6389 !!!
+PostgREST Error Detail:
+
+
+Testing Order: ORD-5945 (Customer: clodair taborda de Faria, Referral: )
+!!! FAILURE DETECTED on Order ORD-5945 !!!
+PostgREST Error Detail:
+
+
+Testing Order: ORD-6061 (Customer: clodair taborda, Referral: fiel01)
+!!! FAILURE DETECTED on Order ORD-6061 !!!
+PostgREST Error Detail:
+
+
+Testing Order: ORD-7640 (Customer: fiel, Referral: )
+!!! FAILURE DETECTED on Order ORD-7640 !!!
+PostgREST Error Detail:
+
+
+--- DIAGNOSIS COMPLETE ---

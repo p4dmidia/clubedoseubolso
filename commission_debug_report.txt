@@ -1,0 +1,405 @@
+COMMISSION DEBUG REPORT
+========================
+
+--- Commission Configs ---
+[
+  {
+    "key": "geral",
+    "type": "percent",
+    "active_generations": 7,
+    "levels": [
+      {
+        "level": 1,
+        "value": 10
+      },
+      {
+        "level": 2,
+        "value": 3
+      },
+      {
+        "level": 3,
+        "value": 2
+      },
+      {
+        "level": 4,
+        "value": 2
+      },
+      {
+        "level": 5,
+        "value": 2
+      },
+      {
+        "level": 6,
+        "value": 2
+      },
+      {
+        "level": 7,
+        "value": 2
+      }
+    ],
+    "updated_at": "2026-03-19T15:41:46.249+00:00"
+  },
+  {
+    "key": "mattress",
+    "type": "percent",
+    "active_generations": 6,
+    "levels": [
+      {
+        "level": 1,
+        "value": 20
+      },
+      {
+        "level": 2,
+        "value": 4
+      },
+      {
+        "level": 3,
+        "value": 4
+      },
+      {
+        "level": 4,
+        "value": 4
+      },
+      {
+        "level": 5,
+        "value": 4
+      },
+      {
+        "level": 6,
+        "value": 4
+      }
+    ],
+    "updated_at": "2026-03-19T15:41:46.249+00:00"
+  },
+  {
+    "key": "sales",
+    "type": "percent",
+    "active_generations": 1,
+    "levels": [
+      {
+        "level": 0,
+        "value": 20
+      },
+      {
+        "level": 1,
+        "value": 3
+      }
+    ],
+    "updated_at": "2026-03-19T15:41:46.249+00:00"
+  }
+]
+
+--- Recent Orders (0.50) ---
+[
+  {
+    "id": "#ORD-7341",
+    "status": "Pendente",
+    "referral_code": null,
+    "user_id": null,
+    "customer_email": "clodair.faria@gmail.com",
+    "customer_name": "CLODAIR TABORDA DE FARIA"
+  },
+  {
+    "id": "#ORD-1112",
+    "status": "Pendente",
+    "referral_code": null,
+    "user_id": null,
+    "customer_email": "clodair.faria@gmail.com",
+    "customer_name": "CLODAIR TABORDA DE FARIA"
+  },
+  {
+    "id": "#ORD-5267",
+    "status": "Pendente",
+    "referral_code": null,
+    "user_id": null,
+    "customer_email": "gilgalmissoes@gmail.com",
+    "customer_name": "GILGAL MISS\u00d5ES E EVANGELISMO"
+  },
+  {
+    "id": "#ORD-7581",
+    "status": "Pendente",
+    "referral_code": null,
+    "user_id": null,
+    "customer_email": "gilgalmissoes@gmail.com",
+    "customer_name": "GILGAL MISS\u00d5ES E EVANGELISMO"
+  },
+  {
+    "id": "#ORD-2292",
+    "status": "Pendente",
+    "referral_code": null,
+    "user_id": null,
+    "customer_email": "gilgalmissoes@gmail.com",
+    "customer_name": "GILGAL MISS\u00d5ES E EVANGELISMO"
+  },
+  {
+    "id": "#ORD-6201",
+    "status": "Pendente",
+    "referral_code": null,
+    "user_id": null,
+    "customer_email": "gilgalmissoes@gmail.com",
+    "customer_name": "GILGAL MISS\u00d5ES E EVANGELISMO"
+  },
+  {
+    "id": "#ORD-8898",
+    "status": "Pendente",
+    "referral_code": null,
+    "user_id": null,
+    "customer_email": "gilgalmissoes@gmail.com",
+    "customer_name": "GILGAL MISS\u00d5ES E EVANGELISMO"
+  },
+  {
+    "id": "#ORD-3301",
+    "status": "Pendente",
+    "referral_code": null,
+    "user_id": null,
+    "customer_email": "clodair.faria@gmail.com",
+    "customer_name": "CLODAIR TABORDA DE FARIA"
+  },
+  {
+    "id": "#ORD-7402",
+    "status": "Pendente",
+    "referral_code": null,
+    "user_id": null,
+    "customer_email": "Clodair.faria@gmail.com",
+    "customer_name": "Clodair Taborda de Faria "
+  },
+  {
+    "id": "#ORD-7579",
+    "status": "Pendente",
+    "referral_code": null,
+    "user_id": null,
+    "customer_email": "clodair.faria@gmail.com",
+    "customer_name": "clodair taborda de Faria"
+  },
+  {
+    "id": "#ORD-8233",
+    "status": "Pago",
+    "referral_code": "gilgalmissoes",
+    "user_id": "7e57d5d8-f44c-46ed-8c14-46e191321620",
+    "customer_email": "gilgalmissoes@gmail.com",
+    "customer_name": "CLODAIR TABORDA DE FARIA"
+  },
+  {
+    "id": "#ORD-5185",
+    "status": "Pendente",
+    "referral_code": null,
+    "user_id": null,
+    "customer_email": "clodair.faria@gmail.com",
+    "customer_name": "clodair taborda de Faria"
+  },
+  {
+    "id": "#ORD-1222",
+    "status": "Pendente",
+    "referral_code": null,
+    "user_id": null,
+    "customer_email": "clodair.faria@gmail.com",
+    "customer_name": "CLODAIR TABORDA DE FARIA"
+  },
+  {
+    "id": "#ORD-7931",
+    "status": "Pendente",
+    "referral_code": null,
+    "user_id": null,
+    "customer_email": "clodair.faria@gmail.com",
+    "customer_name": "CLODAIR TABORDA DE FARIA"
+  },
+  {
+    "id": "#ORD-9375",
+    "status": "Pendente",
+    "referral_code": null,
+    "user_id": null,
+    "customer_email": "fiel02@gmail.com",
+    "customer_name": "fiel"
+  },
+  {
+    "id": "#ORD-9636",
+    "status": "Pendente",
+    "referral_code": null,
+    "user_id": null,
+    "customer_email": "clodair.faria@gmail.com",
+    "customer_name": "CLODAIR TABORDA DE FARIA"
+  },
+  {
+    "id": "#ORD-9830",
+    "status": "Pendente",
+    "referral_code": null,
+    "user_id": null,
+    "customer_email": "clodair.faria@gmail.com",
+    "customer_name": "CLODAIR TABORDA DE FARIA"
+  },
+  {
+    "id": "#ORD-3704",
+    "status": "Pendente",
+    "referral_code": null,
+    "user_id": null,
+    "customer_email": "clodair.faria@gmail.com",
+    "customer_name": "CLODAIR TABORDA DE FARIA"
+  },
+  {
+    "id": "#ORD-1683",
+    "status": "Pendente",
+    "referral_code": null,
+    "user_id": null,
+    "customer_email": "clodair.faria@gmail.com",
+    "customer_name": "CLODAIR TABORDA DE FARIA"
+  },
+  {
+    "id": "#ORD-9432",
+    "status": "Pendente",
+    "referral_code": null,
+    "user_id": null,
+    "customer_email": "gilgalmissoes@gmail.com",
+    "customer_name": "GILGAL MISS\u00d5ES E EVANGELISMO"
+  },
+  {
+    "id": "#ORD-1923",
+    "status": "Pendente",
+    "referral_code": null,
+    "user_id": null,
+    "customer_email": "gilgalmissoes@gmail.com",
+    "customer_name": "GILGAL MISS\u00d5ES E EVANGELISMO"
+  },
+  {
+    "id": "#ORD-1649",
+    "status": "Pendente",
+    "referral_code": null,
+    "user_id": null,
+    "customer_email": "gilgalmissoes@gmail.com",
+    "customer_name": "GILGAL MISS\u00d5ES E EVANGELISMO"
+  }
+]
+
+--- Order Details: #ORD-7341 ---
+Referral Code: None
+Direct Affiliate NOT FOUND by referral_code
+Commissions generated: 0
+[]
+
+--- Order Details: #ORD-1112 ---
+Referral Code: None
+Direct Affiliate NOT FOUND by referral_code
+Commissions generated: 0
+[]
+
+--- Order Details: #ORD-5267 ---
+Referral Code: None
+Direct Affiliate NOT FOUND by referral_code
+Commissions generated: 0
+[]
+
+--- Order Details: #ORD-7581 ---
+Referral Code: None
+Direct Affiliate NOT FOUND by referral_code
+Commissions generated: 0
+[]
+
+--- Order Details: #ORD-2292 ---
+Referral Code: None
+Direct Affiliate NOT FOUND by referral_code
+Commissions generated: 0
+[]
+
+--- Order Details: #ORD-6201 ---
+Referral Code: None
+Direct Affiliate NOT FOUND by referral_code
+Commissions generated: 0
+[]
+
+--- Order Details: #ORD-8898 ---
+Referral Code: None
+Direct Affiliate NOT FOUND by referral_code
+Commissions generated: 0
+[]
+
+--- Order Details: #ORD-3301 ---
+Referral Code: None
+Direct Affiliate NOT FOUND by referral_code
+Commissions generated: 0
+[]
+
+--- Order Details: #ORD-7402 ---
+Referral Code: None
+Direct Affiliate NOT FOUND by referral_code
+Commissions generated: 0
+[]
+
+--- Order Details: #ORD-7579 ---
+Referral Code: None
+Direct Affiliate NOT FOUND by referral_code
+Commissions generated: 0
+[]
+
+--- Order Details: #ORD-8233 ---
+Referral Code: gilgalmissoes
+Direct Affiliate NOT FOUND by referral_code
+Commissions generated: 0
+[]
+
+--- Order Details: #ORD-5185 ---
+Referral Code: None
+Direct Affiliate NOT FOUND by referral_code
+Commissions generated: 0
+[]
+
+--- Order Details: #ORD-1222 ---
+Referral Code: None
+Direct Affiliate NOT FOUND by referral_code
+Commissions generated: 0
+[]
+
+--- Order Details: #ORD-7931 ---
+Referral Code: None
+Direct Affiliate NOT FOUND by referral_code
+Commissions generated: 0
+[]
+
+--- Order Details: #ORD-9375 ---
+Referral Code: None
+Direct Affiliate NOT FOUND by referral_code
+Commissions generated: 0
+[]
+
+--- Order Details: #ORD-9636 ---
+Referral Code: None
+Direct Affiliate NOT FOUND by referral_code
+Commissions generated: 0
+[]
+
+--- Order Details: #ORD-9830 ---
+Referral Code: None
+Direct Affiliate NOT FOUND by referral_code
+Commissions generated: 0
+[]
+
+--- Order Details: #ORD-3704 ---
+Referral Code: None
+Direct Affiliate NOT FOUND by referral_code
+Commissions generated: 0
+[]
+
+--- Order Details: #ORD-1683 ---
+Referral Code: None
+Direct Affiliate NOT FOUND by referral_code
+Commissions generated: 0
+[]
+
+--- Order Details: #ORD-9432 ---
+Referral Code: None
+Direct Affiliate NOT FOUND by referral_code
+Commissions generated: 0
+[]
+
+--- Order Details: #ORD-1923 ---
+Referral Code: None
+Direct Affiliate NOT FOUND by referral_code
+Commissions generated: 0
+[]
+
+--- Order Details: #ORD-1649 ---
+Referral Code: None
+Direct Affiliate NOT FOUND by referral_code
+Commissions generated: 0
+[]
+
+--- Total Affiliates Count ---
+Count: 52

@@ -1,0 +1,126 @@
+--- Searching for affiliate 'Fiel01' (ilike) ---
+Result count: 1
+[
+  {
+    "id": "1ecc7ca1-b1e6-4a4f-91dc-42793b67e037",
+    "user_id": "7e57d5d8-f44c-46ed-8c14-46e191321620",
+    "full_name": "fiel 01",
+    "cpf": "92142321335",
+    "email": "fiel01@gmail.com",
+    "whatsapp": "41998727353",
+    "referral_code": "fiel01",
+    "sponsor_id": "ffab0c91-8110-4a87-8d79-50d71b631af2",
+    "is_active": true,
+    "is_verified": false,
+    "last_access_at": null,
+    "created_at": "2026-03-28T00:22:45.111258+00:00",
+    "updated_at": "2026-03-28T00:22:45.111258+00:00",
+    "position_slot": null,
+    "organization_id": "5111af72-27a5-41fd-8ed9-8c51b78b4fdd",
+    "cnpj": null,
+    "avatar_url": null
+  }
+]
+
+--- Searching for recent orders for this user ---
+null
+
+--- Recent 10 Orders (Global) ---
+Order: c91b7f04-32c9-45d7-884c-454f337990f9, Status: completed, User: None, Code: None, Created: 2026-03-31T18:42:02.980672+00:00
+Order: 681901bf-2136-4d75-b7d0-931fedd710e1, Status: completed, User: None, Code: None, Created: 2026-03-31T18:39:27.799684+00:00
+Order: #ORD-3301, Status: Pendente, User: None, Code: None, Created: 2026-03-31T13:17:07.908787+00:00
+Order: #ORD-2793, Status: Pendente, User: None, Code: None, Created: 2026-03-31T01:40:20.606601+00:00
+Order: #ORD-3451, Status: Pendente, User: None, Code: None, Created: 2026-03-31T01:40:05.043747+00:00
+Order: #ORD-2525, Status: Pendente, User: None, Code: None, Created: 2026-03-31T00:52:07.463658+00:00
+Order: #ORD-5727, Status: Pendente, User: None, Code: None, Created: 2026-03-30T19:18:51.679569+00:00
+Order: #ORD-4820, Status: Pendente, User: None, Code: None, Created: 2026-03-30T19:05:53.865024+00:00
+Order: #ORD-8030, Status: Pendente, User: None, Code: None, Created: 2026-03-30T19:04:43.232327+00:00
+Order: #ORD-1683, Status: Pendente, User: None, Code: None, Created: 2026-03-30T19:04:29.311712+00:00
+
+--- Commission Configs ---
+[
+  {
+    "key": "geral",
+    "type": "percent",
+    "active_generations": 7,
+    "levels": [
+      {
+        "level": 1,
+        "value": 10
+      },
+      {
+        "level": 2,
+        "value": 3
+      },
+      {
+        "level": 3,
+        "value": 2
+      },
+      {
+        "level": 4,
+        "value": 2
+      },
+      {
+        "level": 5,
+        "value": 2
+      },
+      {
+        "level": 6,
+        "value": 2
+      },
+      {
+        "level": 7,
+        "value": 2
+      }
+    ],
+    "updated_at": "2026-03-19T15:41:46.249+00:00"
+  },
+  {
+    "key": "mattress",
+    "type": "percent",
+    "active_generations": 6,
+    "levels": [
+      {
+        "level": 1,
+        "value": 20
+      },
+      {
+        "level": 2,
+        "value": 4
+      },
+      {
+        "level": 3,
+        "value": 4
+      },
+      {
+        "level": 4,
+        "value": 4
+      },
+      {
+        "level": 5,
+        "value": 4
+      },
+      {
+        "level": 6,
+        "value": 4
+      }
+    ],
+    "updated_at": "2026-03-19T15:41:46.249+00:00"
+  },
+  {
+    "key": "sales",
+    "type": "percent",
+    "active_generations": 1,
+    "levels": [
+      {
+        "level": 0,
+        "value": 20
+      },
+      {
+        "level": 1,
+        "value": 3
+      }
+    ],
+    "updated_at": "2026-03-19T15:41:46.249+00:00"
+  }
+]

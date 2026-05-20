@@ -1,0 +1,61 @@
+--- All Organizations ---
+[
+  {
+    "id": "512f9aeb-683a-49c0-9731-76a7c8d10e8d",
+    "name": "Bella Sousa",
+    "domain": "bellasousa.com.br",
+    "created_at": "2026-03-14T01:43:04.533331+00:00",
+    "updated_at": "2026-03-14T01:43:04.533331+00:00",
+    "mercadopago_access_token": null,
+    "mercadopago_public_key": null
+  },
+  {
+    "id": "5111af72-27a5-41fd-8ed9-8c51b78b4fdd",
+    "name": "Classe A",
+    "domain": "classea.com.br",
+    "created_at": "2026-03-14T00:35:01.307574+00:00",
+    "updated_at": "2026-03-14T00:35:01.307574+00:00",
+    "mercadopago_access_token": "APP_USR-6519047848898101-112815-b0c58d19c97019eb4dd2943254c12e58-3013508460",
+    "mercadopago_public_key": "APP_USR-e152f8ab-5122-4a75-bf98-fac1d3faca4b"
+  }
+]
+
+--- Searching for any order with 'Fiel01' in any text column ---
+
+--- Searching for 'Fiel01' in customer_name or customer_email ---
+[]
+
+--- Checking Affiliate 'fiel01' Balances ---
+User Settings for Fiel01: [
+  {
+    "id": "a0cfb81e-758e-4e8d-a22f-97630f958782",
+    "user_id": "7e57d5d8-f44c-46ed-8c14-46e191321620",
+    "pix_key": null,
+    "leg_preference": "automatic",
+    "total_earnings": 0.0,
+    "available_balance": -0.5,
+    "frozen_balance": 0.0,
+    "is_active_this_month": false,
+    "created_at": "2026-03-28T00:22:45.111258+00:00",
+    "updated_at": "2026-03-28T00:22:45.111258+00:00",
+    "organization_id": "5111af72-27a5-41fd-8ed9-8c51b78b4fdd"
+  }
+]
+Sponsor Settings: [
+  {
+    "id": "c82568ea-6bd0-4a66-877d-798c99a25f8c",
+    "user_id": "b95451a8-7ed5-431a-8514-741fc95562f6",
+    "pix_key": null,
+    "leg_preference": "automatic",
+    "total_earnings": 0.0,
+    "available_balance": 0.0,
+    "frozen_balance": 0.0,
+    "is_active_this_month": false,
+    "created_at": "2026-03-27T23:34:37.243676+00:00",
+    "updated_at": "2026-03-27T23:34:37.243676+00:00",
+    "organization_id": "5111af72-27a5-41fd-8ed9-8c51b78b4fdd"
+  }
+]
+
+--- Checking for orders with status 'Pago' (Exact) ---
+Found 0 Pago orders.

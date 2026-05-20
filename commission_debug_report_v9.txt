@@ -1,0 +1,36 @@
+FINAL COMMISSION CHECK
+======================
+
+--- All commissions for Order #ORD-8233 ---
+[
+  {
+    "level": 1,
+    "amount": 0.05,
+    "user_id": "5d15d1ed-0965-4442-af2f-10f1d50cf3e4",
+    "created_at": "2026-04-01T16:46:49.74318+00:00"
+  },
+  {
+    "level": 2,
+    "amount": 0.015,
+    "user_id": "f5b2a147-0ada-4b24-a1dd-025556c0c9e0",
+    "created_at": "2026-04-01T16:46:49.74318+00:00"
+  },
+  {
+    "level": 3,
+    "amount": 0.01,
+    "user_id": "011ea7ca-8dbe-421e-9682-84e6276e8a00",
+    "created_at": "2026-04-01T16:46:49.74318+00:00"
+  },
+  {
+    "level": 4,
+    "amount": 0.01,
+    "user_id": "b3c1bf75-66f7-460f-b0ee-fdfd93d14db1",
+    "created_at": "2026-04-01T16:46:49.74318+00:00"
+  }
+]
+
+Found 4 commission records.
+  Level 1: 0.05 to User 5d15d1ed-0965-4442-af2f-10f1d50cf3e4
+  Level 2: 0.015 to User f5b2a147-0ada-4b24-a1dd-025556c0c9e0
+  Level 3: 0.01 to User 011ea7ca-8dbe-421e-9682-84e6276e8a00
+  Level 4: 0.01 to User b3c1bf75-66f7-460f-b0ee-fdfd93d14db1

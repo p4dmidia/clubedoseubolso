@@ -1,0 +1,6 @@
+﻿--- BUSCANDO AFILIADO 'mariafran' ---
+ENCONTRADO: ID: adad81ca-c13d-426b-940a-70b7a79a8145 | Nome: Maria das flores | Code: mariafran | Org: 512f9aeb-683a-49c0-9731-76a7c8d10e8d
+
+--- ÃsLTIMOS LOGS DE DEBUG ---
+[2026-03-25T02:08:18.765067+00:00] signup_start: Iniciando processamento de novo usuário: joana@gmail.com
+[2026-03-25T02:08:18.765067+00:00] signup_warning: Padrinho não encontrado para o código: mariafran

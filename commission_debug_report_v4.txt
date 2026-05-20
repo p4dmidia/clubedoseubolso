@@ -1,0 +1,65 @@
+BUYER PROFILE CHECK
+===================
+
+--- Buyer Profile (ID: 7e57d5d8-f44c-46ed-8c14-46e191321620) ---
+[
+  {
+    "id": "7e57d5d8-f44c-46ed-8c14-46e191321620",
+    "mocha_user_id": null,
+    "cpf": "92142321335",
+    "role": "affiliate",
+    "is_active": true,
+    "sponsor_id": "b95451a8-7ed5-431a-8514-741fc95562f6",
+    "company_name": null,
+    "created_at": "2026-03-28T00:22:45.111258+00:00",
+    "updated_at": "2026-03-28T00:22:45.111258+00:00",
+    "email": "fiel01@gmail.com",
+    "organization_id": "5111af72-27a5-41fd-8ed9-8c51b78b4fdd",
+    "avatar_url": null,
+    "referrer_id": "b95451a8-7ed5-431a-8514-741fc95562f6",
+    "registration_type": "business",
+    "status": "active",
+    "cnpj": null,
+    "total_sales": 0.0,
+    "rank": "Consultor",
+    "leadership_bonus_total": 0.0,
+    "login": "fiel01",
+    "balance": 0.0,
+    "total_earnings": 0.0,
+    "monthly_commission_total": 0.0,
+    "last_commission_reset": "2026-03-28T00:22:45.10831+00:00",
+    "last_activation_at": "2026-03-28T15:37:15.550824+00:00",
+    "whatsapp": "41998727353",
+    "full_name": "fiel 01",
+    "city": null,
+    "pix_key": null
+  }
+]
+
+Sponsor ID in profile: b95451a8-7ed5-431a-8514-741fc95562f6
+--- Affiliate with ID 'b95451a8-7ed5-431a-8514-741fc95562f6' ---
+[]
+
+--- Affiliate record for buyer (user_id: 7e57d5d8-f44c-46ed-8c14-46e191321620) ---
+[
+  {
+    "id": "1ecc7ca1-b1e6-4a4f-91dc-42793b67e037",
+    "user_id": "7e57d5d8-f44c-46ed-8c14-46e191321620",
+    "full_name": "fiel 01",
+    "cpf": "92142321335",
+    "email": "fiel01@gmail.com",
+    "whatsapp": "41998727353",
+    "referral_code": "fiel01",
+    "sponsor_id": "ffab0c91-8110-4a87-8d79-50d71b631af2",
+    "is_active": true,
+    "is_verified": false,
+    "last_access_at": null,
+    "created_at": "2026-03-28T00:22:45.111258+00:00",
+    "updated_at": "2026-03-28T00:22:45.111258+00:00",
+    "position_slot": null,
+    "organization_id": "5111af72-27a5-41fd-8ed9-8c51b78b4fdd",
+    "cnpj": null,
+    "avatar_url": null
+  }
+]
+

@@ -1,0 +1,82 @@
+DETAILED DATA CHECK
+===================
+
+--- Paid Order Check (#ORD-8233) ---
+[
+  {
+    "id": "#ORD-8233",
+    "customer_name": "CLODAIR TABORDA DE FARIA",
+    "customer_email": "gilgalmissoes@gmail.com",
+    "customer_phone": "41999670714",
+    "shipping_address": "LUIZ BARRETO MURAT 1754 FUNDOS - CEP: 82820160",
+    "total_amount": 0.5,
+    "status": "Pago",
+    "payment_method": "Pix",
+    "referral_code": "gilgalmissoes",
+    "tracking_code": null,
+    "created_at": "2026-03-31T23:05:44.374924+00:00",
+    "updated_at": "2026-03-31T23:07:32.854+00:00",
+    "payment_id": "152745781090",
+    "payment_preference_id": null,
+    "payment_status_detail": "accredited",
+    "customer_cpf": "82611335915",
+    "shipping_cost": 0,
+    "shipping_method": "N\u00e3o informado",
+    "organization_id": "5111af72-27a5-41fd-8ed9-8c51b78b4fdd",
+    "leadership_bonus_amount": 0.0,
+    "affiliate_id": null,
+    "commission_amount": 0,
+    "email": null,
+    "nome": null,
+    "whatsapp": null,
+    "items": [],
+    "referrer_id": null,
+    "payment_status": "paid",
+    "user_id": "7e57d5d8-f44c-46ed-8c14-46e191321620"
+  }
+]
+
+Org ID: 5111af72-27a5-41fd-8ed9-8c51b78b4fdd, Ref Code: gilgalmissoes
+--- Affiliate with ref_code 'gilgalmissoes' ---
+[]
+
+--- User Profiles for 12aguias@gmail.com ---
+[
+  {
+    "id": "b95451a8-7ed5-431a-8514-741fc95562f6",
+    "mocha_user_id": null,
+    "cpf": "93284363212",
+    "role": "affiliate",
+    "is_active": true,
+    "sponsor_id": "5d15d1ed-0965-4442-af2f-10f1d50cf3e4",
+    "company_name": null,
+    "created_at": "2026-03-27T23:34:37.243676+00:00",
+    "updated_at": "2026-03-27T23:34:37.243676+00:00",
+    "email": "12aguias@gmail.com",
+    "organization_id": "5111af72-27a5-41fd-8ed9-8c51b78b4fdd",
+    "avatar_url": null,
+    "referrer_id": "5d15d1ed-0965-4442-af2f-10f1d50cf3e4",
+    "registration_type": "business",
+    "status": "active",
+    "cnpj": null,
+    "total_sales": 0.0,
+    "rank": "Consultor",
+    "leadership_bonus_total": 0.0,
+    "login": "12aguias",
+    "balance": 0.0,
+    "total_earnings": 0.0,
+    "monthly_commission_total": 0.0,
+    "last_commission_reset": "2026-03-27T23:34:37.242645+00:00",
+    "last_activation_at": null,
+    "whatsapp": "41997458473",
+    "full_name": "12aguias Equipe",
+    "city": null,
+    "pix_key": null
+  }
+]
+
+--- Affiliates list (first 20) ---
+{
+  "error": "HTTP Error 400: Bad Request"
+}
+

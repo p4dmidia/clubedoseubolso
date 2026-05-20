@@ -1,0 +1,14 @@
+Checking for new activity since 2026-03-28T16:25:47.202030+00:00...
+
+--- Recent Orders ---
+{
+  "error": "HTTP Error 400: Bad Request"
+}
+--- Recent Wallet Transactions ---
+{
+  "error": "HTTP Error 400: Bad Request"
+}
+--- Recent Withdrawals ---
+{
+  "error": "HTTP Error 400: Bad Request"
+}

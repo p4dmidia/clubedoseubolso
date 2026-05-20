@@ -1,0 +1,72 @@
+12AGUIAS DATA CHECK
+===================
+
+--- Searching for affiliate with email '12aguias@gmail.com' ---
+[
+  {
+    "id": "ffab0c91-8110-4a87-8d79-50d71b631af2",
+    "user_id": "b95451a8-7ed5-431a-8514-741fc95562f6",
+    "full_name": "12aguias Equipe",
+    "cpf": "93284363212",
+    "email": "12aguias@gmail.com",
+    "whatsapp": "41997458473",
+    "referral_code": "12aguias",
+    "sponsor_id": "481274fd-8f4e-4e48-8a15-c9a669ac2999",
+    "is_active": true,
+    "is_verified": false,
+    "last_access_at": null,
+    "created_at": "2026-03-27T23:34:37.243676+00:00",
+    "updated_at": "2026-03-29T02:54:16.795+00:00",
+    "position_slot": null,
+    "organization_id": "5111af72-27a5-41fd-8ed9-8c51b78b4fdd",
+    "cnpj": null,
+    "avatar_url": null
+  }
+]
+
+--- Searching for affiliate with referral_code '12aguias' ---
+[
+  {
+    "id": "ffab0c91-8110-4a87-8d79-50d71b631af2",
+    "user_id": "b95451a8-7ed5-431a-8514-741fc95562f6",
+    "full_name": "12aguias Equipe",
+    "cpf": "93284363212",
+    "email": "12aguias@gmail.com",
+    "whatsapp": "41997458473",
+    "referral_code": "12aguias",
+    "sponsor_id": "481274fd-8f4e-4e48-8a15-c9a669ac2999",
+    "is_active": true,
+    "is_verified": false,
+    "last_access_at": null,
+    "created_at": "2026-03-27T23:34:37.243676+00:00",
+    "updated_at": "2026-03-29T02:54:16.795+00:00",
+    "position_slot": null,
+    "organization_id": "5111af72-27a5-41fd-8ed9-8c51b78b4fdd",
+    "cnpj": null,
+    "avatar_url": null
+  }
+]
+
+--- Searching for affiliate with user_id 'b95451a8-7ed5-431a-8514-741fc95562f6' ---
+[
+  {
+    "id": "ffab0c91-8110-4a87-8d79-50d71b631af2",
+    "user_id": "b95451a8-7ed5-431a-8514-741fc95562f6",
+    "full_name": "12aguias Equipe",
+    "cpf": "93284363212",
+    "email": "12aguias@gmail.com",
+    "whatsapp": "41997458473",
+    "referral_code": "12aguias",
+    "sponsor_id": "481274fd-8f4e-4e48-8a15-c9a669ac2999",
+    "is_active": true,
+    "is_verified": false,
+    "last_access_at": null,
+    "created_at": "2026-03-27T23:34:37.243676+00:00",
+    "updated_at": "2026-03-29T02:54:16.795+00:00",
+    "position_slot": null,
+    "organization_id": "5111af72-27a5-41fd-8ed9-8c51b78b4fdd",
+    "cnpj": null,
+    "avatar_url": null
+  }
+]
+

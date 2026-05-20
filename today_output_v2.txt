@@ -1,0 +1,231 @@
+Checking orders for 2026-03-28...
+Total orders today: 20
+Order: c1583cac-dc9f-4d4f-9e8b-1c6abd14aa03 | Email: None | Amount: 132 | Status: completed | Payment: whatsapp
+Order: d31443f8-f06f-46a6-a904-cb93aa9bc708 | Email: None | Amount: 132 | Status: completed | Payment: whatsapp
+Order: 7a28b915-7ea0-4be9-9593-d395177ba671 | Email: None | Amount: 132 | Status: completed | Payment: whatsapp
+Order: #ORD-1649 | Email: gilgalmissoes@gmail.com | Amount: 0.5 | Status: Pendente | Payment: Cartão de Crédito
+Order: #ORD-2309 | Email: gilgalmissoes@gmail.com | Amount: 24.22 | Status: Pendente | Payment: Pix
+Order: #ORD-1923 | Email: gilgalmissoes@gmail.com | Amount: 0.5 | Status: Pendente | Payment: Pix
+Order: #ORD-9432 | Email: gilgalmissoes@gmail.com | Amount: 0.5 | Status: Pendente | Payment: Pix
+Order: #ORD-4576 | Email: agenciap4d@gmail.com | Amount: 9902.32 | Status: Pendente | Payment: Pix
+Order: #ORD-4758 | Email: agenciap4d@gmail.com | Amount: 9996.33 | Status: Pendente | Payment: Cartão de Crédito
+Order: #ORD-8554 | Email: agenciap4d@gmail.com | Amount: 33.08 | Status: Pendente | Payment: Cartão de Crédito
+Order: #ORD-1361 | Email: agenciap4d@gmail.com | Amount: 404.03 | Status: Pendente | Payment: Pix
+Order: #ORD-3177 | Email: agenciap4d@gmail.com | Amount: 364.87 | Status: Pendente | Payment: Pix
+Order: 455bffb2-db18-44be-ba25-e3a2fda559a6 | Email: None | Amount: 132 | Status: completed | Payment: whatsapp
+Order: 9bd39e22-6542-4b12-a81f-91625f46b138 | Email: None | Amount: 132 | Status: completed | Payment: whatsapp
+Order: #ORD-9338 | Email: agenciap4d@gmail.com | Amount: 364.87 | Status: Pendente | Payment: Pix
+Order: #ORD-1461 | Email: agenciap4d@gmail.com | Amount: 364.87 | Status: Pendente | Payment: Cartão de Crédito
+Order: #ORD-4962 | Email: agenciap4d@gmail.com | Amount: 364.87 | Status: Pendente | Payment: Cartão de Crédito
+Order: #ORD-8699 | Email: gilgalmissoes@gmail.com | Amount: 23.77 | Status: Pendente | Payment: Pix
+Order: #ORD-9000 | Email: gilgalmissoes@gmail.com | Amount: 28.21 | Status: Pendente | Payment: Pix
+Order: #ORD-1759 | Email: gilgalmissoes@gmail.com | Amount: 1 | Status: Pendente | Payment: Pix
+
+User Settings (fiel01): [
+  {
+    "id": "a0cfb81e-758e-4e8d-a22f-97630f958782",
+    "user_id": "7e57d5d8-f44c-46ed-8c14-46e191321620",
+    "pix_key": null,
+    "leg_preference": "automatic",
+    "total_earnings": 0.0,
+    "available_balance": 0.0,
+    "frozen_balance": 0.0,
+    "is_active_this_month": false,
+    "created_at": "2026-03-28T00:22:45.111258+00:00",
+    "updated_at": "2026-03-28T00:22:45.111258+00:00",
+    "organization_id": "5111af72-27a5-41fd-8ed9-8c51b78b4fdd"
+  }
+]
+
+Transactions today: [
+  {
+    "id": "1290a6d4-2254-4272-90cf-2b633ba5ec68",
+    "user_id": "73713f6f-2019-45bd-b0ff-363e5f10a6fb",
+    "order_id": "9bd39e22-6542-4b12-a81f-91625f46b138",
+    "amount": 10.0,
+    "type": "commission",
+    "description": "Comiss\u00e3o N\u00edvel 2 - Item: Kit lingerie 22 pe\u00e7as - Pedido #9bd39e22",
+    "status": "confirmed",
+    "created_at": "2026-03-28T12:20:41.509086+00:00"
+  },
+  {
+    "id": "ed924980-537c-4ce9-abea-9e3a30f03aa3",
+    "user_id": "0b9afaaf-7dd2-4e57-b410-c5dae9784cfb",
+    "order_id": "9bd39e22-6542-4b12-a81f-91625f46b138",
+    "amount": 5.0,
+    "type": "commission",
+    "description": "Comiss\u00e3o N\u00edvel 3 - Item: Kit lingerie 22 pe\u00e7as - Pedido #9bd39e22",
+    "status": "confirmed",
+    "created_at": "2026-03-28T12:20:41.509086+00:00"
+  },
+  {
+    "id": "1f1b037f-a3e8-4876-ab07-7c8378658b8b",
+    "user_id": "fa874ef5-ada6-4a81-9e96-486e806791cb",
+    "order_id": "9bd39e22-6542-4b12-a81f-91625f46b138",
+    "amount": 20.0,
+    "type": "commission",
+    "description": "Comiss\u00e3o N\u00edvel 4 - Item: Kit lingerie 22 pe\u00e7as - Pedido #9bd39e22",
+    "status": "confirmed",
+    "created_at": "2026-03-28T12:20:41.509086+00:00"
+  },
+  {
+    "id": "21777c7d-fa22-453f-b303-5ed1c7f53d76",
+    "user_id": "c80bb887-2bf1-4122-a0e8-390ab97aac06",
+    "order_id": "9bd39e22-6542-4b12-a81f-91625f46b138",
+    "amount": 5.0,
+    "type": "commission",
+    "description": "Comiss\u00e3o N\u00edvel 5 - Item: Kit lingerie 22 pe\u00e7as - Pedido #9bd39e22",
+    "status": "confirmed",
+    "created_at": "2026-03-28T12:20:41.509086+00:00"
+  },
+  {
+    "id": "3f27489a-cf13-446f-831f-d6a6f9470ab6",
+    "user_id": "01b0467c-be48-48d3-9e0d-2f39ecbd0fe3",
+    "order_id": "455bffb2-db18-44be-ba25-e3a2fda559a6",
+    "amount": 10.0,
+    "type": "commission",
+    "description": "Comiss\u00e3o N\u00edvel 2 - Item: Kit lingerie 22 pe\u00e7as - Pedido #455bffb2",
+    "status": "confirmed",
+    "created_at": "2026-03-28T12:23:30.813269+00:00"
+  },
+  {
+    "id": "331e887e-5fd0-477a-a5ee-17c0b66e200f",
+    "user_id": "73713f6f-2019-45bd-b0ff-363e5f10a6fb",
+    "order_id": "455bffb2-db18-44be-ba25-e3a2fda559a6",
+    "amount": 5.0,
+    "type": "commission",
+    "description": "Comiss\u00e3o N\u00edvel 3 - Item: Kit lingerie 22 pe\u00e7as - Pedido #455bffb2",
+    "status": "confirmed",
+    "created_at": "2026-03-28T12:23:30.813269+00:00"
+  },
+  {
+    "id": "ea4d580f-e825-4695-a6ff-a60df69a8de4",
+    "user_id": "0b9afaaf-7dd2-4e57-b410-c5dae9784cfb",
+    "order_id": "455bffb2-db18-44be-ba25-e3a2fda559a6",
+    "amount": 20.0,
+    "type": "commission",
+    "description": "Comiss\u00e3o N\u00edvel 4 - Item: Kit lingerie 22 pe\u00e7as - Pedido #455bffb2",
+    "status": "confirmed",
+    "created_at": "2026-03-28T12:23:30.813269+00:00"
+  },
+  {
+    "id": "0c375e8a-b1e5-4768-919e-743fbaef71d5",
+    "user_id": "fa874ef5-ada6-4a81-9e96-486e806791cb",
+    "order_id": "455bffb2-db18-44be-ba25-e3a2fda559a6",
+    "amount": 5.0,
+    "type": "commission",
+    "description": "Comiss\u00e3o N\u00edvel 5 - Item: Kit lingerie 22 pe\u00e7as - Pedido #455bffb2",
+    "status": "confirmed",
+    "created_at": "2026-03-28T12:23:30.813269+00:00"
+  },
+  {
+    "id": "818c7634-84f7-4496-95b3-d2ba5095e99c",
+    "user_id": "73713f6f-2019-45bd-b0ff-363e5f10a6fb",
+    "order_id": "7a28b915-7ea0-4be9-9593-d395177ba671",
+    "amount": 10.0,
+    "type": "commission",
+    "description": "Comiss\u00e3o N\u00edvel 2 - Item: Kit lingerie 22 pe\u00e7as - Pedido #7a28b915",
+    "status": "confirmed",
+    "created_at": "2026-03-28T16:39:07.495005+00:00"
+  },
+  {
+    "id": "a9a443de-0d6e-40a5-9f60-45f96e3243d3",
+    "user_id": "0b9afaaf-7dd2-4e57-b410-c5dae9784cfb",
+    "order_id": "7a28b915-7ea0-4be9-9593-d395177ba671",
+    "amount": 5.0,
+    "type": "commission",
+    "description": "Comiss\u00e3o N\u00edvel 3 - Item: Kit lingerie 22 pe\u00e7as - Pedido #7a28b915",
+    "status": "confirmed",
+    "created_at": "2026-03-28T16:39:07.495005+00:00"
+  },
+  {
+    "id": "4b6b46e9-51ab-4108-ba3d-a8b36c15b947",
+    "user_id": "fa874ef5-ada6-4a81-9e96-486e806791cb",
+    "order_id": "7a28b915-7ea0-4be9-9593-d395177ba671",
+    "amount": 20.0,
+    "type": "commission",
+    "description": "Comiss\u00e3o N\u00edvel 4 - Item: Kit lingerie 22 pe\u00e7as - Pedido #7a28b915",
+    "status": "confirmed",
+    "created_at": "2026-03-28T16:39:07.495005+00:00"
+  },
+  {
+    "id": "f96df1e2-02c5-4d20-91e9-9f3aa0bbca8b",
+    "user_id": "c80bb887-2bf1-4122-a0e8-390ab97aac06",
+    "order_id": "7a28b915-7ea0-4be9-9593-d395177ba671",
+    "amount": 5.0,
+    "type": "commission",
+    "description": "Comiss\u00e3o N\u00edvel 5 - Item: Kit lingerie 22 pe\u00e7as - Pedido #7a28b915",
+    "status": "confirmed",
+    "created_at": "2026-03-28T16:39:07.495005+00:00"
+  },
+  {
+    "id": "72d6f056-18b8-49f0-87c8-68bdaed4eb8c",
+    "user_id": "0b9afaaf-7dd2-4e57-b410-c5dae9784cfb",
+    "order_id": "d31443f8-f06f-46a6-a904-cb93aa9bc708",
+    "amount": 10.0,
+    "type": "commission",
+    "description": "Comiss\u00e3o N\u00edvel 2 - Item: Kit lingerie 22 pe\u00e7as - Pedido #d31443f8",
+    "status": "confirmed",
+    "created_at": "2026-03-28T16:42:42.044815+00:00"
+  },
+  {
+    "id": "145b2d8f-e40e-4f14-962e-fe4d8819c5c2",
+    "user_id": "fa874ef5-ada6-4a81-9e96-486e806791cb",
+    "order_id": "d31443f8-f06f-46a6-a904-cb93aa9bc708",
+    "amount": 5.0,
+    "type": "commission",
+    "description": "Comiss\u00e3o N\u00edvel 3 - Item: Kit lingerie 22 pe\u00e7as - Pedido #d31443f8",
+    "status": "confirmed",
+    "created_at": "2026-03-28T16:42:42.044815+00:00"
+  },
+  {
+    "id": "b9c16715-d5b7-4ae4-be24-b924a534dbfb",
+    "user_id": "c80bb887-2bf1-4122-a0e8-390ab97aac06",
+    "order_id": "d31443f8-f06f-46a6-a904-cb93aa9bc708",
+    "amount": 20.0,
+    "type": "commission",
+    "description": "Comiss\u00e3o N\u00edvel 4 - Item: Kit lingerie 22 pe\u00e7as - Pedido #d31443f8",
+    "status": "confirmed",
+    "created_at": "2026-03-28T16:42:42.044815+00:00"
+  },
+  {
+    "id": "cc99d4b9-1efe-4b2e-b25f-efdefb1d4073",
+    "user_id": "62ca5670-da7b-4f82-a4ae-acbf8259b059",
+    "order_id": "c1583cac-dc9f-4d4f-9e8b-1c6abd14aa03",
+    "amount": 10.0,
+    "type": "commission",
+    "description": "Comiss\u00e3o N\u00edvel 2 - Item: Kit lingerie 22 pe\u00e7as - Pedido #c1583cac",
+    "status": "confirmed",
+    "created_at": "2026-03-28T16:46:58.975875+00:00"
+  },
+  {
+    "id": "8ad62133-087b-4b12-a3c0-497b186d542c",
+    "user_id": "0b9afaaf-7dd2-4e57-b410-c5dae9784cfb",
+    "order_id": "c1583cac-dc9f-4d4f-9e8b-1c6abd14aa03",
+    "amount": 5.0,
+    "type": "commission",
+    "description": "Comiss\u00e3o N\u00edvel 3 - Item: Kit lingerie 22 pe\u00e7as - Pedido #c1583cac",
+    "status": "confirmed",
+    "created_at": "2026-03-28T16:46:58.975875+00:00"
+  },
+  {
+    "id": "6fb76e0c-f28f-48c5-ae0c-05d0bbcee96c",
+    "user_id": "fa874ef5-ada6-4a81-9e96-486e806791cb",
+    "order_id": "c1583cac-dc9f-4d4f-9e8b-1c6abd14aa03",
+    "amount": 20.0,
+    "type": "commission",
+    "description": "Comiss\u00e3o N\u00edvel 4 - Item: Kit lingerie 22 pe\u00e7as - Pedido #c1583cac",
+    "status": "confirmed",
+    "created_at": "2026-03-28T16:46:58.975875+00:00"
+  },
+  {
+    "id": "53755a94-6b3b-4ec7-bb00-5b6905474ac1",
+    "user_id": "c80bb887-2bf1-4122-a0e8-390ab97aac06",
+    "order_id": "c1583cac-dc9f-4d4f-9e8b-1c6abd14aa03",
+    "amount": 5.0,
+    "type": "commission",
+    "description": "Comiss\u00e3o N\u00edvel 5 - Item: Kit lingerie 22 pe\u00e7as - Pedido #c1583cac",
+    "status": "confirmed",
+    "created_at": "2026-03-28T16:46:58.975875+00:00"
+  }
+]

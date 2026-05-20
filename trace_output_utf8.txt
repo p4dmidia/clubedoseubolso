@@ -1,0 +1,6 @@
+﻿Triggering update for order: #ORD-1152
+SUCCESS: Update worked? That's strange if it supposedly fails.
+
+Reading debug_logs...
+No logs found for this order. This means the trigger didn't even start or the transaction rolled back logs? (In Postgres, if transaction rolls back, logs in the same DB also roll back UNLESS they are external).
+Wait, if logs roll back, I should use RAISE NOTICE or a separate mechanism. But I used SECURITY DEFINER trigger.

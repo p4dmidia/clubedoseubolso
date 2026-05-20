@@ -1,0 +1,14 @@
+--- Searching for any order with status like 'Pago' (case insensitive) ---
+[]
+
+--- Searching for orders with referral_code = 'fiel01' ---
+[]
+
+--- Searching for orders for user_id = '7e57d5d8-f44c-46ed-8c14-46e191321620' ---
+null
+
+--- Checking for recent purchases in 'company_purchases' ---
+[]
+
+--- Checking for logs in 'commissions' related to recent activity ---
+[]

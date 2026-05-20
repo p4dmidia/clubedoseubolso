@@ -1,0 +1,68 @@
+MYSTERY USER CHECK
+==================
+
+--- Searching for user_profile or affiliate with ID '5d15d1ed-0965-4442-af2f-10f1d50cf3e4' ---
+Profile:
+[
+  {
+    "id": "5d15d1ed-0965-4442-af2f-10f1d50cf3e4",
+    "mocha_user_id": null,
+    "cpf": null,
+    "role": "affiliate",
+    "is_active": true,
+    "sponsor_id": "f5b2a147-0ada-4b24-a1dd-025556c0c9e0",
+    "company_name": null,
+    "created_at": "2026-03-27T23:27:45.458885+00:00",
+    "updated_at": "2026-03-27T23:27:45.458885+00:00",
+    "email": "gilgalmissoes@gmail.com",
+    "organization_id": "5111af72-27a5-41fd-8ed9-8c51b78b4fdd",
+    "avatar_url": null,
+    "referrer_id": "f5b2a147-0ada-4b24-a1dd-025556c0c9e0",
+    "registration_type": "business",
+    "status": "active",
+    "cnpj": "63.755.873/0001-24",
+    "total_sales": 0.0,
+    "rank": "Consultor",
+    "leadership_bonus_total": 0.0,
+    "login": "Gilgalmissoes",
+    "balance": 0.0,
+    "total_earnings": 0.0,
+    "monthly_commission_total": 0.0,
+    "last_commission_reset": "2026-03-27T23:27:45.457783+00:00",
+    "last_activation_at": null,
+    "whatsapp": "41902834287",
+    "full_name": "Gilgal  Miss\u00f5es e Evangelismo",
+    "city": null,
+    "pix_key": null
+  }
+]
+
+Affiliate (by ID):
+[]
+
+Affiliate (by user_id):
+[
+  {
+    "id": "481274fd-8f4e-4e48-8a15-c9a669ac2999",
+    "user_id": "5d15d1ed-0965-4442-af2f-10f1d50cf3e4",
+    "full_name": "Gilgal  Miss\u00f5es e Evangelismo",
+    "cpf": null,
+    "email": "gilgalmissoes@gmail.com",
+    "whatsapp": "41902834287",
+    "referral_code": "Gilgalmissoes",
+    "sponsor_id": "25c7ed99-773d-423c-b2b0-2d1816caee27",
+    "is_active": true,
+    "is_verified": false,
+    "last_access_at": null,
+    "created_at": "2026-03-27T23:27:45.458885+00:00",
+    "updated_at": "2026-03-27T23:27:45.458885+00:00",
+    "position_slot": null,
+    "organization_id": "5111af72-27a5-41fd-8ed9-8c51b78b4fdd",
+    "cnpj": "63.755.873/0001-24",
+    "avatar_url": null
+  }
+]
+
+--- Checking if this user has referral_code 'gilgalmissoes' ---
+[]
+

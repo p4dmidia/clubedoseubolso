@@ -1,0 +1,116 @@
+[
+  {
+    "id": 15,
+    "operation": "signup_success",
+    "message": "Cadastro conclu\u00eddo para: leo@gmail.com",
+    "metadata": null,
+    "created_at": "2026-03-27T19:57:50.07635+00:00"
+  },
+  {
+    "id": 14,
+    "operation": "signup_start",
+    "message": "Iniciando processamento: leo@gmail.com",
+    "metadata": {
+      "cpf": "40982616503",
+      "cnpj": null,
+      "nome": "Leo andrade",
+      "login": "LEONARDO456",
+      "whatsapp": "3199800789",
+      "sobrenome": "silva",
+      "sponsor_code": null,
+      "organization_id": "5111af72-27a5-41fd-8ed9-8c51b78b4fdd",
+      "registration_type": "business"
+    },
+    "created_at": "2026-03-27T19:57:50.07635+00:00"
+  },
+  {
+    "id": 12,
+    "operation": "signup_start",
+    "message": "Iniciando processamento: test_v5_56bbb6f6@example.com",
+    "metadata": {
+      "nome": "Teste",
+      "login": "testv5_56bbb6f6",
+      "whatsapp": "11999999999",
+      "sobrenome": "V5 56bbb6f6",
+      "organization_id": "5111af72-27a5-41fd-8ed9-8c51b78b4fdd",
+      "registration_type": "personal"
+    },
+    "created_at": "2026-03-27T19:50:25.316725+00:00"
+  },
+  {
+    "id": 13,
+    "operation": "signup_success",
+    "message": "Cadastro conclu\u00eddo para: test_v5_56bbb6f6@example.com",
+    "metadata": null,
+    "created_at": "2026-03-27T19:50:25.316725+00:00"
+  },
+  {
+    "id": 11,
+    "operation": "signup_success",
+    "message": "Cadastro conclu\u00eddo para: test_v5_cfa72620@example.com",
+    "metadata": null,
+    "created_at": "2026-03-27T19:50:02.550008+00:00"
+  },
+  {
+    "id": 10,
+    "operation": "signup_start",
+    "message": "Iniciando processamento: test_v5_cfa72620@example.com",
+    "metadata": {
+      "nome": "Teste",
+      "login": "testv5_cfa72620",
+      "whatsapp": "11999999999",
+      "sobrenome": "V5 cfa72620",
+      "organization_id": "5111af72-27a5-41fd-8ed9-8c51b78b4fdd",
+      "registration_type": "personal"
+    },
+    "created_at": "2026-03-27T19:50:02.550008+00:00"
+  },
+  {
+    "id": 9,
+    "operation": "signup_success",
+    "message": "Cadastro conclu\u00eddo para: test_v5_c781dd33@example.com",
+    "metadata": null,
+    "created_at": "2026-03-27T19:49:39.32981+00:00"
+  },
+  {
+    "id": 8,
+    "operation": "signup_start",
+    "message": "Iniciando processamento: test_v5_c781dd33@example.com",
+    "metadata": {},
+    "created_at": "2026-03-27T19:49:39.32981+00:00"
+  },
+  {
+    "id": 6,
+    "operation": "signup_start",
+    "message": "Iniciando processamento de novo usu\u00e1rio: joana@gmail.com",
+    "metadata": {
+      "cpf": "898.947.230-04",
+      "cnpj": null,
+      "nome": "Joana ",
+      "login": "joanan2",
+      "whatsapp": "32988552211",
+      "sobrenome": "nivel 2",
+      "sponsor_code": "mariafran",
+      "organization_id": "5111af72-27a5-41fd-8ed9-8c51b78b4fdd",
+      "registration_type": "business"
+    },
+    "created_at": "2026-03-25T02:08:18.765067+00:00"
+  },
+  {
+    "id": 7,
+    "operation": "signup_warning",
+    "message": "Padrinho n\u00e3o encontrado para o c\u00f3digo: mariafran",
+    "metadata": {
+      "cpf": "898.947.230-04",
+      "cnpj": null,
+      "nome": "Joana ",
+      "login": "joanan2",
+      "whatsapp": "32988552211",
+      "sobrenome": "nivel 2",
+      "sponsor_code": "mariafran",
+      "organization_id": "5111af72-27a5-41fd-8ed9-8c51b78b4fdd",
+      "registration_type": "business"
+    },
+    "created_at": "2026-03-25T02:08:18.765067+00:00"
+  }
+]

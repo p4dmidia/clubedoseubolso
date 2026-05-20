@@ -1,0 +1,24 @@
+COMMISSION 0.05 CHECK
+=====================
+
+--- Commissions with amount 0.05 ---
+[
+  {
+    "id": "76da32c0-eea3-46cc-a601-c9737b67f026",
+    "organization_id": "5111af72-27a5-41fd-8ed9-8c51b78b4fdd",
+    "user_id": "5d15d1ed-0965-4442-af2f-10f1d50cf3e4",
+    "order_id": "#ORD-8233",
+    "amount": 0.05,
+    "level": 1,
+    "commission_type": "percent",
+    "description": "Comiss\u00e3o de Gera\u00e7\u00e3o 1 - Pedido #ORD-8233",
+    "created_at": "2026-04-01T16:46:49.74318+00:00"
+  }
+]
+
+--- Order Details for Order #ORD-8233 ---
+[]
+
+--- All commissions for Order #ORD-8233 ---
+[]
+
