@@ -27,10 +27,10 @@ const RegisterPage: React.FC = () => {
 
     const [regType, setRegType] = useState<'client' | 'affiliate'>(regTypeParam === 'client' ? 'client' : 'affiliate');
     const [formData, setFormData] = useState({
-        nomeCompleto: '',
+        nomeCompleto: searchParams.get('name') || searchParams.get('nome') || '',
         cpf: '',
-        email: '',
-        whatsapp: '',
+        email: searchParams.get('email') || '',
+        whatsapp: searchParams.get('whatsapp') || searchParams.get('phone') || '',
         dataNascimento: '',
         senha: '',
         confirmarSenha: '',

@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { ShoppingCart, Menu, X } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useCart } from './CartContext';
 import CartDrawer from './CartDrawer';
 
 const Header: React.FC = () => {
   const { cartCount, setIsCartOpen } = useCart();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const location = useLocation();
+  const isHome = location.pathname === '/' || location.pathname === '';
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-md border-b border-gray-100">
@@ -30,24 +32,34 @@ const Header: React.FC = () => {
         {/* Controls */}
         <div className="flex items-center gap-2 md:gap-4">
           {/* Cart Icon */}
-          <button 
-            onClick={() => setIsCartOpen(true)}
-            className="relative p-2 text-slate-700 hover:text-[#2980B9] transition-colors focus:outline-none"
-          >
-            <ShoppingCart className="w-5 h-5 md:w-6 md:h-6" />
-            {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black w-4 h-4 md:w-5 md:h-5 rounded-full flex items-center justify-center border-2 border-white">
-                {cartCount}
-              </span>
-            )}
-          </button>
+          {!isHome && (
+            <button 
+              onClick={() => setIsCartOpen(true)}
+              className="relative p-2 text-slate-700 hover:text-[#2980B9] transition-colors focus:outline-none"
+            >
+              <ShoppingCart className="w-5 h-5 md:w-6 md:h-6" />
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black w-4 h-4 md:w-5 md:h-5 rounded-full flex items-center justify-center border-2 border-white">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+          )}
 
-          {/* CTA Button */}
+          {/* Member Login (Secondary) */}
           <Link 
             to="/login" 
-            className="hidden lg:inline-block bg-[#27AE60] text-white font-bold px-6 py-2.5 rounded-lg hover:bg-[#1e8449] transition-all shadow-md text-sm"
+            className="hidden lg:inline-block border border-slate-300 text-slate-700 font-bold px-4 py-2.5 rounded-lg hover:bg-slate-50 transition-all text-sm"
           >
             Área do Membro
+          </Link>
+
+          {/* Visitor CTA (Primary) */}
+          <Link 
+            to="/register?type=affiliate" 
+            className="hidden lg:inline-block bg-[#27AE60] text-white font-bold px-5 py-2.5 rounded-lg hover:bg-[#1e8449] transition-all shadow-md text-sm"
+          >
+            Quero ser Afiliado
           </Link>
 
           {/* Menu Mobile Button */}
@@ -94,9 +106,16 @@ const Header: React.FC = () => {
           <Link 
             to="/login" 
             onClick={() => setIsMenuOpen(false)} 
-            className="block bg-[#27AE60] text-white font-bold text-center px-4 py-2.5 rounded-lg hover:bg-[#1e8449] transition-all"
+            className="block border border-slate-350 text-slate-700 font-bold text-center px-4 py-2.5 rounded-lg hover:bg-slate-50 transition-all"
           >
             Área do Membro
+          </Link>
+          <Link 
+            to="/register?type=affiliate" 
+            onClick={() => setIsMenuOpen(false)} 
+            className="block bg-[#27AE60] text-white font-bold text-center px-4 py-2.5 rounded-lg hover:bg-[#1e8449] transition-all"
+          >
+            Quero ser Afiliado
           </Link>
         </div>
       )}
