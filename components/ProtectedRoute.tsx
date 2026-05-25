@@ -22,7 +22,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles,
     }
 
     if (!user || !profile) {
-        return <Navigate to="/login" replace state={{ from: location }} />;
+        const redirectPath = location.pathname.startsWith('/admin') ? '/admin/login' : '/login';
+        return <Navigate to={redirectPath} replace state={{ from: location }} />;
     }
 
     if (allowedRoles && allowedRoles.length > 0) {

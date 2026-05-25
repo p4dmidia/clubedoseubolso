@@ -4,6 +4,7 @@ import { Mail, Lock, LogIn, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { ORGANIZATION_ID } from '../lib/config';
+import { recordSecurityLog } from '../lib/security';
 
 const LoginPage: React.FC = () => {
     const navigate = useNavigate();
@@ -60,6 +61,9 @@ const LoginPage: React.FC = () => {
                     throw new Error('E-mail ou senha não encontrados.');
                 }
 
+                // Gravar log de sucesso de login
+                recordSecurityLog(loginIdentifier, 'login_success', 'success');
+
                 toast.success('Login realizado com sucesso!', {
                     style: {
                         background: '#0B1221',
@@ -85,6 +89,9 @@ const LoginPage: React.FC = () => {
                 }
             }
         } catch (err: any) {
+            // Gravar log de falha de login
+            recordSecurityLog(loginIdentifier, 'login_failure', 'failure');
+
             let message = 'Erro ao realizar login. Verifique suas credenciais.';
             if (err.message === 'Invalid login credentials') {
                 // Se a pessoa digitou um username que puxou um email, podemos avisar que a senha daquele email está errada

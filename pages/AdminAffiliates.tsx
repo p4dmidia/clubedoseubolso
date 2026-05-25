@@ -49,6 +49,17 @@ const AdminAffiliates: React.FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [newPassword, setNewPassword] = useState('');
     const [originalEmail, setOriginalEmail] = useState('');
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [createFormData, setCreateFormData] = useState({
+        name: '',
+        email: '',
+        password: '',
+        phone: '',
+        cpf: '',
+        cnpj: '',
+        login: '',
+        sponsor_code: ''
+    });
 
     const itemsPerPage = 8;
 
@@ -154,6 +165,50 @@ const AdminAffiliates: React.FC = () => {
         } finally {
             setIsLoading(true);
             setTimeout(() => setIsLoading(false), 500);
+        }
+    };
+
+    const handleCreateAffiliate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!createFormData.email.trim() || !createFormData.password.trim() || !createFormData.name.trim()) {
+            toast.error('Por favor, preencha Nome, E-mail e Senha.');
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            const { error } = await supabase.rpc('admin_create_user', {
+                p_email: createFormData.email.trim(),
+                p_password: createFormData.password.trim(),
+                p_role: 'affiliate',
+                p_full_name: createFormData.name.trim(),
+                p_whatsapp: createFormData.phone.trim() || null,
+                p_cpf: createFormData.cpf.trim() || null,
+                p_cnpj: createFormData.cnpj.trim() || null,
+                p_login: createFormData.login.trim() || null,
+                p_sponsor_code: createFormData.sponsor_code.trim() || null
+            });
+
+            if (error) throw error;
+
+            toast.success('Afiliado criado com sucesso!');
+            setIsCreateModalOpen(false);
+            setCreateFormData({
+                name: '',
+                email: '',
+                password: '',
+                phone: '',
+                cpf: '',
+                cnpj: '',
+                login: '',
+                sponsor_code: ''
+            });
+            fetchAffiliates();
+        } catch (error: any) {
+            console.error('Error creating affiliate:', error);
+            toast.error(error.message || 'Erro ao criar afiliado');
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -324,6 +379,13 @@ const AdminAffiliates: React.FC = () => {
 
                     <div className="flex flex-wrap gap-3 w-full xl:w-auto">
                         <button
+                            onClick={() => setIsCreateModalOpen(true)}
+                            className="flex-1 xl:flex-none flex items-center justify-center gap-2 px-6 py-3.5 bg-[#05080F] text-white rounded-2xl font-bold hover:bg-slate-800 transition-all text-sm shadow-xl shadow-slate-200"
+                        >
+                            <UserPlus className="w-4 h-4 text-[#2980B9]" />
+                            Novo Afiliado
+                        </button>
+                        <button
                             onClick={handleExportPDF}
                             disabled={isExporting}
                             className="flex-1 xl:flex-none flex items-center justify-center gap-2 px-6 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-600 font-bold hover:bg-slate-50 transition-all text-sm shadow-sm"
@@ -455,6 +517,7 @@ const AdminAffiliates: React.FC = () => {
                                     <th className="text-left py-8 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-none">Status</th>
                                     <th className="text-left py-8 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-none text-center">Ganhos Acumulados</th>
                                     <th className="text-left py-8 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-none">Plano</th>
+                                    <th className="text-left py-8 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-none">Membro Desde</th>
                                     <th className="text-right py-8 px-10 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-none">Ações</th>
                                 </tr>
                             </thead>
@@ -465,6 +528,7 @@ const AdminAffiliates: React.FC = () => {
                                             <td className="py-6 px-10"><div className="h-12 w-48 bg-slate-100 rounded-2xl"></div></td>
                                             <td className="py-6 px-6"><div className="h-8 w-24 bg-slate-100 rounded-full"></div></td>
                                             <td className="py-6 px-6"><div className="h-10 w-24 bg-slate-100 rounded-2xl mx-auto"></div></td>
+                                            <td className="py-6 px-6"><div className="h-10 w-24 bg-slate-100 rounded-2xl"></div></td>
                                             <td className="py-6 px-6"><div className="h-10 w-24 bg-slate-100 rounded-2xl"></div></td>
                                             <td className="py-6 px-10"><div className="h-10 w-20 bg-slate-100 rounded-2xl ml-auto"></div></td>
                                         </tr>
@@ -496,6 +560,12 @@ const AdminAffiliates: React.FC = () => {
                                                 <div className="flex items-center gap-2">
                                                     <Shield className={`w-4 h-4 ${aff.plan.includes('Slot') ? 'text-[#2980B9]' : 'text-slate-300'}`} />
                                                     <span className="text-[10px] md:text-xs font-black text-slate-600">{aff.plan}</span>
+                                                </div>
+                                            </td>
+                                            <td className="py-8 px-6">
+                                                <div className="flex items-center gap-2">
+                                                    <Calendar className="w-4 h-4 text-slate-300" />
+                                                    <span className="text-[10px] md:text-xs font-bold text-slate-500">{aff.joined}</span>
                                                 </div>
                                             </td>
                                             <td className="py-8 px-10 text-right shrink-0">
@@ -826,6 +896,127 @@ const AdminAffiliates: React.FC = () => {
                                 {isSaving ? '...' : 'REMOVER'}
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {isCreateModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-[#05080F]/80 backdrop-blur-md" onClick={() => setIsCreateModalOpen(false)}></div>
+                    <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
+                        <div className="p-8 md:p-10 border-b border-slate-100 flex justify-between items-center shrink-0">
+                            <div>
+                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-1">Painel Administrativo</p>
+                                <h2 className="text-xl md:text-2xl font-black text-[#05080F]">Novo Afiliado</h2>
+                            </div>
+                            <button onClick={() => setIsCreateModalOpen(false)} className="p-2 hover:bg-slate-50 rounded-xl transition-all">
+                                <X className="w-5 h-5 text-slate-400" />
+                            </button>
+                        </div>
+                        <form onSubmit={handleCreateAffiliate} className="flex-1 overflow-y-auto p-8 md:p-10 space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Nome Completo</label>
+                                    <input
+                                        type="text"
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"
+                                        value={createFormData.name}
+                                        onChange={e => setCreateFormData({ ...createFormData, name: e.target.value })}
+                                        placeholder="Nome do Afiliado"
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">E-mail</label>
+                                    <input
+                                        type="email"
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"
+                                        value={createFormData.email}
+                                        onChange={e => setCreateFormData({ ...createFormData, email: e.target.value })}
+                                        placeholder="email@afiliado.com"
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Senha de Acesso</label>
+                                    <input
+                                        type="password"
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"
+                                        value={createFormData.password}
+                                        onChange={e => setCreateFormData({ ...createFormData, password: e.target.value })}
+                                        placeholder="Senha temporária"
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">WhatsApp</label>
+                                    <input
+                                        type="text"
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"
+                                        value={createFormData.phone}
+                                        onChange={e => setCreateFormData({ ...createFormData, phone: e.target.value })}
+                                        placeholder="(11) 99999-9999"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">CPF</label>
+                                    <input
+                                        type="text"
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"
+                                        value={createFormData.cpf}
+                                        onChange={e => setCreateFormData({ ...createFormData, cpf: e.target.value })}
+                                        placeholder="000.000.000-00"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">CNPJ (Opcional)</label>
+                                    <input
+                                        type="text"
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"
+                                        value={createFormData.cnpj}
+                                        onChange={e => setCreateFormData({ ...createFormData, cnpj: e.target.value })}
+                                        placeholder="00.000.000/0000-00"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Login (Referral Code)</label>
+                                    <input
+                                        type="text"
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"
+                                        value={createFormData.login}
+                                        onChange={e => setCreateFormData({ ...createFormData, login: e.target.value.toLowerCase().replace(/\s+/g, '') })}
+                                        placeholder="ex: joaodasilva"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Indicador / Patrocinador (Código)</label>
+                                    <input
+                                        type="text"
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"
+                                        value={createFormData.sponsor_code}
+                                        onChange={e => setCreateFormData({ ...createFormData, sponsor_code: e.target.value.toLowerCase().replace(/\s+/g, '') })}
+                                        placeholder="ex: patrocinador"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex gap-4 pt-4 shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCreateModalOpen(false)}
+                                    className="flex-1 py-4 border border-slate-100 text-slate-400 rounded-2xl font-black text-xs uppercase tracking-widest"
+                                >
+                                    CANCELAR
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSaving}
+                                    className="flex-[2] py-4 bg-[#05080F] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#2980B9] hover:text-[#05080F] transition-all flex items-center justify-center gap-2"
+                                >
+                                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4 text-[#2980B9]" />}
+                                    CADASTRAR AFILIADO
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

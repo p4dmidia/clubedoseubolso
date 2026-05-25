@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { ShieldAlert, Lock, User, Eye, EyeOff, ArrowRight, ShieldCheck } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import { recordSecurityLog } from '../lib/security';
 
 const AdminLoginPage: React.FC = () => {
     const navigate = useNavigate();
@@ -37,16 +38,19 @@ const AdminLoginPage: React.FC = () => {
             if (profile?.role !== 'admin_master' && profile?.role !== 'admin_op') {
                 // Not an admin - Force Logout
                 await supabase.auth.signOut();
+                recordSecurityLog(email, 'login_failure', 'failure');
                 toast.error('Acesso negado. Esta área é restrita a administradores.');
                 setIsLoading(false);
                 return;
             }
 
             // 3. Success
+            recordSecurityLog(email, 'login_success', 'success');
             toast.success('Autenticação realizada com sucesso!');
             navigate('/admin/dashboard');
 
         } catch (error: any) {
+            recordSecurityLog(email, 'login_failure', 'failure');
             console.error('Admin Login Error:', error);
             toast.error(error.message || 'Erro ao realizar login. Verifique suas credenciais.');
         } finally {
