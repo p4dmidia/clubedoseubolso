@@ -296,7 +296,7 @@ const CheckoutPage: React.FC = () => {
                     detailedMessage = paymentError.message;
                 }
                 
-                throw new Error(detailedMessage || 'Erro ao processar pagamento via Mercado Pago.');
+                throw new Error(detailedMessage || 'Erro ao processar pagamento via Asaas.');
             }
 
             // Tratamento para nova estratégia de retorno 200 com erro no corpo

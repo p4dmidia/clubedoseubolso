@@ -152,120 +152,125 @@ serve(async (req) => {
 
             if (orderError || !order) throw new Error(`Pedido ${safeId} não encontrado.`);
 
-            // 2. Buscar credenciais
+            // 2. Buscar credenciais Asaas
             const { data: org } = await supabase.from("organizations").select("*").eq("id", order.organization_id).single();
-            const accessToken = org?.mercadopago_access_token || (org?.mercadopago_config as any)?.access_token;
+            const asaasToken = org?.asaas_access_token;
+            const asaasEnv = org?.asaas_environment || 'sandbox';
 
-            if (!accessToken) throw new Error("Configuração do Mercado Pago não encontrada para esta organização.");
+            if (!asaasToken) throw new Error("Configuração do Asaas não encontrada para esta organização.");
 
-            if (targetPaymentMethod === "pix") {
-                // --- Lógica PIX ---
-                const cleanDoc = (customerCpf || order.customer_cpf || "").replace(/\D/g, "");
-                const docType = cleanDoc.length === 11 ? "CPF" : cleanDoc.length === 14 ? "CNPJ" : null;
+            const baseUrl = asaasEnv === 'production' 
+                ? 'https://api.asaas.com/v3' 
+                : 'https://api-sandbox.asaas.com/v3';
 
-                if (!docType) throw new Error("Documento (CPF/CNPJ) inválido para pagamento PIX.");
+            const cleanCpf = (customerCpf || order.customer_cpf || "").replace(/\D/g, "");
+            if (!cleanCpf) throw new Error("CPF/CNPJ do cliente é obrigatório para processar o pagamento.");
 
-                const paymentData = {
-                    transaction_amount: Number(order.total_amount),
-                    description: `Pedido ${order.id} - ${org?.name || "Loja"}`,
-                    payment_method_id: "pix",
-                    installments: 1,
-                    payer: {
-                        email: order.customer_email || "cliente@mercado.com",
-                        first_name: order.customer_name?.split(" ")[0] || "Cliente",
-                        last_name: order.customer_name?.split(" ").slice(1).join(" ") || "Sistema",
-                        identification: { type: docType, number: cleanDoc }
-                    },
-                    external_reference: order.id,
-                    notification_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/mercadopago-webhook?org_id=${order.organization_id}`,
+            // 1. Procurar cliente existente no Asaas
+            console.log(`Buscando cliente por CPF/CNPJ ${cleanCpf} no Asaas...`);
+            const customerSearchUrl = `${baseUrl}/customers?cpfCnpj=${cleanCpf}`;
+            const searchResponse = await fetch(customerSearchUrl, {
+                method: "GET",
+                headers: {
+                    "access_token": asaasToken,
+                    "Content-Type": "application/json",
+                    "User-Agent": "ClubeDoSeuBolsoIntegration"
+                }
+            });
+
+            if (!searchResponse.ok) {
+                const errText = await searchResponse.text();
+                throw new Error(`Erro ao buscar cliente no Asaas: ${errText}`);
+            }
+
+            const searchResult = await searchResponse.json();
+            let asaasCustomerId = "";
+
+            if (searchResult.data && searchResult.data.length > 0) {
+                asaasCustomerId = searchResult.data[0].id;
+                console.log(`Cliente encontrado no Asaas: ${asaasCustomerId}`);
+            } else {
+                // 2. Se não existir, criar cliente
+                console.log("Cliente não encontrado. Criando novo cliente no Asaas...");
+                const customerData = {
+                    name: order.customer_name || "Cliente",
+                    cpfCnpj: cleanCpf,
+                    email: order.customer_email || undefined,
+                    mobilePhone: order.customer_phone ? order.customer_phone.replace(/\D/g, "") : undefined,
+                    externalReference: order.user_id || undefined
                 };
 
-                const response = await fetch("https://api.mercadopago.com/v1/payments", {
+                const createResponse = await fetch(`${baseUrl}/customers`, {
                     method: "POST",
                     headers: {
-                        "Authorization": `Bearer ${accessToken}`,
+                        "access_token": asaasToken,
                         "Content-Type": "application/json",
-                        "X-Idempotency-Key": `pix-${order.id}-${Date.now()}`
+                        "User-Agent": "ClubeDoSeuBolsoIntegration"
                     },
-                    body: JSON.stringify(paymentData),
+                    body: JSON.stringify(customerData)
                 });
 
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.message || "Erro no Mercado Pago (PIX)");
-
-                const transactionData = result.point_of_interaction?.transaction_data;
-                
-                await supabase.from("orders").update({ 
-                    payment_id: result.id.toString(),
-                    pix_qr_code: transactionData?.qr_code,
-                    pix_qr_code_base64: transactionData?.qr_code_base64,
-                    pix_copy_paste: transactionData?.qr_code,
-                    status: 'Pendente'
-                }).eq("id", order.id);
-
-                return new Response(JSON.stringify({
-                    success: true,
-                    qr_code: transactionData?.qr_code,
-                    qr_code_base64: transactionData?.qr_code_base64,
-                    copy_paste: transactionData?.qr_code,
-                    payment_id: result.id,
-                    ticket_url: transactionData?.ticket_url
-                }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-
-            } else {
-                // --- Lógica Checkout Pro (Cartão e outros) ---
-                const items = order.order_items?.length > 0 
-                    ? order.order_items.map((item: any) => ({
-                        title: item.product_name,
-                        quantity: item.quantity,
-                        unit_price: Number(item.unit_price),
-                        currency_id: "BRL",
-                      }))
-                    : [{
-                        title: `Pedido ${order.id}`,
-                        quantity: 1,
-                        unit_price: Number(order.total_amount),
-                        currency_id: "BRL",
-                      }];
-
-                // Adicionar Frete se houver
-                if (order.shipping_cost && Number(order.shipping_cost) > 0) {
-                    items.push({
-                        title: "Frete",
-                        quantity: 1,
-                        unit_price: Number(order.shipping_cost),
-                        currency_id: "BRL",
-                    });
+                if (!createResponse.ok) {
+                    const errText = await createResponse.text();
+                    throw new Error(`Erro ao criar cliente no Asaas: ${errText}`);
                 }
 
-                const preferenceData = {
-                    items,
-                    payer: { email: order.customer_email || "cliente@mercado.com" },
-                    external_reference: order.id,
-                    back_urls: {
-                        success: `${origin || "https://classea.vercel.app"}/checkout/success`,
-                        failure: `${origin || "https://classea.vercel.app"}/checkout`,
-                        pending: `${origin || "https://classea.vercel.app"}/checkout`,
-                    },
-                    auto_return: "approved",
-                    notification_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/mercadopago-webhook?org_id=${order.organization_id}`,
-                };
-
-                const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
-                    method: "POST",
-                    headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
-                    body: JSON.stringify(preferenceData),
-                });
-
-                const result = await response.json();
-                if (!result.id) throw new Error(result.message || "Erro ao criar preferência MP");
-
-                await supabase.from("orders").update({ payment_preference_id: result.id }).eq("id", order.id);
-
-                return new Response(JSON.stringify({ success: true, id: result.id, init_point: result.init_point }), {
-                    headers: { ...corsHeaders, "Content-Type": "application/json" }
-                });
+                const createResult = await createResponse.json();
+                asaasCustomerId = createResult.id;
+                console.log(`Cliente criado no Asaas: ${asaasCustomerId}`);
             }
+
+            // 3. Criar cobrança no Asaas (Checkout Asaas / invoiceUrl)
+            console.log(`Criando cobrança de R$ ${order.total_amount} para cliente ${asaasCustomerId}...`);
+            
+            // Gerar data de vencimento: hoje formatada em YYYY-MM-DD
+            const dateSP = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+            const year = dateSP.getFullYear();
+            const month = String(dateSP.getMonth() + 1).padStart(2, '0');
+            const day = String(dateSP.getDate()).padStart(2, '0');
+            const dueDate = `${year}-${month}-${day}`;
+
+            const paymentData = {
+                customer: asaasCustomerId,
+                billingType: "UNDEFINED",
+                value: Number(order.total_amount),
+                dueDate: dueDate,
+                externalReference: order.id
+            };
+
+            const paymentResponse = await fetch(`${baseUrl}/payments`, {
+                method: "POST",
+                headers: {
+                    "access_token": asaasToken,
+                    "Content-Type": "application/json",
+                    "User-Agent": "ClubeDoSeuBolsoIntegration"
+                },
+                body: JSON.stringify(paymentData)
+            });
+
+            if (!paymentResponse.ok) {
+                const errText = await paymentResponse.text();
+                throw new Error(`Erro ao criar cobrança no Asaas: ${errText}`);
+            }
+
+            const paymentResult = await paymentResponse.json();
+            console.log(`Cobrança criada com sucesso! ID Asaas: ${paymentResult.id}`);
+
+            // 4. Salvar o payment_id do Asaas e a URL da fatura (invoiceUrl) no pedido
+            await supabase.from("orders").update({
+                payment_id: paymentResult.id,
+                payment_preference_id: paymentResult.invoiceUrl,
+                status: 'Pendente',
+                updated_at: new Date().toISOString()
+            }).eq("id", order.id);
+
+            return new Response(JSON.stringify({
+                success: true,
+                payment_id: paymentResult.id,
+                invoiceUrl: paymentResult.invoiceUrl,
+                init_point: paymentResult.invoiceUrl, // Compatibilidade com frontend (Cartão)
+                ticket_url: paymentResult.invoiceUrl  // Compatibilidade com frontend (PIX)
+            }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
 
         throw new Error("Dados insuficientes para processar o pedido.");

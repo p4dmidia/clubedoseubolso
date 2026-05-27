@@ -1,39 +1,32 @@
-import urllib.request
-import json
+from supabase import create_client, Client
+import sys
 
-supabase_url = "https://clnuievcdnbwqbyqhwys.supabase.co"
-key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsbnVpZXZjZG5id3FieXFod3lzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjExNDkzMCwiZXhwIjoyMDg3NjkwOTMwfQ.2c3qA3jew8xedEzEA_BvXKQgS2BqC1fN5Y0PKb1JKbk"
-
-def run_rpc(name, params={}):
-    url = f"{supabase_url}/rest/v1/rpc/{name}"
-    req = urllib.request.Request(url, data=json.dumps(params).encode('utf-8'), method='POST')
-    req.add_header("apikey", key)
-    req.add_header("Authorization", f"Bearer {key}")
-    req.add_header("Content-Type", "application/json")
+def check_logs():
+    url = "https://qbjzhcxwtpskrlbgjagc.supabase.co"
+    anon_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFianpoY3h3dHBza3JsYmdqYWdjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyMjEwNjIsImV4cCI6MjA5NDc5NzA2Mn0.NAwTalsBsLCHgv29a7TN-CM-_frxNrUu5IZU87D8Rno"
+    
+    supabase: Client = create_client(url, anon_key)
     try:
-        with urllib.request.urlopen(req) as response:
-            return response.read().decode('utf-8')
+        supabase.auth.sign_in_with_password({
+            "email": "admin@seuclube.com",
+            "password": "SenhaAdmin123!"
+        })
+        
+        # Query debug_logs
+        print("--- DEBUG LOGS (Últimos 10) ---")
+        res = supabase.table("debug_logs").select("*").order("created_at", desc=True).limit(10).execute()
+        for log in res.data:
+            print(f"[{log['created_at']}] {log['operation']} | {log['message']}")
+            if log['metadata']:
+                print(f"   Metadata: {log['metadata']}")
+
+        print("\n--- SECURITY LOGS (Últimos 5) ---")
+        res_sec = supabase.table("security_logs").select("*").order("created_at", desc=True).limit(5).execute()
+        for log in res_sec.data:
+            print(f"[{log['created_at']}] {log['event_type']} | {log['status']} | {log['user_email']}")
+
     except Exception as e:
-        return str(e)
+        print(f"Erro: {e}")
 
-# Try to find table info
-print("--- TABLE INFO affiliates ---")
-# I'll try to insert a dummy record and see the error to infer columns if needed, but I already know them.
-# I want to know the CONSTRAINTS.
-
-# Let's check if there's a debug log.
-# I saw a debug_logs table in previous viewed files.
-print("--- RECENT DEBUG LOGS ---")
-def query_table(table, params=""):
-    url = f"{supabase_url}/rest/v1/{table}?{params}"
-    req = urllib.request.Request(url)
-    req.add_header("apikey", key)
-    req.add_header("Authorization", f"Bearer {key}")
-    try:
-        with urllib.request.urlopen(req) as response:
-            return json.loads(response.read().decode('utf-8'))
-    except Exception as e:
-        return str(e)
-
-logs = query_table("debug_logs", "order=created_at.desc&limit=5")
-print(json.dumps(logs, indent=2))
+if __name__ == "__main__":
+    check_logs()

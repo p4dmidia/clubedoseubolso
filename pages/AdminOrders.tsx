@@ -37,7 +37,7 @@ const AdminOrders: React.FC = () => {
     const [orders, setOrders] = useState<Order[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'shipped' | 'cancelled'>('all');
+    const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'cancelled'>('all');
     const [currentPage, setCurrentPage] = useState(1);
     const ordersPerPage = 10;
 
@@ -63,7 +63,7 @@ const AdminOrders: React.FC = () => {
             setOrders(data || []);
         } catch (error) {
             console.error('Error fetching orders:', error);
-            toast.error('Erro ao carregar pedidos.');
+            toast.error('Erro ao carregar assinaturas.');
         } finally {
             setIsLoading(false);
         }
@@ -89,7 +89,7 @@ const AdminOrders: React.FC = () => {
                 .eq('id', orderId);
 
             if (error) throw error;
-            toast.success(`Pedido atualizado para ${newStatus}!`);
+            toast.success(`Assinatura atualizada para ${newStatus === 'Pago' || newStatus === 'completed' ? 'Ativa' : newStatus}!`);
             fetchOrders();
         } catch (error) {
             console.error('Error updating order status:', error);
@@ -105,8 +105,6 @@ const AdminOrders: React.FC = () => {
         if (statusFilter !== 'all') {
             if (statusFilter === 'pending') {
                 matchesStatus = order.status === 'pending' || order.status === 'Pendente';
-            } else if (statusFilter === 'shipped') {
-                matchesStatus = order.status === 'shipped' || order.status === 'Enviado';
             } else if (statusFilter === 'completed') {
                 matchesStatus = order.status === 'completed' || order.status === 'Pago' || order.status === 'Entregue';
             } else if (statusFilter === 'cancelled') {
@@ -126,8 +124,8 @@ const AdminOrders: React.FC = () => {
     const stats = {
         total: orders.length,
         pending: orders.filter(o => o.status === 'pending' || o.status === 'Pendente').length,
+        active: orders.filter(o => o.status === 'completed' || o.status === 'Pago' || o.status === 'Entregue').length,
         revenue: orders.filter(o => o.status === 'completed' || o.status === 'Pago' || o.status === 'Entregue').reduce((acc, curr) => acc + curr.total_amount, 0),
-        shipped: orders.filter(o => o.status === 'shipped' || o.status === 'Enviado').length
     };
 
     if (isLoading) {
@@ -135,7 +133,7 @@ const AdminOrders: React.FC = () => {
             <AdminLayout>
                 <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
                     <Loader2 className="w-10 h-10 text-[#2980B9] animate-spin" />
-                    <p className="font-bold text-slate-400">Carregando pedidos...</p>
+                    <p className="font-bold text-slate-400">Carregando assinaturas...</p>
                 </div>
             </AdminLayout>
         );
@@ -147,17 +145,17 @@ const AdminOrders: React.FC = () => {
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-black text-[#05080F]">Gestão de Pedidos</h1>
-                        <p className="text-slate-500 font-medium text-sm md:text-base">Acompanhe as vendas e status de entrega em tempo real.</p>
+                        <h1 className="text-2xl md:text-3xl font-black text-[#05080F]">Gestão de Assinaturas</h1>
+                        <p className="text-slate-500 font-medium text-sm md:text-base">Acompanhe os planos de assinatura e status de pagamento em tempo real.</p>
                     </div>
                 </div>
 
                 {/* KPI Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
                     {[
-                        { label: 'Total Pedidos', value: stats.total, icon: ShoppingBag, color: 'text-blue-500', bg: 'bg-blue-50' },
+                        { label: 'Total Assinaturas', value: stats.total, icon: ShoppingBag, color: 'text-blue-500', bg: 'bg-blue-50' },
                         { label: 'Pendentes', value: stats.pending, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
-                        { label: 'Enviados', value: stats.shipped, icon: Truck, color: 'text-purple-500', bg: 'bg-purple-50' },
+                        { label: 'Ativas', value: stats.active, icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50' },
                         { label: 'Receita Total', value: `R$ ${stats.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-50' },
                     ].map((card, i) => (
                         <div key={i} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
@@ -174,13 +172,13 @@ const AdminOrders: React.FC = () => {
                 <div className="bg-white rounded-[2rem] md:rounded-[3rem] border border-slate-100 shadow-sm overflow-hidden">
                     <div className="p-6 md:p-8 border-b border-slate-50">
                         <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
-                            <h3 className="text-lg md:text-xl font-black text-[#05080F]">Fila de Pedidos</h3>
+                            <h3 className="text-lg md:text-xl font-black text-[#05080F]">Fila de Assinaturas</h3>
 
                             <div className="flex flex-col sm:flex-row w-full xl:w-auto gap-4">
                                 <div className="relative flex-1 sm:min-w-[320px]">
                                     <input
                                         type="text"
-                                        placeholder="Buscar por cliente ou ID do pedido..."
+                                        placeholder="Buscar por cliente ou ID da assinatura..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         className="w-full bg-slate-50 border border-slate-100 rounded-xl py-3 px-10 outline-none text-[10px] md:text-xs font-medium focus:border-[#2980B9] transition-all"
@@ -188,13 +186,13 @@ const AdminOrders: React.FC = () => {
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                                 </div>
                                 <div className="flex bg-slate-50 p-1 rounded-xl border border-slate-100 overflow-x-auto no-scrollbar">
-                                    {(['all', 'pending', 'shipped', 'completed', 'cancelled'] as const).map(f => (
+                                    {(['all', 'pending', 'completed', 'cancelled'] as const).map(f => (
                                         <button
                                             key={f}
                                             onClick={() => setStatusFilter(f)}
                                             className={`whitespace-nowrap px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === f ? 'bg-white shadow-sm text-[#05080F]' : 'text-slate-400 hover:text-slate-600'}`}
                                         >
-                                            {f === 'all' ? 'Ver Todos' : f === 'pending' ? 'Pendentes' : f === 'shipped' ? 'Enviados' : f === 'completed' ? 'Finalizados' : 'Cancelados'}
+                                            {f === 'all' ? 'Ver Todas' : f === 'pending' ? 'Pendentes' : f === 'completed' ? 'Ativas' : 'Canceladas'}
                                         </button>
                                     ))}
                                 </div>
@@ -243,17 +241,14 @@ const AdminOrders: React.FC = () => {
                                         <td className="py-6 px-4">
                                             <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
                                                 order.status === 'completed' || order.status === 'Pago' || order.status === 'Entregue' ? 'bg-emerald-50 text-emerald-600' :
-                                                order.status === 'Enviado' || order.status === 'shipped' ? 'bg-purple-50 text-purple-600' :
                                                 order.status === 'Cancelado' || order.status === 'cancelled' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'
                                             }`}>
                                                 <div className={`w-1.5 h-1.5 rounded-full ${
                                                     order.status === 'completed' || order.status === 'Pago' || order.status === 'Entregue' ? 'bg-emerald-500' :
-                                                    order.status === 'Enviado' || order.status === 'shipped' ? 'bg-purple-500' :
                                                     order.status === 'Cancelado' || order.status === 'cancelled' ? 'bg-red-500' : 'bg-amber-500'
                                                 }`}></div>
                                                 {order.status === 'pending' || order.status === 'Pendente' ? 'Pendente' :
-                                                 order.status === 'shipped' || order.status === 'Enviado' ? 'Enviado' :
-                                                 order.status === 'completed' || order.status === 'Pago' || order.status === 'Entregue' ? 'Concluído' : 'Cancelado'}
+                                                 order.status === 'completed' || order.status === 'Pago' || order.status === 'Entregue' ? 'Ativa' : 'Cancelada'}
                                             </span>
                                         </td>
                                         <td className="py-6 px-6 text-right">
@@ -266,7 +261,7 @@ const AdminOrders: React.FC = () => {
                                                             title="Marcar como Pago"
                                                         >
                                                             <CheckCircle2 className="w-3.5 h-3.5" />
-                                                            PAGO
+                                                            ATIVER PLANO
                                                         </button>
                                                         <button 
                                                             onClick={() => updateOrderStatus(order.id, 'Cancelado')}
@@ -280,12 +275,12 @@ const AdminOrders: React.FC = () => {
                                                 )}
                                                 {(order.status === 'Pago' || order.status === 'completed') && (
                                                     <button 
-                                                        onClick={() => updateOrderStatus(order.id, 'Enviado')}
-                                                        className="flex items-center gap-2 px-3 py-1.5 bg-[#05080F] text-white rounded-lg text-[9px] font-black uppercase hover:bg-slate-800 transition-all"
-                                                        title="Marcar como Enviado"
+                                                        onClick={() => updateOrderStatus(order.id, 'Cancelado')}
+                                                        className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-[9px] font-black uppercase hover:bg-red-100 transition-all"
+                                                        title="Revogar Acesso / Cancelar Plano"
                                                     >
-                                                        <Truck className="w-3.5 h-3.5" />
-                                                        ENVIAR
+                                                        <XCircle className="w-3.5 h-3.5" />
+                                                        REVOGAR PLANO
                                                     </button>
                                                 )}
                                                 <button className="flex items-center justify-center p-2 bg-slate-50 text-slate-400 rounded-lg hover:text-[#05080F] transition-all">
@@ -299,7 +294,7 @@ const AdminOrders: React.FC = () => {
                                         <td colSpan={6} className="py-20 text-center">
                                             <div className="flex flex-col items-center gap-4 text-slate-400">
                                                 <ShoppingBag className="w-12 h-12 opacity-20" />
-                                                <p className="font-bold">Nenhum pedido encontrado.</p>
+                                                <p className="font-bold">Nenhuma assinatura encontrada.</p>
                                             </div>
                                         </td>
                                     </tr>
@@ -312,7 +307,7 @@ const AdminOrders: React.FC = () => {
                     {totalPages > 1 && (
                         <div className="p-6 md:p-8 bg-slate-50/30 border-t border-slate-50 flex flex-col sm:flex-row justify-between items-center gap-6">
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                Página {currentPage} de {totalPages} — {filteredOrders.length} Pedidos
+                                Página {currentPage} de {totalPages} — {filteredOrders.length} Assinaturas
                             </p>
                             <div className="flex items-center gap-2">
                                 <button

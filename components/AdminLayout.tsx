@@ -49,7 +49,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         { label: 'Afiliados', icon: Users, path: '/admin/affiliates' },
         { label: 'Categorias', icon: Layers, path: '/admin/categories' },
         { label: 'Produtos', icon: Package, path: '/admin/products' },
-        { label: 'Pedidos', icon: ShoppingCart, path: '/admin/orders' },
+        { label: 'Assinaturas', icon: ShoppingCart, path: '/admin/orders' },
         { label: 'Comissões', icon: Percent, path: '/admin/commissions' },
         { label: 'Materiais', icon: Library, path: '/admin/materials' },
         { label: 'Financeiro', icon: Wallet, path: '/admin/financial' },
@@ -125,7 +125,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <input
                                 type="text"
-                                placeholder="Buscar por pedidos, afiliados..."
+                                placeholder="Buscar por assinaturas, afiliados..."
                                 className="w-full bg-slate-50 border border-slate-100 rounded-xl py-2.5 pl-12 pr-4 text-sm outline-none focus:border-[#2980B9] transition-all"
                             />
                         </div>
