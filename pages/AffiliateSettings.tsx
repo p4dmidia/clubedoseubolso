@@ -97,6 +97,7 @@ const AffiliateSettings: React.FC = () => {
         bank_account: '',
         bank_account_type: 'Corrente',
         bank_document: '',
+        asaas_wallet_id: '',
         auto_renew_subscription: true
     });
 
@@ -185,7 +186,7 @@ const AffiliateSettings: React.FC = () => {
             // 2. Fetch from user_settings (Bank data & subscription preferences)
             const { data: settingsData, error: settingsError } = await supabase
                 .from('user_settings')
-                .select('pix_key, bank_name, bank_agency, bank_account, bank_account_type, bank_document, auto_renew_subscription')
+                .select('pix_key, bank_name, bank_agency, bank_account, bank_account_type, bank_document, asaas_wallet_id, auto_renew_subscription')
                 .eq('user_id', user?.id)
                 .eq('organization_id', ORGANIZATION_ID)
                 .limit(1);
@@ -201,6 +202,7 @@ const AffiliateSettings: React.FC = () => {
                     bank_account: s.bank_account || '',
                     bank_account_type: s.bank_account_type || 'Corrente',
                     bank_document: s.bank_document || '',
+                    asaas_wallet_id: s.asaas_wallet_id || '',
                     auto_renew_subscription: s.auto_renew_subscription !== false
                 });
             }
@@ -318,6 +320,14 @@ const AffiliateSettings: React.FC = () => {
         e.preventDefault();
         if (!user) return;
 
+        const walletId = bankData.asaas_wallet_id.trim();
+        const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
+        if (walletId && !uuidRegex.test(walletId)) {
+            toast.error('A Chave de Acesso Asaas (Wallet ID) informada é inválida. Ela deve ter o formato padrão (ex: 8a7b6c5d-4e3f-2a1b-0c9d-8e7f6a5b4c3d) com 36 caracteres.');
+            return;
+        }
+
         try {
             setSaving(true);
 
@@ -330,6 +340,7 @@ const AffiliateSettings: React.FC = () => {
                     bank_account: bankData.bank_account.trim(),
                     bank_account_type: bankData.bank_account_type,
                     bank_document: bankData.bank_document.trim(),
+                    asaas_wallet_id: bankData.asaas_wallet_id.trim(),
                     updated_at: new Date().toISOString()
                 })
                 .eq('user_id', user.id)
@@ -497,7 +508,7 @@ const AffiliateSettings: React.FC = () => {
                         <p className="text-slate-500 font-medium">
                             {isClientOnly 
                                 ? 'Gerencie suas informações pessoais de cadastro.' 
-                                : 'Gerencie suas informações pessoais, dados de saque e assinatura do EVA.'}
+                                : 'Gerencie suas informações pessoais e dados de recebimento.'}
                         </p>
                     </div>
                 </div>
@@ -527,17 +538,6 @@ const AffiliateSettings: React.FC = () => {
                             >
                                 <CreditCard className="w-4 h-4" />
                                 Dados de Recebimento
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('subscription')}
-                                className={`flex-1 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
-                                    activeTab === 'subscription'
-                                        ? 'bg-white text-[#0B1221] shadow-sm'
-                                        : 'text-slate-500 hover:text-[#0B1221]'
-                                }`}
-                            >
-                                <Shield className="w-4 h-4" />
-                                Assinatura do EVA
                             </button>
                         </>
                     )}
@@ -913,6 +913,22 @@ const AffiliateSettings: React.FC = () => {
                                         />
                                     </div>
 
+                                    {/* Campo Asaas Wallet ID */}
+                                    <div className="space-y-2 md:col-span-2">
+                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Chave de Acesso Asaas (Wallet ID) *</label>
+                                        <input
+                                            type="text"
+                                            value={bankData.asaas_wallet_id}
+                                            onChange={(e) => setBankData({ ...bankData, asaas_wallet_id: e.target.value })}
+                                            className="block w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-[#2980B9] focus:border-transparent outline-none transition-all font-bold text-[#0B1221]"
+                                            placeholder="Ex: 8a7b6c5d-4e3f-2a1b-0c9d-8e7f6a5b4c3d"
+                                            required
+                                        />
+                                        <p className="text-[10px] text-slate-400 font-bold ml-1 uppercase tracking-wider">
+                                            Obrigatório. Cadastre-se na plataforma Asaas, obtenha a Chave de Acesso da sua carteira (Wallet ID) e preencha aqui para ativar seu link de indicações e receber suas comissões.
+                                        </p>
+                                    </div>
+
                                     <div className="md:col-span-2 bg-blue-50 border border-blue-100 p-4 rounded-2xl flex items-start gap-3">
                                         <div className="p-2 bg-white rounded-xl text-[#2980B9] shadow-sm mt-0.5">
                                             <AlertCircle className="w-4 h-4" />
@@ -933,214 +949,6 @@ const AffiliateSettings: React.FC = () => {
                                         </button>
                                     </div>
                                 </form>
-                            </div>
-                        )}
-
-                        {activeTab === 'subscription' && (
-                            /* EVA Subscription Management Section */
-                            <div className="space-y-8 animate-in fade-in duration-300">
-                                <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-8 md:p-10">
-                                    <h3 className="text-xl font-black text-[#0B1221] mb-6 flex items-center gap-2">
-                                        <Shield className="w-5 h-5 text-[#2980B9]" />
-                                        Gerenciamento da Assinatura do EVA
-                                    </h3>
-
-                                    {/* Regras e Status de Ativação Info Box */}
-                                    <div className="p-6 bg-slate-50 border border-slate-100 rounded-3xl mb-8 space-y-6">
-                                        <div>
-                                            <h4 className="font-black text-[#0B1221] text-sm mb-1">Como Funciona a Ativação Mensal</h4>
-                                            <p className="text-slate-400 text-xs font-medium leading-relaxed">
-                                                Para se manter ativo e apto para receber as comissões da sua rede, você deve cumprir pelo menos <b>um</b> dos seguintes requisitos:
-                                            </p>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="p-5 bg-white rounded-2xl border border-slate-100 flex flex-col justify-between">
-                                                <div>
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Regra 1: Indicação</p>
-                                                    <h5 className="font-black text-sm text-[#0B1221] mb-2">Indicar pelo menos 1 cliente por mês</h5>
-                                                    <p className="text-slate-400 text-xs font-medium leading-relaxed">Indicar um novo cliente nos últimos 30 dias.</p>
-                                                </div>
-                                                <div className="mt-4 pt-4 border-t border-slate-50 flex items-center justify-between">
-                                                    <span className="text-[10px] font-black text-slate-400 uppercase">Resultado</span>
-                                                    <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider ${
-                                                        recentClientsCount > 0 
-                                                            ? 'bg-emerald-50 text-emerald-600' 
-                                                            : 'bg-slate-50 text-slate-500'
-                                                    }`}>
-                                                        {recentClientsCount > 0 ? `Qualificado (${recentClientsCount})` : 'Pendente'}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <div className="p-5 bg-white rounded-2xl border border-slate-100 flex flex-col justify-between">
-                                                <div>
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Regra 2: Taxa de Escritório</p>
-                                                    <h5 className="font-black text-sm text-[#0B1221] mb-2">Pagar R$ 17,00 mensais do EVA</h5>
-                                                    <p className="text-slate-400 text-xs font-medium leading-relaxed">Manter a taxa de manutenção do EVA em dia.</p>
-                                                </div>
-                                                <div className="mt-4 pt-4 border-t border-slate-50 flex items-center justify-between">
-                                                    <span className="text-[10px] font-black text-slate-400 uppercase">Vencimento</span>
-                                                    <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider ${
-                                                        maintenanceExpiresAt && new Date(maintenanceExpiresAt) >= new Date()
-                                                            ? 'bg-emerald-50 text-emerald-600'
-                                                            : 'bg-amber-50 text-amber-600'
-                                                    }`}>
-                                                        {maintenanceExpiresAt 
-                                                            ? new Date(maintenanceExpiresAt).toLocaleDateString('pt-BR') 
-                                                            : 'Pendente'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Status Resumo */}
-                                        <div className={`p-4 rounded-2xl flex items-center gap-3 ${
-                                            (maintenanceExpiresAt && new Date(maintenanceExpiresAt) >= new Date()) || recentClientsCount > 0
-                                                ? 'bg-emerald-50/50 border border-emerald-100 text-emerald-800'
-                                                : 'bg-rose-50/50 border border-rose-100 text-rose-800'
-                                        }`}>
-                                            <Activity className={`w-5 h-5 shrink-0 ${
-                                                (maintenanceExpiresAt && new Date(maintenanceExpiresAt) >= new Date()) || recentClientsCount > 0
-                                                    ? 'text-emerald-500'
-                                                    : 'text-rose-500'
-                                            }`} />
-                                            <p className="text-xs font-semibold">
-                                                {(maintenanceExpiresAt && new Date(maintenanceExpiresAt) >= new Date()) || recentClientsCount > 0
-                                                    ? 'Você está ATIVO e apto a receber comissões.'
-                                                    : 'Você está INATIVO. Indique pelo menos 1 cliente ou pague o EVA para se ativar.'}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="p-6 bg-slate-50 border border-slate-100 rounded-3xl mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs font-black uppercase text-slate-400 tracking-wider">Serviço</span>
-                                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                                                    maintenanceExpiresAt && new Date(maintenanceExpiresAt) >= new Date()
-                                                        ? 'bg-emerald-50 text-emerald-600'
-                                                        : 'bg-rose-50 text-rose-600'
-                                                }`}>
-                                                    {maintenanceExpiresAt && new Date(maintenanceExpiresAt) >= new Date() ? 'Ativo' : 'Expirado'}
-                                                </span>
-                                            </div>
-                                            <h4 className="text-lg font-black text-[#0B1221]">Escritório Virtual do Afiliado</h4>
-                                            <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Manutenção mensal recorrente</p>
-                                        </div>
-                                        <div className="text-left md:text-right">
-                                            <span className="text-2xl font-black text-[#0B1221]">R$ 17,00</span>
-                                            <span className="text-slate-400 text-xs font-bold">/mês</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Auto renew toggle */}
-                                    <div className="p-6 bg-slate-50/50 border border-slate-100 rounded-3xl flex justify-between items-center gap-4">
-                                        <div>
-                                            <h4 className="font-black text-[#0B1221] text-sm">Renovação Automática</h4>
-                                            <p className="text-slate-400 text-xs font-medium leading-relaxed mt-0.5">
-                                                Se ativada, a mensalidade será cobrada do seu saldo disponível ou meio de pagamento principal.
-                                            </p>
-                                        </div>
-
-                                        <button
-                                            type="button"
-                                            onClick={() => handleToggleAutoRenew(!bankData.auto_renew_subscription)}
-                                            className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                                bankData.auto_renew_subscription ? 'bg-[#2980B9]' : 'bg-slate-300'
-                                            }`}
-                                        >
-                                            <span
-                                                className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                                    bankData.auto_renew_subscription ? 'translate-x-5' : 'translate-x-0'
-                                                }`}
-                                            />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Billing History */}
-                                <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
-                                    <div className="p-8 md:p-10 border-b border-slate-50 flex items-center justify-between">
-                                        <h3 className="text-xl font-black text-[#0B1221] flex items-center gap-2">
-                                            <History className="w-5 h-5 text-[#2980B9]" />
-                                            Histórico de Cobrança do EVA
-                                        </h3>
-                                    </div>
-
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full">
-                                            <thead>
-                                                <tr className="bg-slate-50/50">
-                                                    <th className="text-left py-5 px-8 text-xs font-black text-slate-400 uppercase tracking-widest">Fatura</th>
-                                                    <th className="text-left py-5 px-4 text-xs font-black text-slate-400 uppercase tracking-widest">Data</th>
-                                                    <th className="text-left py-5 px-4 text-xs font-black text-slate-400 uppercase tracking-widest">Valor</th>
-                                                    <th className="text-right py-5 px-8 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-50">
-                                                {loadingBilling ? (
-                                                    <tr>
-                                                        <td colSpan={4} className="py-12 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">
-                                                            Carregando histórico de cobrança...
-                                                        </td>
-                                                    </tr>
-                                                ) : billingHistory.length > 0 ? (
-                                                    billingHistory.map((order) => {
-                                                        const date = new Date(order.created_at).toLocaleDateString('pt-BR', {
-                                                            day: '2-digit',
-                                                            month: 'short',
-                                                            year: 'numeric'
-                                                        });
-                                                        return (
-                                                            <tr key={order.id} className="group hover:bg-slate-50/30 transition-colors">
-                                                                <td className="py-6 px-8">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-[#2980B9] transition-colors">
-                                                                            <Activity className="w-4 h-4" />
-                                                                        </div>
-                                                                        <div>
-                                                                            <span className="font-bold text-[#0B1221] block text-xs">
-                                                                                {order.order_items?.[0]?.product_name || 'Manutenção EVA'}
-                                                                            </span>
-                                                                            <span className="text-[10px] text-slate-400 font-medium">ID: {order.id.slice(0, 8)}...</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </td>
-                                                                <td className="py-6 px-4">
-                                                                    <span className="text-xs font-bold text-[#0B1221]">{date}</span>
-                                                                </td>
-                                                                <td className="py-6 px-4">
-                                                                    <span className="font-black text-slate-800 text-xs">
-                                                                        R$ {Number(order.total_amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                                    </span>
-                                                                </td>
-                                                                <td className="py-6 px-8 text-right">
-                                                                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                                                                        order.status.toLowerCase() === 'pago' || order.status.toLowerCase() === 'paid' || order.status.toLowerCase() === 'completed'
-                                                                            ? 'bg-emerald-50 text-emerald-600'
-                                                                            : order.status.toLowerCase() === 'pendente' || order.status.toLowerCase() === 'pending'
-                                                                            ? 'bg-amber-50 text-amber-600'
-                                                                            : 'bg-red-50 text-red-600'
-                                                                    }`}>
-                                                                        {order.status.toLowerCase() === 'pago' || order.status.toLowerCase() === 'paid' || order.status.toLowerCase() === 'completed' ? 'Pago' :
-                                                                         order.status.toLowerCase() === 'pendente' || order.status.toLowerCase() === 'pending' ? 'Pendente' : 'Cancelado'}
-                                                                    </span>
-                                                                </td>
-                                                            </tr>
-                                                        );
-                                                    })
-                                                ) : (
-                                                    <tr>
-                                                        <td colSpan={4} className="py-12 text-center text-slate-400 font-bold text-xs uppercase">
-                                                            Nenhuma fatura encontrada.
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
                             </div>
                         )}
                     </div>

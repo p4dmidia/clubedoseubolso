@@ -1,5 +1,4 @@
--- FIX COMMISSION DISTRIBUTION LOGIC
--- Migration to update the distribute_commissions function with tenant isolation and case-insensitive matching.
+-- Migration: Update distribute_commissions trigger function for Asaas Split hybrid flow
 
 CREATE OR REPLACE FUNCTION public.distribute_commissions()
 RETURNS trigger

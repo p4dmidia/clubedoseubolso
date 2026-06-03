@@ -224,8 +224,7 @@ const AffiliateDashboard: React.FC = () => {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
     };
 
-    const hasActiveMaintenance = affiliateData?.maintenance_expires_at && new Date(affiliateData.maintenance_expires_at) >= new Date();
-    const isAccountActive = (hasActiveMaintenance || recentClientsCount > 0) && !affiliateData?.is_delinquent;
+    const isAccountActive = !!walletData?.asaas_wallet_id;
 
     const stats = [
         {
@@ -250,19 +249,13 @@ const AffiliateDashboard: React.FC = () => {
             color: 'text-blue-500'
         },
         {
-            label: 'Ativação Mensal',
-            value: hasActiveMaintenance 
-                ? 'Ativo via EVA' 
-                : recentClientsCount > 0
-                ? 'Ativo via Indicação'
-                : 'Pendente',
-            description: hasActiveMaintenance
-                ? `Válido até ${new Date(affiliateData.maintenance_expires_at).toLocaleDateString('pt-BR')}`
-                : recentClientsCount > 0
-                ? `${recentClientsCount} cliente indicado no mês`
-                : 'Indique 1 cliente ou pague R$ 17',
+            label: 'Conta Asaas',
+            value: walletData?.asaas_wallet_id ? 'Configurada' : 'Pendente',
+            description: walletData?.asaas_wallet_id 
+                ? 'Chave de Acesso ativa para comissões direct' 
+                : 'Configure sua Chave Asaas para indicar',
             icon: Clock,
-            color: isAccountActive ? 'text-emerald-500' : 'text-amber-500'
+            color: isAccountActive ? 'text-emerald-500' : 'text-rose-500'
         },
     ];
 

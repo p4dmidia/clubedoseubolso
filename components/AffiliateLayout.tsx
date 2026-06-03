@@ -34,6 +34,7 @@ const AffiliateLayout: React.FC<AffiliateLayoutProps> = ({ children }) => {
     const { clearCart } = useCart();
     const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
     const [affiliate, setAffiliate] = React.useState<any>(null);
+    const [asaasWalletId, setAsaasWalletId] = React.useState<string | null>(null);
     const [loadingAff, setLoadingAff] = React.useState(true);
 
     React.useEffect(() => {
@@ -53,6 +54,18 @@ const AffiliateLayout: React.FC<AffiliateLayoutProps> = ({ children }) => {
                 if (data) {
                     setAffiliate(data);
                 }
+
+                // Query asaas_wallet_id from user_settings
+                const { data: settingsData } = await supabase
+                    .from('user_settings')
+                    .select('asaas_wallet_id')
+                    .eq('user_id', user.id)
+                    .eq('organization_id', ORGANIZATION_ID)
+                    .maybeSingle();
+
+                if (settingsData) {
+                    setAsaasWalletId(settingsData.asaas_wallet_id || null);
+                }
             } catch (err) {
                 console.error('Error fetching affiliate status:', err);
             } finally {
@@ -63,9 +76,8 @@ const AffiliateLayout: React.FC<AffiliateLayoutProps> = ({ children }) => {
         fetchAffStatus();
     }, [user]);
 
-    const isAdesaoPending = affiliate && affiliate.maintenance_expires_at === null && !affiliate.is_active;
-    const isMaintenanceDelinquent = affiliate && (affiliate.is_delinquent || (affiliate.maintenance_expires_at && new Date(affiliate.maintenance_expires_at) < new Date()));
-    const isBlocked = (profile?.role === 'affiliate') && (isAdesaoPending || isMaintenanceDelinquent);
+    const isSettingsPage = location.pathname === '/afiliado/settings';
+    const isBlocked = (profile?.role === 'affiliate') && !asaasWalletId && !isSettingsPage;
 
     const handleLogout = async () => {
         try {
@@ -177,51 +189,38 @@ const AffiliateLayout: React.FC<AffiliateLayoutProps> = ({ children }) => {
                 ) : isBlocked ? (
                     <div className="max-w-3xl mx-auto py-12 px-4">
                         <div className="bg-white rounded-[3rem] shadow-xl border border-slate-100 p-8 md:p-12 relative overflow-hidden">
-                            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#2980B9] to-[#ffa000]"></div>
+                            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#2980B9] to-[#27AE60]"></div>
                             
                             <div className="flex flex-col items-center text-center">
-                                <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mb-8 ${isAdesaoPending ? 'bg-blue-50 text-[#2980B9]' : 'bg-amber-50 text-amber-500'}`}>
-                                    {isAdesaoPending ? <Sparkles className="w-10 h-10 animate-pulse" /> : <ShieldAlert className="w-10 h-10 animate-bounce" />}
+                                <div className="w-20 h-20 rounded-3xl flex items-center justify-center mb-8 bg-amber-50 text-amber-500">
+                                    <ShieldAlert className="w-10 h-10 animate-bounce" />
                                 </div>
-                                
-                                <h2 className="text-3xl font-black text-[#0B1221] mb-4">
-                                    {isAdesaoPending ? 'Ativação da Conta Pendente' : 'Escritório Virtual Bloqueado'}
+                                                        <h2 className="text-3xl font-black text-[#0B1221] mb-4">
+                                    Chave da Carteira Asaas Obrigatória
                                 </h2>
                                 
                                 <p className="text-slate-500 font-medium text-sm max-w-xl leading-relaxed mb-8">
-                                    {isAdesaoPending 
-                                        ? 'Seja bem-vindo ao Clube do Seu Bolso! Para ativar seu Escritório Virtual, começar a indicar novos parceiros, divulgar seus links de afiliado e receber comissões, efetue o pagamento da taxa de adesão única de R$ 44,00.' 
-                                        : 'Seu Escritório Virtual está bloqueado temporariamente por inadimplência da taxa de manutenção mensal. Para reativar seu acesso, desbloquear saques e voltar a acumular suas comissões, efetue o pagamento de R$ 17,00.'}
+                                    Seja bem-vindo ao Clube do Seu Bolso! Para liberar o seu link de indicações, divulgar os produtos do clube e começar a receber suas comissões direto na sua conta, é obrigatório preencher a sua **Chave da Carteira** (Wallet ID) do Asaas.
                                 </p>
 
                                 <div className="w-full bg-slate-50 rounded-2xl p-6 border border-slate-100/50 mb-10 text-left space-y-4">
                                     <div className="flex items-center gap-3">
                                         <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0" />
-                                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Acesso a todos os produtos do portfólio</span>
+                                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Cadastro gratuito na plataforma Asaas</span>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0" />
-                                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Links personalizados de vendas e indicações</span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0" />
-                                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Distribuição e recebimento de comissões instantâneas</span>
+                                        <CheckCircle className="w-5 h-5 text-[#2980B9] shrink-0" />
+                                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Ativação automática do link de indicação</span>
                                     </div>
                                 </div>
 
-                                <button
-                                    onClick={() => {
-                                        clearCart();
-                                        const buyProductId = isAdesaoPending 
-                                            ? 'd3b07384-d113-4171-bc05-9a7c936df312' 
-                                            : 'd3b07384-d113-4171-bc06-9a7c936df312';
-                                        window.location.href = `/checkout?buy=${buyProductId}`;
-                                    }}
-                                    className="w-full bg-[#0B1221] text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#2980B9] transition-all flex items-center justify-center gap-3 shadow-xl hover:shadow-[#2980B9]/20"
+                                <Link
+                                    to="/afiliado/settings?tab=bank"
+                                    className="w-full bg-[#0B1221] text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#2980B9] transition-all flex items-center justify-center gap-3 shadow-xl hover:shadow-[#2980B9]/20 text-center"
                                 >
-                                    <CreditCard className="w-5 h-5" />
-                                    {isAdesaoPending ? 'Pagar Taxa de Adesão (R$ 44,00)' : 'Pagar Manutenção EVA (R$ 17,00)'}
-                                </button>
+                                    <Settings className="w-5 h-5" />
+                                    CONFIGURAR CHAVE ASAAS
+                                </Link>
                             </div>
                         </div>
                     </div>

@@ -138,7 +138,7 @@ const HomePage: React.FC = () => {
         },
         {
             q: "Existe custo para atuar como afiliado?",
-            a: "A inscrição pode ser gratuita, e a plataforma possui mensalidade operacional de R$ 17,00, com isenção da taxa mensal, caso haja pelo menos uma indicação efetivada por mês."
+            a: "A inscrição é totalmente gratuita e sem taxas mensais de manutenção. No entanto, para começar a indicar e receber suas comissões, é obrigatório cadastrar-se na plataforma Asaas e preencher a sua Chave de Acesso no painel do afiliado."
         },
         {
             q: "Como funciona o ganho por indicação?",
@@ -154,11 +154,11 @@ const HomePage: React.FC = () => {
         },
         {
             q: "Por que essa proposta tem boa aceitação?",
-            a: "Porque reúne soluções relacionadas a necessidades permanentes da população: cuidar da saúde, aliviar o orçamento doméstico e buscar novas fontes de renda extra."
+            a: "Porque reúne soluções relacionadas a necessidades permanentes da population: cuidar da saúde, aliviar o orçamento doméstico e buscar novas fontes de renda extra."
         },
         {
             q: "Posso começar de forma simples?",
-            a: "Sim. A proposta foi pensada para permitir uma entrada acessível, com baixo custo operacional e possibilidade de crescimento conforme o engajamento do afiliado."
+            a: "Sim. O cadastro de afiliado é gratuito e sem taxas mensais de manutenção, permitindo que você inicie de forma simples, segura e receba direto em sua conta Asaas."
         }
     ];
 
@@ -753,9 +753,9 @@ const HomePage: React.FC = () => {
                             <div className="w-16 h-16 rounded-full bg-[#0B1221] text-white flex items-center justify-center font-black text-lg mx-auto shadow-md relative z-10 border-4 border-white">
                                 01
                             </div>
-                            <h3 className="font-extrabold text-[#0B1221] text-base">Cadastre-se na plataforma</h3>
+                            <h3 className="font-extrabold text-[#0B1221] text-base">Cadastre-se e Ative sua Conta Asaas</h3>
                             <p className="text-slate-500 text-xs font-medium leading-relaxed max-w-xs mx-auto">
-                                Você pode iniciar sua jornada conhecendo a estrutura do clube e entendendo como o modelo funciona.
+                                Crie sua conta, cadastre-se no Asaas e insira a sua Chave de Acesso no painel. Esse passo é obrigatório para começar a indicar.
                             </p>
                         </div>
 
@@ -805,26 +805,14 @@ const HomePage: React.FC = () => {
                                 <span>Afiliação Simples</span>
                             </div>
                             <h3 className="text-2xl md:text-3xl font-black text-[#0B1221]">
-                                Comece como afiliado com entrada acessível
+                                Comece como afiliado de forma gratuita
                             </h3>
                             <p className="text-slate-600 text-sm md:text-base font-medium leading-relaxed">
-                                No Clube do Seu Bolso, você pode iniciar como afiliado com inscrição gratuita. A plataforma possui mensalidade operacional de **R$ 17,00**, e com uma indicação elegível no mês, esse valor pode ser compensado conforme as regras do programa.
-                            </p>
-                            <p className="text-slate-600 text-sm font-semibold italic">
-                                Isso torna o início mais acessível para quem deseja começar a construir uma renda extra com responsabilidade e baixo custo operacional.
-                            </p>
-                            <p className="text-slate-500 text-xs font-bold uppercase tracking-wide">
-                                Uma oportunidade simples de começar, com base em uma solução útil e de fácil aceitação.
+                                No Clube do Seu Bolso, você pode iniciar como afiliado com inscrição 100% gratuita. Para receber suas comissões por indicações diretas e de sua rede de forma automática, basta cadastrar-se na plataforma Asaas e preencher a sua Chave de Acesso dentro do seu painel de configurações.
                             </p>
                         </div>
 
                         <div className="lg:col-span-5 flex flex-col items-center justify-center p-6 bg-slate-50 rounded-3xl border border-slate-100">
-                            <div className="text-center space-y-2 mb-6">
-                                <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Taxa Operacional EVA</span>
-                                <div className="text-4xl font-black text-[#0B1221]">R$ 17,00</div>
-                                <span className="text-[10px] text-[#27AE60] font-black uppercase tracking-widest block bg-[#27AE60]/10 px-3 py-1 rounded-full">Compensável por indicação</span>
-                            </div>
-                            
                             <Link 
                                 to="/register?type=affiliate" 
                                 className="w-full text-center py-4 bg-[#27AE60] hover:bg-[#219653] text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-md shadow-[#27AE60]/10"

@@ -230,12 +230,69 @@ serve(async (req) => {
             const day = String(dateSP.getDate()).padStart(2, '0');
             const dueDate = `${year}-${month}-${day}`;
 
+            // --- CÁLCULO DE SPLIT ---
+            let splitData = null;
+            let splitWalletId = null;
+            let splitAmount = 0;
+
+            if (order.referral_code) {
+                console.log(`Buscando Wallet ID para o referral_code do afiliado: ${order.referral_code}...`);
+                const { data: affiliate } = await supabase
+                    .from('affiliates')
+                    .select('user_id')
+                    .ilike('referral_code', order.referral_code)
+                    .maybeSingle();
+
+                if (affiliate) {
+                    const { data: userSettings } = await supabase
+                        .from('user_settings')
+                        .select('asaas_wallet_id')
+                        .eq('user_id', affiliate.user_id)
+                        .maybeSingle();
+
+                    if (userSettings?.asaas_wallet_id) {
+                        splitWalletId = userSettings.asaas_wallet_id;
+                        
+                        // Obter a comissão configurada para Geração 1
+                        const { data: configData } = await supabase
+                            .from('commission_configs')
+                            .select('*')
+                            .eq('key', 'geral')
+                            .maybeSingle();
+
+                        let rateValue = 10; // Fallback 10%
+                        if (configData && Array.isArray(configData.levels) && configData.levels.length > 0) {
+                            rateValue = parseFloat(configData.levels[0].value) || 10;
+                        }
+
+                        if (configData?.type === 'fixed') {
+                            splitAmount = rateValue;
+                        } else {
+                            splitAmount = Number((Number(order.total_amount) * (rateValue / 100)).toFixed(2));
+                        }
+
+                        if (splitAmount > 0) {
+                            splitData = [{
+                                walletId: splitWalletId,
+                                fixedValue: splitAmount
+                            }];
+                            console.log(`Configurando split de comissão: R$ ${splitAmount} para Wallet ID: ${splitWalletId}`);
+                        }
+                    } else {
+                        console.log(`Afiliado com código ${order.referral_code} encontrado, mas sem Wallet ID cadastrado.`);
+                    }
+                } else {
+                    console.log(`Nenhum afiliado encontrado para o código de indicação: ${order.referral_code}`);
+                }
+            }
+
             const paymentData = {
                 customer: asaasCustomerId,
                 billingType: "UNDEFINED",
                 value: Number(order.total_amount),
                 dueDate: dueDate,
-                externalReference: order.id
+                externalReference: order.id,
+                ...(splitData ? { splits: splitData } : {})
             };
 
             const paymentResponse = await fetch(`${baseUrl}/payments`, {
@@ -256,11 +313,13 @@ serve(async (req) => {
             const paymentResult = await paymentResponse.json();
             console.log(`Cobrança criada com sucesso! ID Asaas: ${paymentResult.id}`);
 
-            // 4. Salvar o payment_id do Asaas e a URL da fatura (invoiceUrl) no pedido
+            // 4. Salvar o payment_id do Asaas, split e a URL da fatura (invoiceUrl) no pedido
             await supabase.from("orders").update({
                 payment_id: paymentResult.id,
                 payment_preference_id: paymentResult.invoiceUrl,
                 status: 'Pendente',
+                split_wallet_id: splitWalletId,
+                split_amount: splitAmount,
                 updated_at: new Date().toISOString()
             }).eq("id", order.id);
 
