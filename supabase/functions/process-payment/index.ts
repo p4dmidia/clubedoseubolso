@@ -230,61 +230,167 @@ serve(async (req) => {
             const day = String(dateSP.getDate()).padStart(2, '0');
             const dueDate = `${year}-${month}-${day}`;
 
-            // --- CÁLCULO DE SPLIT ---
+            // --- CÁLCULO DE SPLIT MULTINÍVEL ---
             let splitData = null;
-            let splitWalletId = null;
-            let splitAmount = 0;
+            const splitDetails: any[] = [];
+            const gdFinanceWalletId = org?.gd_finance_wallet_id;
+            
+            console.log(`GD Finance Wallet ID: ${gdFinanceWalletId || 'Não configurada'}`);
 
-            if (order.referral_code) {
-                console.log(`Buscando Wallet ID para o referral_code do afiliado: ${order.referral_code}...`);
-                const { data: affiliate } = await supabase
-                    .from('affiliates')
-                    .select('user_id')
-                    .ilike('referral_code', order.referral_code)
-                    .maybeSingle();
+            // 1. Identificar se o pedido é Master (Colchão)
+            let isMaster = false;
+            if (order.order_items && order.order_items.length > 0) {
+                isMaster = order.order_items.some((item: any) => 
+                    (item.product_name && (item.product_name.toLowerCase().includes('colchão') || item.product_name.toLowerCase().includes('concorcio')))
+                );
+            }
 
-                if (affiliate) {
-                    const { data: userSettings } = await supabase
-                        .from('user_settings')
-                        .select('asaas_wallet_id')
-                        .eq('user_id', affiliate.user_id)
+            const configKey = isMaster ? 'mattress' : 'geral';
+            console.log(`Usando configuração de comissão: ${configKey}`);
+
+            // 2. Buscar configuração de comissão
+            const { data: configData } = await supabase
+                .from('commission_configs')
+                .select('*')
+                .eq('key', configKey)
+                .maybeSingle();
+
+            if (configData && Array.isArray(configData.levels) && configData.levels.length > 0) {
+                const activeGens = configData.active_generations || configData.levels.length;
+                
+                // 3. Identificar o afiliado inicial (Geração 1)
+                let currentAffiliate = null;
+                if (order.referral_code) {
+                    const { data: aff } = await supabase
+                        .from('affiliates')
+                        .select('*')
+                        .ilike('referral_code', order.referral_code)
+                        .eq('organization_id', order.organization_id)
                         .maybeSingle();
+                    currentAffiliate = aff;
+                }
 
-                    if (userSettings?.asaas_wallet_id) {
-                        splitWalletId = userSettings.asaas_wallet_id;
-                        
-                        // Obter a comissão configurada para Geração 1
-                        const { data: configData } = await supabase
-                            .from('commission_configs')
+                if (!currentAffiliate && order.user_id) {
+                    const { data: buyerProfile } = await supabase
+                        .from('user_profiles')
+                        .select('sponsor_id')
+                        .eq('id', order.user_id)
+                        .maybeSingle();
+                    
+                    if (buyerProfile?.sponsor_id) {
+                        const { data: aff } = await supabase
+                            .from('affiliates')
                             .select('*')
-                            .eq('key', 'geral')
+                            .eq('user_id', buyerProfile.sponsor_id)
+                            .eq('organization_id', order.organization_id)
                             .maybeSingle();
+                        currentAffiliate = aff;
+                    }
+                }
 
-                        let rateValue = 10; // Fallback 10%
-                        if (configData && Array.isArray(configData.levels) && configData.levels.length > 0) {
-                            rateValue = parseFloat(configData.levels[0].value) || 10;
-                        }
+                // 4. Varrer a árvore de patrocinadores e calcular as comissões por nível
+                let currentSponsorId = currentAffiliate?.id;
+                let levelCount = 0;
 
-                        if (configData?.type === 'fixed') {
-                            splitAmount = rateValue;
+                while (levelCount < activeGens) {
+                    levelCount++;
+                    
+                    // Buscar o percentual do nível atual
+                    const levelConfig = configData.levels.find((l: any) => l.level === levelCount);
+                    const rateValue = levelConfig ? parseFloat(levelConfig.value) : 0;
+
+                    if (rateValue > 0) {
+                        let levelAmount = 0;
+                        if (configData.type === 'fixed') {
+                            levelAmount = rateValue;
                         } else {
-                            splitAmount = Number((Number(order.total_amount) * (rateValue / 100)).toFixed(2));
+                            levelAmount = Number((Number(order.total_amount) * (rateValue / 100)).toFixed(2));
                         }
 
-                        if (splitAmount > 0) {
-                            splitData = [{
-                                walletId: splitWalletId,
-                                fixedValue: splitAmount
-                            }];
-                            console.log(`Configurando split de comissão: R$ ${splitAmount} para Wallet ID: ${splitWalletId}`);
+                        if (levelAmount > 0) {
+                            let targetUserId = null;
+                            let targetWalletId = null;
+                            let status = 'held_in_gd_finance';
+
+                            if (currentSponsorId) {
+                                // Buscar dados do afiliado atual
+                                const { data: aff } = await supabase
+                                    .from('affiliates')
+                                    .select('user_id, sponsor_id')
+                                    .eq('id', currentSponsorId)
+                                    .maybeSingle();
+
+                                if (aff) {
+                                    targetUserId = aff.user_id;
+                                    
+                                    // Buscar o wallet do afiliado para split automático
+                                    const { data: userSettings } = await supabase
+                                        .from('user_settings')
+                                        .select('asaas_wallet_id')
+                                        .eq('user_id', aff.user_id)
+                                        .maybeSingle();
+
+                                    if (userSettings?.asaas_wallet_id) {
+                                        targetWalletId = userSettings.asaas_wallet_id;
+                                        status = 'split_sent';
+                                    }
+                                    
+                                    // Avançar para o patrocinador do próximo nível
+                                    currentSponsorId = aff.sponsor_id;
+                                } else {
+                                    currentSponsorId = null;
+                                }
+                            } else {
+                                currentSponsorId = null;
+                            }
+
+                            // Define a carteira final: carteira do afiliado ou da GD Finance como fallback
+                            const finalWalletId = targetWalletId || gdFinanceWalletId;
+
+                            splitDetails.push({
+                                level: levelCount,
+                                user_id: targetUserId,
+                                amount: levelAmount,
+                                wallet_id: finalWalletId,
+                                status: finalWalletId ? status : 'no_wallet_configured'
+                            });
                         }
                     } else {
-                        console.log(`Afiliado com código ${order.referral_code} encontrado, mas sem Wallet ID cadastrado.`);
+                        // Se a comissão for 0, ainda avançamos na árvore para o próximo nível
+                        if (currentSponsorId) {
+                            const { data: aff } = await supabase
+                                .from('affiliates')
+                                .select('sponsor_id')
+                                .eq('id', currentSponsorId)
+                                .maybeSingle();
+                            currentSponsorId = aff?.sponsor_id || null;
+                        }
                     }
-                } else {
-                    console.log(`Nenhum afiliado encontrado para o código de indicação: ${order.referral_code}`);
                 }
             }
+
+            // Consolidar splits por walletId para evitar carteiras repetidas no payload
+            const consolidatedSplitsMap: Record<string, number> = {};
+            for (const detail of splitDetails) {
+                if (detail.wallet_id && detail.status !== 'no_wallet_configured') {
+                    consolidatedSplitsMap[detail.wallet_id] = (consolidatedSplitsMap[detail.wallet_id] || 0) + detail.amount;
+                }
+            }
+
+            const splitsToSend = Object.entries(consolidatedSplitsMap).map(([walletId, amount]) => ({
+                walletId: walletId,
+                fixedValue: Number(amount.toFixed(2))
+            })).filter(s => s.fixedValue > 0);
+
+            if (splitsToSend.length > 0) {
+                splitData = splitsToSend;
+                console.log('Splits consolidados:', JSON.stringify(splitData));
+            }
+
+            // Para compatibilidade com a trigger e logs do banco (Nível 1)
+            const level1Split = splitDetails.find((s: any) => s.level === 1);
+            const splitWalletId = level1Split && level1Split.status === 'split_sent' ? level1Split.wallet_id : null;
+            const splitAmount = level1Split && level1Split.status === 'split_sent' ? level1Split.amount : 0;
 
             const paymentData = {
                 customer: asaasCustomerId,
@@ -313,13 +419,14 @@ serve(async (req) => {
             const paymentResult = await paymentResponse.json();
             console.log(`Cobrança criada com sucesso! ID Asaas: ${paymentResult.id}`);
 
-            // 4. Salvar o payment_id do Asaas, split e a URL da fatura (invoiceUrl) no pedido
+            // 4. Salvar o payment_id do Asaas, split, split_details e a URL da fatura (invoiceUrl) no pedido
             await supabase.from("orders").update({
                 payment_id: paymentResult.id,
                 payment_preference_id: paymentResult.invoiceUrl,
                 status: 'Pendente',
                 split_wallet_id: splitWalletId,
                 split_amount: splitAmount,
+                split_details: splitDetails,
                 updated_at: new Date().toISOString()
             }).eq("id", order.id);
 
