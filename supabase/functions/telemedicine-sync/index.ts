@@ -1,0 +1,217 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+serve(async (req) => {
+    // Handle CORS preflight options request
+    if (req.method === 'OPTIONS') {
+        return new Response('ok', { headers: corsHeaders });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    let orderId = "";
+    let matchedPlanId: number | null = null;
+    let matchedPlanName = "";
+    let cleanCpf = "";
+    let name = "";
+
+    try {
+        const body = await req.json();
+        orderId = body.orderId;
+
+        if (!orderId) {
+            throw new Error("orderId não fornecido na requisição.");
+        }
+
+        console.log(`[Telemedicine Sync] Iniciando sincronização para pedido: ${orderId}`);
+
+        // 1. Buscar detalhes do pedido
+        const { data: order, error: orderError } = await supabase
+            .from("orders")
+            .select("*")
+            .eq("id", orderId)
+            .maybeSingle();
+
+        if (orderError) throw orderError;
+        if (!order) {
+            throw new Error(`Pedido ${orderId} não encontrado no banco de dados.`);
+        }
+
+        // 2. Buscar itens do pedido
+        const { data: items, error: itemsError } = await supabase
+            .from("order_items")
+            .select("*")
+            .eq("order_id", orderId);
+
+        if (itemsError) throw itemsError;
+        if (!items || items.length === 0) {
+            throw new Error(`Nenhum item encontrado para o pedido ${orderId}.`);
+        }
+
+        // 3. Mapear UUIDs dos produtos/planos ou nomes
+        const telemedicinePlans: Record<string, number> = {
+            'd3b07384-d113-4171-bc01-9a7c936df312': 1, // Individual Essencial
+            'd3b07384-d113-4171-bc02-9a7c936df312': 2, // Individual Premium
+            'd3b07384-d113-4171-bc03-9a7c936df312': 3, // Familiar Essencial
+            'd3b07384-d113-4171-bc04-9a7c936df312': 4, // Familiar Premium
+        };
+
+        for (const item of items) {
+            const id = item.product_id;
+            const pName = item.product_name || "";
+            
+            if (id && telemedicinePlans[id]) {
+                matchedPlanId = telemedicinePlans[id];
+                matchedPlanName = pName;
+                break;
+            }
+            
+            // Fallback por comparação de texto no nome do produto
+            const lowerName = pName.toLowerCase();
+            if (lowerName.includes("individual") && lowerName.includes("essencial")) {
+                matchedPlanId = 1;
+                matchedPlanName = pName;
+                break;
+            } else if (lowerName.includes("individual") && lowerName.includes("premium")) {
+                matchedPlanId = 2;
+                matchedPlanName = pName;
+                break;
+            } else if (lowerName.includes("familiar") && lowerName.includes("essencial")) {
+                matchedPlanId = 3;
+                matchedPlanName = pName;
+                break;
+            } else if (lowerName.includes("familiar") && lowerName.includes("premium")) {
+                matchedPlanId = 4;
+                matchedPlanName = pName;
+                break;
+            }
+        }
+
+        // 4. Ignorar se não for um plano de telemedicina
+        if (!matchedPlanId) {
+            console.log(`[Telemedicine Sync] Pedido ${orderId} não contém planos de telemedicina. Ignorando.`);
+            return new Response(JSON.stringify({ success: true, message: "Ignorado: O pedido não contém plano de telemedicina." }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" }
+            });
+        }
+
+        // 5. Validar campos obrigatórios para a Mais Unidos API
+        const rawCpf = order.customer_cpf || "";
+        cleanCpf = rawCpf.replace(/\D/g, "");
+        name = order.customer_name || "";
+
+        if (!cleanCpf) {
+            throw new Error("CPF do cliente está ausente ou inválido.");
+        }
+        if (!name) {
+            throw new Error("Nome do cliente está ausente.");
+        }
+
+        // 6. Carregar configurações de ambiente
+        const token = Deno.env.get("TELEMEDICINE_API_TOKEN") ?? "7287033acbda457fa46c4dff78f9fd88";
+        const companyIdStr = Deno.env.get("TELEMEDICINE_COMPANY_ID") ?? "19";
+        const companyId = parseInt(companyIdStr, 10);
+        const env = Deno.env.get("TELEMEDICINE_ENV") ?? "sandbox";
+
+        const baseUrl = env === "production" 
+            ? "https://app.maisunidos.com.br/APIv1" 
+            : "https://app.maisunidos.com.br/APIv1/sandbox";
+        
+        const requestUrl = `${baseUrl}/lives/sync/one`;
+
+        // 7. Preparar payload de acordo com a documentação (form-urlencoded com prefixo Item.)
+        const params = new URLSearchParams();
+        params.append("Item.Name", name);
+        if (order.customer_email) {
+            params.append("Item.Email", order.customer_email);
+        }
+        params.append("Item.CPFCNPJ", cleanCpf);
+        if (order.customer_phone) {
+            params.append("Item.Phone", order.customer_phone.replace(/\D/g, ""));
+        }
+        params.append("Item.CompanyId", companyId.toString());
+        params.append("Item.PlanId", matchedPlanId.toString());
+        params.append("Item.IsActive", "true");
+
+        console.log(`[Telemedicine Sync] Enviando requisição para ${requestUrl} com dados: ${params.toString()}`);
+
+        const apiResponse = await fetch(requestUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "X-Api-Key": token
+            },
+            body: params.toString()
+        });
+
+        const responseText = await apiResponse.text();
+        let responseData;
+        try {
+            responseData = JSON.parse(responseText);
+        } catch {
+            responseData = { rawText: responseText };
+        }
+
+        console.log(`[Telemedicine Sync] Resposta recebida (${apiResponse.status}):`, responseText);
+
+        if (!apiResponse.ok) {
+            throw new Error(`Erro retornado pela API da Mais Unidos (HTTP ${apiResponse.status}): ${responseText}`);
+        }
+
+        // 8. Gravar log de sucesso
+        await supabase.from("debug_logs").insert({
+            operation: "telemedicine_sync",
+            message: `Cliente ${name} (CPF: ${cleanCpf}) integrado com sucesso no plano ID ${matchedPlanId} (${matchedPlanName}).`,
+            metadata: {
+                order_id: orderId,
+                plan_id: matchedPlanId,
+                plan_name: matchedPlanName,
+                status: "success",
+                response: responseData
+            }
+        });
+
+        return new Response(JSON.stringify({ 
+            success: true, 
+            message: "Cliente integrado com sucesso.", 
+            planId: matchedPlanId,
+            response: responseData 
+        }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+
+    } catch (error) {
+        console.error(`[Telemedicine Sync Error] Falha na integração do pedido ${orderId}:`, error.message);
+
+        // Gravar log de erro no banco de dados para auditoria do administrador
+        try {
+            await supabase.from("debug_logs").insert({
+                operation: "telemedicine_sync_error",
+                message: `Falha ao integrar cliente ${name || "N/A"} (CPF: ${cleanCpf || "N/A"}) no plano ID ${matchedPlanId || "N/A"}: ${error.message}`,
+                metadata: {
+                    order_id: orderId,
+                    error: error.message,
+                    stack: error.stack,
+                    status: "failed"
+                }
+            });
+        } catch (dbLogErr) {
+            console.error("[Telemedicine Sync] Falha catastrófica ao tentar salvar log de erro no DB:", dbLogErr.message);
+        }
+
+        return new Response(JSON.stringify({ 
+            error: true, 
+            message: `Erro na integração: ${error.message}` 
+        }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+    }
+});

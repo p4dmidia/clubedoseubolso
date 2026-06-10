@@ -89,6 +89,22 @@ const AdminOrders: React.FC = () => {
                 .eq('id', orderId);
 
             if (error) throw error;
+
+            // Disparar sincronização com telemedicina se o status for Pago
+            if (newStatus === 'Pago' || newStatus === 'completed') {
+                supabase.functions.invoke('telemedicine-sync', {
+                    body: { orderId }
+                }).then(({ data, error: syncError }) => {
+                    if (syncError) {
+                        console.error('Erro ao sincronizar com telemedicina:', syncError);
+                    } else {
+                        console.log('Sincronização com telemedicina concluída:', data);
+                    }
+                }).catch(err => {
+                    console.error('Erro ao invocar telemedicina:', err);
+                });
+            }
+
             toast.success(`Assinatura atualizada para ${newStatus === 'Pago' || newStatus === 'completed' ? 'Ativa' : newStatus}!`);
             fetchOrders();
         } catch (error) {

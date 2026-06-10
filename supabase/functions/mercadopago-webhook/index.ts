@@ -184,6 +184,21 @@ serve(async (req) => {
                     // Processar Upgrade e Comissões
                     await processAffiliateAndCommissions(order, supabase);
                     
+                    // Sincronizar com telemedicina (Mais Unidos)
+                    try {
+                        console.log(`[Webhook] Disparando sincronização de telemedicina para pedido ${orderId}...`);
+                        const { data: syncRes, error: syncErr } = await supabase.functions.invoke('telemedicine-sync', {
+                            body: { orderId: orderId }
+                        });
+                        if (syncErr) {
+                            console.error(`[Webhook] Erro no invoke da telemedicina para pedido ${orderId}:`, syncErr);
+                        } else {
+                            console.log(`[Webhook] Sincronização concluída com sucesso para pedido ${orderId}:`, syncRes);
+                        }
+                    } catch (err) {
+                        console.error(`[Webhook] Erro ao disparar sincronização da telemedicina para pedido ${orderId}:`, err.message);
+                    }
+                    
                     // E-mail desativado a pedido do usuário (Mercado Pago faz isso nativamente)
                     // await sendConfirmationEmail(order);
                 }

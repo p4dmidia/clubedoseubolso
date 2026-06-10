@@ -120,6 +120,21 @@ serve(async (req) => {
                 console.log(`[Asaas Webhook] ✅ Pedido ${safeOrderId} atualizado para 'Pago'. Processando comissões...`);
                 // Processar Upgrade e Comissões
                 await processAffiliateAndCommissions(order, supabase);
+
+                // Sincronizar com telemedicina (Mais Unidos)
+                try {
+                    console.log(`[Asaas Webhook] Disparando sincronização de telemedicina para pedido ${safeOrderId}...`);
+                    const { data: syncRes, error: syncErr } = await supabase.functions.invoke('telemedicine-sync', {
+                        body: { orderId: safeOrderId }
+                    });
+                    if (syncErr) {
+                        console.error(`[Asaas Webhook] Erro no invoke da telemedicina para pedido ${safeOrderId}:`, syncErr);
+                    } else {
+                        console.log(`[Asaas Webhook] Sincronização concluída com sucesso para pedido ${safeOrderId}:`, syncRes);
+                    }
+                } catch (err) {
+                    console.error(`[Asaas Webhook] Erro ao disparar sincronização da telemedicina para pedido ${safeOrderId}:`, err.message);
+                }
             } else {
                 console.warn(`[Asaas Webhook] Pedido ${safeOrderId} não encontrado no banco de dados.`);
             }
