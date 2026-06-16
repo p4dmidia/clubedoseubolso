@@ -392,7 +392,11 @@ serve(async (req) => {
             const splitWalletId = level1Split && level1Split.status === 'split_sent' ? level1Split.wallet_id : null;
             const splitAmount = level1Split && level1Split.status === 'split_sent' ? level1Split.amount : 0;
 
-            const requestOrigin = origin || req.headers.get("origin") || "https://clubedoseubolso.com.br";
+            let requestOrigin = origin || req.headers.get("origin") || "https://clubedoseubolso.com.br";
+            if (requestOrigin.includes("localhost") || requestOrigin.includes("127.0.0.1")) {
+                const orgDomain = org?.domain || "clubedoseubolso.com.br";
+                requestOrigin = orgDomain.startsWith("http") ? orgDomain : `https://${orgDomain}`;
+            }
             const successUrl = `${requestOrigin}/checkout/success/${order.id}`;
 
             const paymentData = {
@@ -408,7 +412,7 @@ serve(async (req) => {
                 ...(splitData ? { splits: splitData } : {})
             };
 
-            const paymentResponse = await fetch(`${baseUrl}/payments`, {
+            let paymentResponse = await fetch(`${baseUrl}/payments`, {
                 method: "POST",
                 headers: {
                     "access_token": asaasToken,
@@ -417,6 +421,27 @@ serve(async (req) => {
                 },
                 body: JSON.stringify(paymentData)
             });
+
+            if (!paymentResponse.ok) {
+                const errText = await paymentResponse.text();
+                console.warn(`Primeira tentativa de cobrança falhou: ${errText}`);
+                
+                // Se o erro for de callback/domínio inválido, tenta criar novamente sem as opções de callback
+                if (errText.includes("callback") || errText.includes("domínio") || errText.includes("dominio")) {
+                    console.log("Tentando criar cobrança novamente sem as configurações de callback...");
+                    const { callback: _, ...paymentDataFallback } = paymentData;
+
+                    paymentResponse = await fetch(`${baseUrl}/payments`, {
+                        method: "POST",
+                        headers: {
+                            "access_token": asaasToken,
+                            "Content-Type": "application/json",
+                            "User-Agent": "ClubeDoSeuBolsoIntegration"
+                        },
+                        body: JSON.stringify(paymentDataFallback)
+                    });
+                }
+            }
 
             if (!paymentResponse.ok) {
                 const errText = await paymentResponse.text();

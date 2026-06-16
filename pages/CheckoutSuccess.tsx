@@ -51,6 +51,14 @@ const CheckoutSuccess: React.FC = () => {
   // Determinar o ID do pedido
   const effectiveOrderId = orderId;
 
+  const isOrderOwner = !!(currentUser && order && currentUser.email?.toLowerCase() === order.customer_email?.toLowerCase());
+
+  const hasMinLength = password.length >= 8;
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const isPasswordStrong = hasMinLength && hasUpperCase && hasLowerCase && hasNumber;
+
   useEffect(() => {
     if (!effectiveOrderId) {
         setLoading(false);
@@ -186,8 +194,8 @@ const CheckoutSuccess: React.FC = () => {
       return;
     }
 
-    // Se não estiver logado, valida senhas
-    if (!currentUser) {
+    // Se o usuário logado não for o dono do pedido, valida senhas para criar a conta do cliente
+    if (!isOrderOwner) {
       if (!password || !confirmPassword) {
         toast.error('Por favor, defina uma senha para sua conta.');
         return;
@@ -196,8 +204,20 @@ const CheckoutSuccess: React.FC = () => {
         toast.error('As senhas não coincidem.');
         return;
       }
-      if (password.length < 6) {
-        toast.error('A senha deve ter pelo menos 6 caracteres.');
+      if (!hasMinLength) {
+        toast.error('A senha deve ter pelo menos 8 caracteres.');
+        return;
+      }
+      if (!hasUpperCase) {
+        toast.error('A senha deve conter pelo menos uma letra maiúscula.');
+        return;
+      }
+      if (!hasLowerCase) {
+        toast.error('A senha deve conter pelo menos uma letra minúscula.');
+        return;
+      }
+      if (!hasNumber) {
+        toast.error('A senha deve conter pelo menos um número.');
         return;
       }
     }
@@ -205,9 +225,9 @@ const CheckoutSuccess: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      let activeUserId = currentUser?.id;
+      let activeUserId = isOrderOwner ? currentUser?.id : null;
 
-      if (!currentUser) {
+      if (!isOrderOwner) {
         // Obter IP para LGPD
         let userIp = '0.0.0.0';
         try {
@@ -246,22 +266,42 @@ const CheckoutSuccess: React.FC = () => {
           }
         });
 
-        if (signUpError) throw signUpError;
-        if (!signUpData?.user) throw new Error('Não foi possível criar o usuário no sistema.');
-        
-        activeUserId = signUpData.user.id;
-        console.log('User created successfully:', activeUserId);
+        if (signUpError) {
+          if (signUpError.message?.toLowerCase().includes('already registered') || signUpError.message?.toLowerCase().includes('already exists') || (signUpError as any).code === 'user_already_exists') {
+            console.log('User already exists. Attempting sign in to proceed...');
+            const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+              email: order.customer_email,
+              password: password
+            });
 
-        // Associar o usuário recém-criado ao pedido
-        const { error: orderLinkError } = await supabase
-          .from('orders')
-          .update({
-            user_id: activeUserId
-          })
-          .eq('id', order.id);
+            if (signInError) {
+              throw new Error('Este e-mail já está cadastrado. Por favor, digite a senha correta da sua conta para continuar.');
+            }
 
-        if (orderLinkError) {
-          console.error('Error linking user to order:', orderLinkError);
+            activeUserId = signInData.user?.id;
+          } else if (signUpError.message?.toLowerCase().includes('database error saving new user')) {
+            throw new Error('Este CPF já está cadastrado em outra conta de usuário. Por favor, utilize um CPF diferente ou faça login com a conta existente.');
+          } else {
+            throw signUpError;
+          }
+        } else {
+          if (!signUpData?.user) throw new Error('Não foi possível criar o usuário no sistema.');
+          activeUserId = signUpData.user.id;
+          console.log('User created successfully:', activeUserId);
+        }
+
+        // Associar o usuário ao pedido
+        if (activeUserId) {
+          const { error: orderLinkError } = await supabase
+            .from('orders')
+            .update({
+              user_id: activeUserId
+            })
+            .eq('id', order.id);
+
+          if (orderLinkError) {
+            console.error('Error linking user to order:', orderLinkError);
+          }
         }
       }
 
@@ -650,12 +690,12 @@ const CheckoutSuccess: React.FC = () => {
                     </div>
                   </div>
 
-                  {!currentUser && (
+                  {!isOrderOwner && (
                     <>
                       <hr className="border-slate-100 my-4" />
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-2 duration-300">
                         <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Escolha uma Senha (mín. 6 caracteres) *</label>
+                          <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Escolha uma Senha Forte *</label>
                           <div className="relative">
                             <input
                               type={showPassword ? "text" : "password"}
@@ -674,8 +714,28 @@ const CheckoutSuccess: React.FC = () => {
                               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                             </button>
                           </div>
+                          {password && (
+                            <div className="mt-2 pl-1 space-y-1 text-[10px] font-bold tracking-wide transition-all duration-300">
+                              <div className="flex items-center gap-1.5">
+                                <span className={`w-1.5 h-1.5 rounded-full ${hasMinLength ? 'bg-green-500' : 'bg-slate-300'}`}></span>
+                                <span className={hasMinLength ? 'text-green-600' : 'text-slate-400'}>Mínimo de 8 caracteres</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className={`w-1.5 h-1.5 rounded-full ${hasUpperCase ? 'bg-green-500' : 'bg-slate-300'}`}></span>
+                                <span className={hasUpperCase ? 'text-green-600' : 'text-slate-400'}>Pelo menos uma letra maiúscula</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className={`w-1.5 h-1.5 rounded-full ${hasLowerCase ? 'bg-green-500' : 'bg-slate-300'}`}></span>
+                                <span className={hasLowerCase ? 'text-green-600' : 'text-slate-400'}>Pelo menos uma letra minúscula</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className={`w-1.5 h-1.5 rounded-full ${hasNumber ? 'bg-green-500' : 'bg-slate-300'}`}></span>
+                                <span className={hasNumber ? 'text-green-600' : 'text-slate-400'}>Pelo menos um número</span>
+                              </div>
+                            </div>
+                          )}
                         </div>
-
+ 
                         <div className="space-y-2">
                           <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Confirme sua Senha *</label>
                           <div className="relative">

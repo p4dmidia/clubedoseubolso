@@ -174,8 +174,11 @@ serve(async (req) => {
 
         // 6. Carregar configurações de ambiente
         const token = Deno.env.get("TELEMEDICINE_API_TOKEN") ?? "7287033acbda457fa46c4dff78f9fd88";
-        const companyIdStr = Deno.env.get("TELEMEDICINE_COMPANY_ID") ?? "19";
-        const companyId = parseInt(companyIdStr, 10);
+        const companyIdStr = (Deno.env.get("TELEMEDICINE_COMPANY_ID") || "").trim() || "19";
+        let companyId = parseInt(companyIdStr, 10);
+        if (isNaN(companyId)) {
+            companyId = 19;
+        }
         const env = Deno.env.get("TELEMEDICINE_ENV") ?? "sandbox";
 
         const baseUrl = env === "production" 
@@ -184,47 +187,138 @@ serve(async (req) => {
         
         const requestUrl = `${baseUrl}/lives/sync/one`;
 
-        // 7. Preparar payload de acordo com a documentação (JSON)
-        const payload = {
+        // 7. Preparar payloads (tanto form-urlencoded quanto JSON)
+        
+        // 7a. URLSearchParams (form-urlencoded)
+        const params = new URLSearchParams();
+        params.append("Item.Name", name);
+        params.append("Item.Nome", name);
+        if (order.customer_email) {
+            params.append("Item.Email", order.customer_email);
+        }
+        params.append("Item.CPFCNPJ", cleanCpf);
+        params.append("Item.CPF", cleanCpf);
+        params.append("Item.Cpf", cleanCpf);
+        if (order.customer_phone) {
+            params.append("Item.Phone", order.customer_phone.replace(/\D/g, ""));
+            params.append("Item.Telefone", order.customer_phone.replace(/\D/g, ""));
+        }
+        params.append("Item.CompanyId", companyId.toString());
+        params.append("Item.PlanId", matchedPlanId.toString());
+        params.append("Item.IsActive", "true");
+        
+        if (addressData.cep) {
+            params.append("Item.ZipCode", addressData.cep);
+            params.append("Item.CEP", addressData.cep);
+        }
+        if (addressData.street) {
+            params.append("Item.Address", addressData.street);
+            params.append("Item.Endereco", addressData.street);
+        }
+        if (addressData.number) {
+            params.append("Item.HouseNumber", addressData.number);
+            params.append("Item.Numero", addressData.number);
+        }
+        if (addressData.neighborhood) {
+            params.append("Item.Neighborhood", addressData.neighborhood);
+            params.append("Item.Bairro", addressData.neighborhood);
+        }
+        if (addressData.city) {
+            params.append("Item.City", addressData.city);
+            params.append("Item.Cidade", addressData.city);
+        }
+        if (addressData.state) {
+            params.append("Item.State", addressData.state);
+            params.append("Item.Estado", addressData.state);
+        }
+        if (addressData.birth_date) {
+            const bDate = formatBirthDate(addressData.birth_date);
+            params.append("Item.BirthDate", bDate);
+            params.append("Item.DataNascimento", bDate);
+        }
+        if (addressData.sex) {
+            params.append("Item.Sex", sexFormatted);
+            params.append("Item.Sexo", sexFormatted);
+        }
+
+        // 7b. Objeto JSON
+        const jsonPayload = {
             Item: {
                 Name: name,
+                Nome: name,
                 Email: order.customer_email || "",
                 CPFCNPJ: cleanCpf,
+                CPF: cleanCpf,
+                Cpf: cleanCpf,
                 Phone: order.customer_phone ? order.customer_phone.replace(/\D/g, "") : "",
+                Telefone: order.customer_phone ? order.customer_phone.replace(/\D/g, "") : "",
+                Celular: order.customer_phone ? order.customer_phone.replace(/\D/g, "") : "",
                 ZipCode: addressData.cep,
+                CEP: addressData.cep,
                 Address: addressData.street,
+                Endereco: addressData.street,
+                Logradouro: addressData.street,
                 HouseNumber: addressData.number,
+                Numero: addressData.number,
                 Neighborhood: addressData.neighborhood,
+                Bairro: addressData.neighborhood,
                 City: addressData.city,
+                Cidade: addressData.city,
                 State: addressData.state,
+                Estado: addressData.state,
                 CompanyId: companyId,
+                EmpresaId: companyId,
                 PlanId: matchedPlanId,
+                PlanoId: matchedPlanId,
                 IsActive: true,
-                ...(addressData.birth_date ? { BirthDate: formatBirthDate(addressData.birth_date) } : {}),
-                ...(addressData.sex ? { Sex: sexFormatted } : {})
+                Ativo: true,
+                ...(addressData.birth_date ? { 
+                    BirthDate: formatBirthDate(addressData.birth_date),
+                    DataNascimento: formatBirthDate(addressData.birth_date)
+                } : {}),
+                ...(addressData.sex ? { 
+                    Sex: sexFormatted,
+                    Sexo: sexFormatted
+                } : {})
             }
         };
 
-        console.log(`[Telemedicine Sync] Enviando requisição JSON para ${requestUrl} com dados:`, JSON.stringify(payload));
-
-        const apiResponse = await fetch(requestUrl, {
+        console.log(`[Telemedicine Sync] Tentando integração via form-urlencoded para ${requestUrl}...`);
+        
+        let apiResponse = await fetch(requestUrl, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json",
+                "Content-Type": "application/x-www-form-urlencoded",
                 "X-Api-Key": token
             },
-            body: JSON.stringify(payload)
+            body: params.toString()
         });
 
-        const responseText = await apiResponse.text();
+        let responseText = await apiResponse.text();
+        console.log(`[Telemedicine Sync] Resposta form-urlencoded (${apiResponse.status}):`, responseText);
+
+        // Se falhar, tenta com JSON
+        if (!apiResponse.ok) {
+            console.log(`[Telemedicine Sync] Tentativa form-urlencoded falhou. Tentando via JSON...`);
+            apiResponse = await fetch(requestUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Api-Key": token
+                },
+                body: JSON.stringify(jsonPayload)
+            });
+
+            responseText = await apiResponse.text();
+            console.log(`[Telemedicine Sync] Resposta JSON (${apiResponse.status}):`, responseText);
+        }
+
         let responseData;
         try {
             responseData = JSON.parse(responseText);
         } catch {
             responseData = { rawText: responseText };
         }
-
-        console.log(`[Telemedicine Sync] Resposta recebida (${apiResponse.status}):`, responseText);
 
         if (!apiResponse.ok) {
             throw new Error(`Erro retornado pela API da Mais Unidos (HTTP ${apiResponse.status}): ${responseText}`);
