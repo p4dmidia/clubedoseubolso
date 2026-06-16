@@ -378,7 +378,7 @@ const HomePageTest: React.FC = () => {
                                 </ul>
                             </div>
                              <Link 
-                                 to={user ? "/checkout?buy=d3b07384-d113-4171-bc03-9a7c936df312" : "/register?type=client&buy=d3b07384-d113-4171-bc03-9a7c936df312"}
+                                 to="/checkout?buy=d3b07384-d113-4171-bc03-9a7c936df312"
                                  className="block w-full bg-verde text-white font-bold text-center py-4 rounded-xl hover:bg-verde-dark transition-all shadow-md"
                              >
                                  QUERO ASSINAR
@@ -403,7 +403,7 @@ const HomePageTest: React.FC = () => {
                                 </ul>
                             </div>
                              <Link 
-                                 to={user ? "/checkout?buy=d3b07384-d113-4171-bc05-9a7c936df312" : "/register?type=client&buy=d3b07384-d113-4171-bc05-9a7c936df312"}
+                                 to="/checkout?buy=d3b07384-d113-4171-bc05-9a7c936df312"
                                  className="block w-full bg-gray-800 text-white font-bold text-center py-4 rounded-xl hover:bg-gray-900 transition-all shadow-md"
                              >
                                  QUERO ATIVAR

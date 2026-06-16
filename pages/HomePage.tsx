@@ -551,7 +551,7 @@ const HomePage: React.FC = () => {
                                     return (
                                         <div 
                                             key={plan.id || idx}
-                                            onClick={() => navigate(user ? `/checkout?buy=${plan.id}` : `/register?type=client&buy=${plan.id}`)}
+                                            onClick={() => navigate(`/checkout?buy=${plan.id}`)}
                                             className={`bg-white rounded-3xl p-6 border-2 flex flex-col justify-between hover:scale-[1.02] cursor-pointer transition-all duration-300 relative ${
                                                 isPremium 
                                                     ? 'border-[#2980B9] shadow-md shadow-[#2980B9]/5 hover:shadow-lg' 
@@ -602,7 +602,7 @@ const HomePage: React.FC = () => {
 
                                             <div className="mt-6">
                                                 <Link 
-                                                    to={user ? `/checkout?buy=${plan.id}` : `/register?type=client&buy=${plan.id}`}
+                                                    to={`/checkout?buy=${plan.id}`}
                                                     onClick={(e) => e.stopPropagation()}
                                                     className="w-full block text-center py-3 bg-[#27AE60] hover:bg-[#219653] text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-md shadow-[#27AE60]/10"
                                                 >

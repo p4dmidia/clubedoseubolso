@@ -102,7 +102,7 @@ serve(async (req) => {
             });
         }
 
-        // 5. Validar campos obrigatórios para a Mais Unidos API
+        // 5. Validar campos obrigatórios básicos para a Mais Unidos API
         const rawCpf = order.customer_cpf || "";
         cleanCpf = rawCpf.replace(/\D/g, "");
         name = order.customer_name || "";
@@ -113,6 +113,64 @@ serve(async (req) => {
         if (!name) {
             throw new Error("Nome do cliente está ausente.");
         }
+
+        // 5.5. Buscar endereço e dados adicionais no perfil do usuário
+        let addressData = {
+            cep: "",
+            street: "",
+            number: "",
+            complement: "",
+            neighborhood: "",
+            city: "",
+            state: "",
+            birth_date: "",
+            sex: ""
+        };
+
+        if (order.user_id) {
+            const { data: profile } = await supabase
+                .from("user_profiles")
+                .select("cep, address, street, number, complement, neighborhood, city, state, birth_date, sex")
+                .eq("id", order.user_id)
+                .maybeSingle();
+
+            if (profile) {
+                addressData = {
+                    cep: profile.cep || "",
+                    street: profile.street || profile.address || "",
+                    number: profile.number || "",
+                    complement: profile.complement || "",
+                    neighborhood: profile.neighborhood || "",
+                    city: profile.city || "",
+                    state: profile.state || "",
+                    birth_date: profile.birth_date || "",
+                    sex: profile.sex || ""
+                };
+            }
+        }
+
+        // Se o endereço (CEP ou rua/logradouro) estiver ausente, retornamos pendência para o fluxo finalizar na tela de obrigado
+        if (!addressData.cep || !addressData.street) {
+            console.log(`[Telemedicine Sync] Pedido ${orderId} aguardando preenchimento do endereço pelo cliente.`);
+            return new Response(JSON.stringify({ 
+                success: true, 
+                pending_registration: true, 
+                message: "Aguardando preenchimento de endereço e conclusão do cadastro pelo cliente." 
+            }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" }
+            });
+        }
+
+        const formatBirthDate = (dateStr: string): string => {
+            if (!dateStr) return "";
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                const [year, month, day] = dateStr.split("-");
+                return `${day}/${month}/${year}`;
+            }
+            return dateStr;
+        };
+
+        const sexFormatted = addressData.sex ? addressData.sex.charAt(0).toUpperCase() : "";
 
         // 6. Carregar configurações de ambiente
         const token = Deno.env.get("TELEMEDICINE_API_TOKEN") ?? "7287033acbda457fa46c4dff78f9fd88";
@@ -126,29 +184,36 @@ serve(async (req) => {
         
         const requestUrl = `${baseUrl}/lives/sync/one`;
 
-        // 7. Preparar payload de acordo com a documentação (form-urlencoded com prefixo Item.)
-        const params = new URLSearchParams();
-        params.append("Item.Name", name);
-        if (order.customer_email) {
-            params.append("Item.Email", order.customer_email);
-        }
-        params.append("Item.CPFCNPJ", cleanCpf);
-        if (order.customer_phone) {
-            params.append("Item.Phone", order.customer_phone.replace(/\D/g, ""));
-        }
-        params.append("Item.CompanyId", companyId.toString());
-        params.append("Item.PlanId", matchedPlanId.toString());
-        params.append("Item.IsActive", "true");
+        // 7. Preparar payload de acordo com a documentação (JSON)
+        const payload = {
+            Item: {
+                Name: name,
+                Email: order.customer_email || "",
+                CPFCNPJ: cleanCpf,
+                Phone: order.customer_phone ? order.customer_phone.replace(/\D/g, "") : "",
+                ZipCode: addressData.cep,
+                Address: addressData.street,
+                HouseNumber: addressData.number,
+                Neighborhood: addressData.neighborhood,
+                City: addressData.city,
+                State: addressData.state,
+                CompanyId: companyId,
+                PlanId: matchedPlanId,
+                IsActive: true,
+                ...(addressData.birth_date ? { BirthDate: formatBirthDate(addressData.birth_date) } : {}),
+                ...(addressData.sex ? { Sex: sexFormatted } : {})
+            }
+        };
 
-        console.log(`[Telemedicine Sync] Enviando requisição para ${requestUrl} com dados: ${params.toString()}`);
+        console.log(`[Telemedicine Sync] Enviando requisição JSON para ${requestUrl} com dados:`, JSON.stringify(payload));
 
         const apiResponse = await fetch(requestUrl, {
             method: "POST",
             headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
+                "Content-Type": "application/json",
                 "X-Api-Key": token
             },
-            body: params.toString()
+            body: JSON.stringify(payload)
         });
 
         const responseText = await apiResponse.text();

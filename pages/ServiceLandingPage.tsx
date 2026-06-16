@@ -144,11 +144,7 @@ const ServiceLandingPage: React.FC = () => {
     const [plans, setPlans] = useState<any[]>([]);
 
     const handlePurchase = (planId: string) => {
-        if (user) {
-            navigate(`/checkout?buy=${planId}`);
-        } else {
-            navigate(`/register?type=client&buy=${planId}`);
-        }
+        navigate(`/checkout?buy=${planId}`);
     };
 
     const service = SERVICE_DETAILS[serviceSlug || ''] || SERVICE_DETAILS['telemedicina'];

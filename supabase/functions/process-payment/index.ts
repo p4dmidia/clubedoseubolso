@@ -392,12 +392,19 @@ serve(async (req) => {
             const splitWalletId = level1Split && level1Split.status === 'split_sent' ? level1Split.wallet_id : null;
             const splitAmount = level1Split && level1Split.status === 'split_sent' ? level1Split.amount : 0;
 
+            const requestOrigin = origin || req.headers.get("origin") || "https://clubedoseubolso.com.br";
+            const successUrl = `${requestOrigin}/checkout/success/${order.id}`;
+
             const paymentData = {
                 customer: asaasCustomerId,
                 billingType: "UNDEFINED",
                 value: Number(order.total_amount),
                 dueDate: dueDate,
                 externalReference: order.id,
+                callback: {
+                    successUrl: successUrl,
+                    autoRedirect: true
+                },
                 ...(splitData ? { splits: splitData } : {})
             };
 

@@ -281,11 +281,7 @@ const PlanLandingPage: React.FC = () => {
     };
 
     const handleCTA = () => {
-        if (user) {
-            navigate(`/checkout?buy=${plan.checkoutId}`);
-        } else {
-            navigate(`/register?type=client&buy=${plan.checkoutId}`);
-        }
+        navigate(`/checkout?buy=${plan.checkoutId}`);
     };
 
     return (

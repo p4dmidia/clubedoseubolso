@@ -277,7 +277,7 @@ const CheckoutPage: React.FC = () => {
             // 3. Process Payment via Edge Function
             console.log('Invoking process-payment with:', { orderId, paymentMethod });
             const { data: paymentResult, error: paymentError } = await supabase.functions.invoke('process-payment', {
-                body: { orderId, paymentMethod, customerCpf: customerInfo.cpf }
+                body: { orderId, paymentMethod, customerCpf: customerInfo.cpf, origin: window.location.origin }
             });
 
             if (paymentError) {
