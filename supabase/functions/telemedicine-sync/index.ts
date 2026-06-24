@@ -25,6 +25,7 @@ serve(async (req) => {
     try {
         const body = await req.json();
         orderId = body.orderId;
+        const plainPassword = body.password || "";
 
         if (!orderId) {
             throw new Error("orderId não fornecido na requisição.");
@@ -187,61 +188,7 @@ serve(async (req) => {
         
         const requestUrl = `${baseUrl}/lives/sync/one`;
 
-        // 7. Preparar payloads (tanto form-urlencoded quanto JSON)
-        
-        // 7a. URLSearchParams (form-urlencoded)
-        const params = new URLSearchParams();
-        params.append("Item.Name", name);
-        params.append("Item.Nome", name);
-        if (order.customer_email) {
-            params.append("Item.Email", order.customer_email);
-        }
-        params.append("Item.CPFCNPJ", cleanCpf);
-        params.append("Item.CPF", cleanCpf);
-        params.append("Item.Cpf", cleanCpf);
-        if (order.customer_phone) {
-            params.append("Item.Phone", order.customer_phone.replace(/\D/g, ""));
-            params.append("Item.Telefone", order.customer_phone.replace(/\D/g, ""));
-        }
-        params.append("Item.CompanyId", companyId.toString());
-        params.append("Item.PlanId", matchedPlanId.toString());
-        params.append("Item.IsActive", "true");
-        
-        if (addressData.cep) {
-            params.append("Item.ZipCode", addressData.cep);
-            params.append("Item.CEP", addressData.cep);
-        }
-        if (addressData.street) {
-            params.append("Item.Address", addressData.street);
-            params.append("Item.Endereco", addressData.street);
-        }
-        if (addressData.number) {
-            params.append("Item.HouseNumber", addressData.number);
-            params.append("Item.Numero", addressData.number);
-        }
-        if (addressData.neighborhood) {
-            params.append("Item.Neighborhood", addressData.neighborhood);
-            params.append("Item.Bairro", addressData.neighborhood);
-        }
-        if (addressData.city) {
-            params.append("Item.City", addressData.city);
-            params.append("Item.Cidade", addressData.city);
-        }
-        if (addressData.state) {
-            params.append("Item.State", addressData.state);
-            params.append("Item.Estado", addressData.state);
-        }
-        if (addressData.birth_date) {
-            const bDate = formatBirthDate(addressData.birth_date);
-            params.append("Item.BirthDate", bDate);
-            params.append("Item.DataNascimento", bDate);
-        }
-        if (addressData.sex) {
-            params.append("Item.Sex", sexFormatted);
-            params.append("Item.Sexo", sexFormatted);
-        }
-
-        // 7b. Objeto JSON
+        // 7. Preparar payload JSON (com variações de chaves em inglês e português para maior robustez)
         const jsonPayload = {
             Item: {
                 Name: name,
@@ -283,36 +230,18 @@ serve(async (req) => {
             }
         };
 
-        console.log(`[Telemedicine Sync] Tentando integração via form-urlencoded para ${requestUrl}...`);
-        
+        console.log(`[Telemedicine Sync] Enviando requisição JSON para ${requestUrl} com dados:`, JSON.stringify(jsonPayload));
+
         let apiResponse = await fetch(requestUrl, {
             method: "POST",
             headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
+                "Content-Type": "application/json",
                 "X-Api-Key": token
             },
-            body: params.toString()
+            body: JSON.stringify(jsonPayload)
         });
 
         let responseText = await apiResponse.text();
-        console.log(`[Telemedicine Sync] Resposta form-urlencoded (${apiResponse.status}):`, responseText);
-
-        // Se falhar, tenta com JSON
-        if (!apiResponse.ok) {
-            console.log(`[Telemedicine Sync] Tentativa form-urlencoded falhou. Tentando via JSON...`);
-            apiResponse = await fetch(requestUrl, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-Api-Key": token
-                },
-                body: JSON.stringify(jsonPayload)
-            });
-
-            responseText = await apiResponse.text();
-            console.log(`[Telemedicine Sync] Resposta JSON (${apiResponse.status}):`, responseText);
-        }
-
         let responseData;
         try {
             responseData = JSON.parse(responseText);
@@ -320,8 +249,97 @@ serve(async (req) => {
             responseData = { rawText: responseText };
         }
 
+        console.log(`[Telemedicine Sync] Resposta lives/sync/one (${apiResponse.status}):`, responseText);
+
         if (!apiResponse.ok) {
             throw new Error(`Erro retornado pela API da Mais Unidos (HTTP ${apiResponse.status}): ${responseText}`);
+        }
+
+        // Se uma senha foi fornecida, criamos a conta de login do usuário na Mais Unidos
+        let registerResponseData = null;
+        if (plainPassword) {
+            const registerUrl = `${baseUrl}/customers/register`;
+            
+            // Auxiliar para formatar CPF com pontos e traço no cadastro
+            const formatCpfStr = (cpf: string): string => {
+                const clean = cpf.replace(/\D/g, "");
+                if (clean.length === 11) {
+                    return `${clean.substring(0, 3)}.${clean.substring(3, 6)}.${clean.substring(6, 9)}-${clean.substring(9, 11)}`;
+                }
+                return cpf;
+            };
+            
+            const formattedCpf = formatCpfStr(order.customer_cpf || "");
+            
+            let cleanPhone = (order.customer_phone || "").replace(/\D/g, "");
+            if (cleanPhone.length > 11 && cleanPhone.startsWith("55")) {
+                cleanPhone = cleanPhone.substring(2);
+            }
+
+            const formatBirthDateISO = (dateStr: string): string => {
+                if (!dateStr) return "";
+                if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                    return `${dateStr}T00:00:00Z`;
+                }
+                if (dateStr.includes("T")) {
+                    return dateStr;
+                }
+                return dateStr;
+            };
+
+            const registerPayload = {
+                FullName: name,
+                Email: order.customer_email || undefined,
+                CPFCNPJ: formattedCpf,
+                PhoneNumber: cleanPhone,
+                BirthDate: addressData.birth_date ? formatBirthDateISO(addressData.birth_date) : undefined,
+                Sex: addressData.sex ? sexFormatted : undefined,
+                ZipCode: addressData.cep || undefined,
+                Address: addressData.street || undefined,
+                HouseNumber: addressData.number || undefined,
+                Neighborhood: addressData.neighborhood || undefined,
+                City: addressData.city || undefined,
+                State: addressData.state || undefined,
+                Complement: addressData.complement || undefined,
+                Password: plainPassword,
+                ConfirmPassword: plainPassword,
+                TermsAccepted: true,
+                CompanyId: companyId,
+                PlanId: matchedPlanId || undefined
+            };
+
+            console.log(`[Telemedicine Sync] Cadastrando usuário em ${registerUrl} via JSON...`);
+            const regResponse = await fetch(registerUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Api-Key": token
+                },
+                body: JSON.stringify(registerPayload)
+            });
+
+            const regResponseText = await regResponse.text();
+            try {
+                registerResponseData = JSON.parse(regResponseText);
+            } catch {
+                registerResponseData = { rawText: regResponseText };
+            }
+
+            console.log(`[Telemedicine Sync] Resposta do cadastro (${regResponse.status}):`, regResponseText);
+
+            if (!regResponse.ok) {
+                const errorStr = regResponseText.toLowerCase();
+                const isAlreadyRegistered = errorStr.includes("already registered") || 
+                                            errorStr.includes("já existe") || 
+                                            errorStr.includes("já cadastrado") ||
+                                            errorStr.includes("already exists");
+                
+                if (!isAlreadyRegistered) {
+                    console.warn(`[Telemedicine Sync Warning] Erro no cadastro da Mais Unidos (HTTP ${regResponse.status}): ${regResponseText}`);
+                } else {
+                    console.log("[Telemedicine Sync] Usuário já possui conta cadastrada na Mais Unidos. Ignorando.");
+                }
+            }
         }
 
         // 8. Gravar log de sucesso

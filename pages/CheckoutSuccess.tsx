@@ -208,18 +208,6 @@ const CheckoutSuccess: React.FC = () => {
         toast.error('A senha deve ter pelo menos 8 caracteres.');
         return;
       }
-      if (!hasUpperCase) {
-        toast.error('A senha deve conter pelo menos uma letra maiúscula.');
-        return;
-      }
-      if (!hasLowerCase) {
-        toast.error('A senha deve conter pelo menos uma letra minúscula.');
-        return;
-      }
-      if (!hasNumber) {
-        toast.error('A senha deve conter pelo menos um número.');
-        return;
-      }
     }
 
     setIsSubmitting(true);
@@ -371,9 +359,12 @@ const CheckoutSuccess: React.FC = () => {
 
       if (orderError) throw orderError;
 
-      // 5. Invocar a Edge Function telemedicine-sync
+      // 5. Invocar a Edge Function telemedicine-sync (passando a senha cadastrada se houver)
       const { data: syncRes, error: syncErr } = await supabase.functions.invoke('telemedicine-sync', {
-        body: { orderId: order.id }
+        body: { 
+          orderId: order.id,
+          password: password || undefined
+        }
       });
 
       if (syncErr) throw syncErr;
@@ -386,7 +377,7 @@ const CheckoutSuccess: React.FC = () => {
       
       // Redirecionar após pequeno delay para o Mais Unidos
       setTimeout(() => {
-        window.location.href = 'https://telemedicina.maisunidos.com.br/';
+        window.location.href = 'https://app.maisunidos.com.br/Conta/Entrar';
       }, 1500);
 
     } catch (err: any) {
@@ -540,7 +531,7 @@ const CheckoutSuccess: React.FC = () => {
                     Seus dados de endereço e aceites legais foram salvos e sincronizados com a telemedicina do Mais Unidos. Clique abaixo para entrar na plataforma.
                   </p>
                   <a 
-                    href="https://telemedicina.maisunidos.com.br/"
+                    href="https://app.maisunidos.com.br/Conta/Entrar"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-full bg-[#2980B9] text-[#0B1221] py-5 rounded-2xl font-black text-sm uppercase tracking-widest text-center shadow-xl shadow-[#2980B9]/15 flex items-center justify-center gap-2 hover:-translate-y-1 hover:shadow-2xl transition-all"
@@ -716,22 +707,14 @@ const CheckoutSuccess: React.FC = () => {
                           </div>
                           {password && (
                             <div className="mt-2 pl-1 space-y-1 text-[10px] font-bold tracking-wide transition-all duration-300">
-                              <div className="flex items-center gap-1.5">
-                                <span className={`w-1.5 h-1.5 rounded-full ${hasMinLength ? 'bg-green-500' : 'bg-slate-300'}`}></span>
-                                <span className={hasMinLength ? 'text-green-600' : 'text-slate-400'}>Mínimo de 8 caracteres</span>
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                <span className={`w-1.5 h-1.5 rounded-full ${hasUpperCase ? 'bg-green-500' : 'bg-slate-300'}`}></span>
-                                <span className={hasUpperCase ? 'text-green-600' : 'text-slate-400'}>Pelo menos uma letra maiúscula</span>
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                <span className={`w-1.5 h-1.5 rounded-full ${hasLowerCase ? 'bg-green-500' : 'bg-slate-300'}`}></span>
-                                <span className={hasLowerCase ? 'text-green-600' : 'text-slate-400'}>Pelo menos uma letra minúscula</span>
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                <span className={`w-1.5 h-1.5 rounded-full ${hasNumber ? 'bg-green-500' : 'bg-slate-300'}`}></span>
-                                <span className={hasNumber ? 'text-green-600' : 'text-slate-400'}>Pelo menos um número</span>
-                              </div>
+                              {[
+                                { label: 'Mínimo de 8 caracteres', ok: hasMinLength },
+                              ].map((rule, i) => (
+                                <div key={i} className="flex items-center gap-1.5">
+                                  <span className={`w-1.5 h-1.5 rounded-full ${rule.ok ? 'bg-green-500' : 'bg-slate-300'}`}></span>
+                                  <span className={rule.ok ? 'text-green-600' : 'text-slate-400'}>{rule.label}</span>
+                                </div>
+                              ))}
                             </div>
                           )}
                         </div>
