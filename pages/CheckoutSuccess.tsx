@@ -57,7 +57,17 @@ const CheckoutSuccess: React.FC = () => {
   const hasUpperCase = /[A-Z]/.test(password);
   const hasLowerCase = /[a-z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
-  const isPasswordStrong = hasMinLength && hasUpperCase && hasLowerCase && hasNumber;
+  const hasSpecialChar = /[^A-Za-z0-9]/.test(password);
+  
+  const isSequentialOrRepeated = (str: string) => {
+    const sequences = ['12345678', '87654321', '10111213', 'abcdefgh'];
+    if (sequences.some(seq => str.toLowerCase().includes(seq))) return true;
+    if (/^(.)\1+$/.test(str)) return true;
+    return false;
+  };
+  const isPasswordEasy = isSequentialOrRepeated(password);
+
+  const isPasswordStrong = hasMinLength && hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar && !isPasswordEasy;
 
   useEffect(() => {
     if (!effectiveOrderId) {
@@ -208,6 +218,26 @@ const CheckoutSuccess: React.FC = () => {
         toast.error('A senha deve ter pelo menos 8 caracteres.');
         return;
       }
+      if (!hasUpperCase) {
+        toast.error('A senha deve conter pelo menos uma letra maiúscula.');
+        return;
+      }
+      if (!hasLowerCase) {
+        toast.error('A senha deve conter pelo menos uma letra minúscula.');
+        return;
+      }
+      if (!hasNumber) {
+        toast.error('A senha deve conter pelo menos um número.');
+        return;
+      }
+      if (!hasSpecialChar) {
+        toast.error('A senha deve conter pelo menos um caractere especial (ex: @, #, $, !).');
+        return;
+      }
+      if (isPasswordEasy) {
+        toast.error('A senha é muito simples ou fácil de adivinhar. Por favor, escolha outra.');
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -215,7 +245,16 @@ const CheckoutSuccess: React.FC = () => {
     try {
       let activeUserId = isOrderOwner ? currentUser?.id : null;
 
-      if (!isOrderOwner) {
+      // Check if there is an active session right now for the order email
+      if (!activeUserId) {
+        const { data: { user: sessionUser } } = await supabase.auth.getUser();
+        if (sessionUser && sessionUser.email?.toLowerCase() === order.customer_email?.toLowerCase()) {
+          activeUserId = sessionUser.id;
+          setCurrentUser(sessionUser);
+        }
+      }
+
+      if (!activeUserId) {
         // Obter IP para LGPD
         let userIp = '0.0.0.0';
         try {
@@ -267,6 +306,9 @@ const CheckoutSuccess: React.FC = () => {
             }
 
             activeUserId = signInData.user?.id;
+            if (signInData.user) {
+              setCurrentUser(signInData.user);
+            }
           } else if (signUpError.message?.toLowerCase().includes('database error saving new user')) {
             throw new Error('Este CPF já está cadastrado em outra conta de usuário. Por favor, utilize um CPF diferente ou faça login com a conta existente.');
           } else {
@@ -275,6 +317,7 @@ const CheckoutSuccess: React.FC = () => {
         } else {
           if (!signUpData?.user) throw new Error('Não foi possível criar o usuário no sistema.');
           activeUserId = signUpData.user.id;
+          setCurrentUser(signUpData.user);
           console.log('User created successfully:', activeUserId);
         }
 
@@ -709,6 +752,11 @@ const CheckoutSuccess: React.FC = () => {
                             <div className="mt-2 pl-1 space-y-1 text-[10px] font-bold tracking-wide transition-all duration-300">
                               {[
                                 { label: 'Mínimo de 8 caracteres', ok: hasMinLength },
+                                { label: 'Pelo menos uma letra maiúscula', ok: hasUpperCase },
+                                { label: 'Pelo menos uma letra minúscula', ok: hasLowerCase },
+                                { label: 'Pelo menos um número', ok: hasNumber },
+                                { label: 'Pelo menos um caractere especial (ex: @, #, $, !)', ok: hasSpecialChar },
+                                { label: 'Sem sequências muito simples (ex: 12345678)', ok: !isPasswordEasy }
                               ].map((rule, i) => (
                                 <div key={i} className="flex items-center gap-1.5">
                                   <span className={`w-1.5 h-1.5 rounded-full ${rule.ok ? 'bg-green-500' : 'bg-slate-300'}`}></span>

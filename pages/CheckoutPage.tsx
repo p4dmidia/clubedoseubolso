@@ -219,10 +219,12 @@ const CheckoutPage: React.FC = () => {
         }
 
         setIsLoading(true);
+        let createdOrderId: string | null = null;
 
         try {
             // 1. Create order in Supabase
             const orderId = `ORD-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+            createdOrderId = orderId;
             const referralCode = Cookies.get('classea_ref');
             
                 const fullAddressString = 'Assinatura Digital';
@@ -324,6 +326,15 @@ const CheckoutPage: React.FC = () => {
 
         } catch (error: any) {
             console.error('Checkout error:', error);
+            if (createdOrderId) {
+                try {
+                    await supabase.from('order_items').delete().eq('order_id', createdOrderId);
+                    await supabase.from('orders').delete().eq('id', createdOrderId);
+                    console.log(`Cleaned up failed order ${createdOrderId}`);
+                } catch (cleanupErr) {
+                    console.error('Error cleaning up failed order:', cleanupErr);
+                }
+            }
             toast.error('Erro ao processar pedido: ' + (error.message || 'Tente novamente.'));
         } finally {
             setIsLoading(false);
