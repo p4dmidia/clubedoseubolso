@@ -287,7 +287,7 @@ const ClientDashboard: React.FC = () => {
                             </td>
                             <td className="py-6 px-4">
                               <span className="text-xs font-bold text-slate-700 block">
-                                {order.payment_method || 'Mercado Pago'}
+                                {order.payment_method || 'Asaas'}
                               </span>
                               <span className="text-[10px] text-slate-400 font-semibold block uppercase">
                                 {order.shipping_method || 'Digital'}
@@ -448,7 +448,7 @@ const ClientDashboard: React.FC = () => {
                   <h4 className="text-base font-black text-[#0B1221] mb-2">Processamento de Cartões</h4>
                   <p className="text-slate-500 text-xs font-medium leading-relaxed">
                     Não armazenamos dados críticos do seu cartão de crédito (como número ou código CVV) em nossos servidores.
-                    Os pagamentos são intermediados por gateways autorizados de altíssimo nível (Mercado Pago), cumprindo o padrão internacional PCI-DSS.
+                    Os pagamentos são intermediados por gateways autorizados de altíssimo nível (Asaas), cumprindo o padrão internacional PCI-DSS.
                   </p>
                 </div>
 
