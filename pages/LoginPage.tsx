@@ -85,7 +85,13 @@ const LoginPage: React.FC = () => {
                 } else if (profileData?.role === 'affiliate') {
                     navigate('/afiliado/dashboard');
                 } else {
-                    navigate('/cliente/compras');
+                    const params = new URLSearchParams(window.location.search);
+                    const upgrade = params.get('upgrade');
+                    if (upgrade === 'true') {
+                        navigate('/cliente/compras?upgrade=true');
+                    } else {
+                        navigate('/cliente/compras');
+                    }
                 }
             }
         } catch (err: any) {

@@ -16,7 +16,9 @@ import {
     CreditCard,
     Sparkles,
     CheckCircle,
-    ShoppingBag
+    ShoppingBag,
+    Info,
+    HelpCircle
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
@@ -36,6 +38,7 @@ const AffiliateLayout: React.FC<AffiliateLayoutProps> = ({ children }) => {
     const [affiliate, setAffiliate] = React.useState<any>(null);
     const [asaasWalletId, setAsaasWalletId] = React.useState<string | null>(null);
     const [loadingAff, setLoadingAff] = React.useState(true);
+    const [isTutorialOpen, setIsTutorialOpen] = React.useState(false);
 
     React.useEffect(() => {
         if (!user) {
@@ -214,13 +217,23 @@ const AffiliateLayout: React.FC<AffiliateLayoutProps> = ({ children }) => {
                                     </div>
                                 </div>
 
-                                <Link
-                                    to="/afiliado/settings?tab=bank"
-                                    className="w-full bg-[#0B1221] text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#2980B9] transition-all flex items-center justify-center gap-3 shadow-xl hover:shadow-[#2980B9]/20 text-center"
-                                >
-                                    <Settings className="w-5 h-5" />
-                                    CONFIGURAR CHAVE ASAAS
-                                </Link>
+                                <div className="w-full flex flex-col sm:flex-row gap-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsTutorialOpen(true)}
+                                        className="flex-1 bg-transparent border-2 border-slate-200 text-slate-700 py-5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center gap-3 text-center"
+                                    >
+                                        <Info className="w-5 h-5 text-[#2980B9]" />
+                                        VER TUTORIAL DO ASAAS
+                                    </button>
+                                    <Link
+                                        to="/afiliado/settings?tab=bank"
+                                        className="flex-1 bg-[#0B1221] text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#2980B9] transition-all flex items-center justify-center gap-3 shadow-xl hover:shadow-[#2980B9]/20 text-center"
+                                    >
+                                        <Settings className="w-5 h-5" />
+                                        CONFIGURAR CHAVE ASAAS
+                                    </Link>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -228,6 +241,110 @@ const AffiliateLayout: React.FC<AffiliateLayoutProps> = ({ children }) => {
                     children
                 )}
             </main>
+
+            {isTutorialOpen && (
+                <div className="fixed inset-0 bg-[#0B1221]/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 max-w-2xl w-full max-h-[85vh] overflow-y-auto relative animate-in fade-in zoom-in-95 duration-200">
+                        {/* Header */}
+                        <div className="p-8 pb-4 border-b border-slate-50 flex justify-between items-start">
+                            <div>
+                                <h3 className="text-xl font-black text-[#0B1221] text-left">Como obter sua Chave da Carteira Asaas</h3>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 text-left">Siga o passo a passo para configurar suas comissões</p>
+                            </div>
+                            <button 
+                                type="button"
+                                onClick={() => setIsTutorialOpen(false)}
+                                className="p-2 text-slate-400 hover:text-[#0B1221] hover:bg-slate-50 rounded-xl transition-all"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-8 space-y-6 text-sm text-slate-600 font-medium leading-relaxed text-left">
+                            
+                            <div className="space-y-6">
+                                <div className="flex gap-4">
+                                    <div className="w-8 h-8 rounded-full bg-[#2980B9]/10 text-[#2980B9] font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                                        1
+                                    </div>
+                                    <div>
+                                        <h4 className="font-black text-[#0B1221] text-sm">Criar conta no Asaas</h4>
+                                        <p className="mt-1 text-xs">
+                                            Se você ainda não possui uma conta, acesse o site oficial do Asaas e crie sua conta gratuitamente. Ela será usada para gerenciar suas retiradas e comissões do Clube.
+                                        </p>
+                                        <a 
+                                            href="https://www.asaas.com" 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1.5 text-xs font-black text-[#2980B9] hover:underline mt-2"
+                                        >
+                                            Ir para o Asaas <ExternalLink className="w-3.5 h-3.5" />
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-4">
+                                    <div className="w-8 h-8 rounded-full bg-[#2980B9]/10 text-[#2980B9] font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                                        2
+                                    </div>
+                                    <div>
+                                        <h4 className="font-black text-[#0B1221] text-sm">Acessar a Integração da API</h4>
+                                        <p className="mt-1 text-xs">
+                                            Faça login no painel do Asaas. No menu lateral, acesse **Minha Conta** e depois clique na aba **Integrações** (ou acesse a seção de chaves de API).
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-4">
+                                    <div className="w-8 h-8 rounded-full bg-[#2980B9]/10 text-[#2980B9] font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                                        3
+                                    </div>
+                                    <div>
+                                        <h4 className="font-black text-[#0B1221] text-sm">Obter o Wallet ID / Chave da Carteira</h4>
+                                        <p className="mt-1 text-xs">
+                                            Nas configurações de integração, copie o identificador da sua carteira. O código é um identificador único de formato padrão (ex: `8a7b6c5d-4e3f-2a1b-0c9d-8e7f6a5b4c3d`) contendo letras, números e traços.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-4">
+                                    <div className="w-8 h-8 rounded-full bg-[#2980B9]/10 text-[#2980B9] font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                                        4
+                                    </div>
+                                    <div>
+                                        <h4 className="font-black text-[#0B1221] text-sm">Salvar a chave no Clube do Seu Bolso</h4>
+                                        <p className="mt-1 text-xs">
+                                            Com o Wallet ID copiado, feche esta tela de tutorial, clique no botão **Configurar Chave Asaas** e cole a chave no campo **Chave da Carteira Asaas (Wallet ID)**. Por fim, salve as configurações.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-sky-50 border border-sky-100 rounded-3xl p-6 flex gap-4 items-start">
+                                <HelpCircle className="w-5 h-5 text-[#2980B9] shrink-0 mt-0.5" />
+                                <div className="text-xs leading-relaxed text-[#0B1221]">
+                                    <h5 className="font-black uppercase tracking-wider mb-1">Por que isso é necessário?</h5>
+                                    <p className="text-slate-600 font-medium">
+                                        Para fins de segurança e transparência financeira, toda a sua transacionalidade e os pagamentos de bonificações MMN são automatizados através do gateway Asaas. Cadastrar sua chave garante que seus ganhos caiam diretamente no seu saldo da forma mais rápida possível.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-8 pt-4 border-t border-slate-50 flex justify-end">
+                            <button
+                                type="button"
+                                onClick={() => setIsTutorialOpen(false)}
+                                className="bg-[#0B1221] hover:bg-[#2980B9] text-white px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+                            >
+                                Entendi, Fechar Tutorial
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

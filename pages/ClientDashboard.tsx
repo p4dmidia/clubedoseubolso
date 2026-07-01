@@ -28,12 +28,61 @@ const ClientDashboard: React.FC = () => {
   const { profile, user } = useAuth();
   const navigate = useNavigate();
   const [activeSubTab, setActiveSubTab] = useState<'compras' | 'assinaturas' | 'documentos' | 'servicos' | 'pagamentos'>('compras');
+  const [showUpgradeConfirm, setShowUpgradeConfirm] = useState(false);
+  const [upgrading, setUpgrading] = useState(false);
   
   // Data States
   const [orders, setOrders] = useState<any[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [loadingSubscriptions, setLoadingSubscriptions] = useState(true);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const upgrade = params.get('upgrade');
+    if (upgrade === 'true' && profile?.role === 'client') {
+      setActiveSubTab('servicos');
+      setShowUpgradeConfirm(true);
+      
+      // Clean query parameter from URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      // Smooth scroll to the upgrade card
+      setTimeout(() => {
+        const element = document.getElementById('upgrade-card');
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 600);
+    }
+  }, [profile]);
+
+  const handleUpgradeToAffiliate = async () => {
+    if (!user) return;
+    try {
+      setUpgrading(true);
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ role: 'affiliate' })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      toast.success('Parabéns! Sua conta de Afiliado foi ativada gratuitamente.', {
+        icon: '🚀',
+        duration: 4000
+      });
+
+      setTimeout(() => {
+        window.location.href = '/afiliado/dashboard';
+      }, 1500);
+    } catch (err: any) {
+      console.error('Error upgrading to affiliate:', err);
+      toast.error('Erro ao ativar modo afiliado: ' + (err.message || 'Tente novamente.'));
+    } finally {
+      setUpgrading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -528,21 +577,65 @@ const ClientDashboard: React.FC = () => {
 
                 {/* Servico 3 */}
                 {profile?.role === 'client' && (
-                  <div className="border border-slate-100 rounded-3xl p-6 flex flex-col justify-between hover:shadow-md transition-all bg-[#0B1221] text-white">
-                    <div>
-                      <h4 className="text-base font-black mb-2 text-white">Quero Indicar</h4>
-                      <p className="text-[#2980B9] text-[10px] font-bold uppercase tracking-wider mb-4">Programa de Afiliados</p>
-                      <p className="text-slate-300 text-xs leading-relaxed mb-6">
-                        Deseja rentabilizar sua rede indicando novos parceiros e ganhando comissões? Mude para Afiliado.
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => navigate('/plan/afiliado')}
-                      className="w-full bg-[#2980B9] text-white py-3 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-[#ffc947] hover:text-[#0B1221] transition-all"
-                    >
-                      Seja um Afiliado
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
+                  <div 
+                    id="upgrade-card"
+                    className={`border rounded-3xl p-6 flex flex-col justify-between hover:shadow-md transition-all ${
+                      showUpgradeConfirm 
+                        ? 'border-[#2980B9] bg-[#0E1726] text-white col-span-1 md:col-span-2' 
+                        : 'border-slate-100 bg-[#0B1221] text-white'
+                    }`}
+                  >
+                    {!showUpgradeConfirm ? (
+                      <>
+                        <div>
+                          <h4 className="text-base font-black mb-2 text-white">Quero Indicar</h4>
+                          <p className="text-[#2980B9] text-[10px] font-bold uppercase tracking-wider mb-4">Programa de Afiliados</p>
+                          <p className="text-slate-300 text-xs leading-relaxed mb-6">
+                            Deseja rentabilizar sua rede indicando novos parceiros e ganhando comissões? Mude para Afiliado de forma 100% gratuita.
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setShowUpgradeConfirm(true)}
+                          className="w-full bg-[#2980B9] text-white py-3 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-[#ffc947] hover:text-[#0B1221] transition-all"
+                        >
+                          Seja um Afiliado
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className="text-lg font-black mb-1 text-white">Confirmar Ativação de Afiliado</h4>
+                            <p className="text-[#2980B9] text-[10px] font-black uppercase tracking-widest">Adesão 100% Gratuita</p>
+                          </div>
+                          
+                          <div className="space-y-2 text-xs text-slate-300 font-medium leading-relaxed">
+                            <p>✓ **Upgrade Imediato:** Sua conta será promovida para Afiliado instantaneamente.</p>
+                            <p>✓ **Sem Perda de Acesso:** Você continuará acessando todas as suas compras e assinaturas de telemedicina normalmente.</p>
+                            <p>✓ **Regra de Ativação:** Para receber as bonificações geradas pela sua rede, lembre-se de manter sua ativação mensal em dia e cadastrar seus dados bancários (Asaas) nas Configurações.</p>
+                          </div>
+                        </div>
+
+                        <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                          <button
+                            onClick={handleUpgradeToAffiliate}
+                            disabled={upgrading}
+                            className="flex-grow bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white py-3 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
+                          >
+                            {upgrading ? 'Ativando...' : 'Confirmar Ativação'}
+                            <CheckCircle2 className="w-4 h-4 text-white" />
+                          </button>
+                          <button
+                            onClick={() => setShowUpgradeConfirm(false)}
+                            disabled={upgrading}
+                            className="px-6 bg-transparent border border-white/20 hover:bg-white/5 disabled:opacity-50 text-white py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

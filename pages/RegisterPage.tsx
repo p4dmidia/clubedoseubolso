@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
     CheckCircle2,
     Send,
@@ -12,7 +12,8 @@ import {
     Eye,
     EyeOff,
     Calendar,
-    Gift
+    Gift,
+    ArrowRight
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
@@ -353,6 +354,25 @@ const RegisterPage: React.FC = () => {
                                 </p>
                             </div>
                         )}
+
+                        {regType === 'affiliate' && (
+                            <div className="bg-[#2980B9]/5 border border-[#2980B9]/20 rounded-3xl p-6 mb-8 text-center shadow-sm">
+                                <p className="text-slate-600 text-xs font-black uppercase tracking-wider mb-2">
+                                    Já possui uma conta de Cliente no Clube do Seu Bolso?
+                                </p>
+                                <p className="text-slate-500 text-xs font-medium leading-relaxed mb-4">
+                                    Não é necessário criar um novo cadastro! Faça login na sua conta existente e ative o modo afiliado gratuitamente com apenas um clique.
+                                </p>
+                                <Link 
+                                    to="/login?upgrade=true"
+                                    className="inline-flex items-center gap-2 text-xs font-black text-[#2980B9] hover:text-[#0B1221] uppercase tracking-widest transition-colors"
+                                >
+                                    Fazer login e ativar modo Afiliado
+                                    <ArrowRight className="w-4 h-4 text-[#2980B9]" />
+                                </Link>
+                            </div>
+                        )}
+
                         <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100 p-8 lg:p-12">
                             <form onSubmit={handleSubmit} className="space-y-6">
                                 {/* Seletor de Tipo de Cadastro */}
