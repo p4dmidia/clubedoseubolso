@@ -32,8 +32,8 @@ const ClientDashboard: React.FC = () => {
   // Data States
   const [orders, setOrders] = useState<any[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
-  const [consortiums, setConsortiums] = useState<any[]>([]);
-  const [loadingConsortiums, setLoadingConsortiums] = useState(true);
+  const [subscriptions, setSubscriptions] = useState<any[]>([]);
+  const [loadingSubscriptions, setLoadingSubscriptions] = useState(true);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -49,7 +49,7 @@ const ClientDashboard: React.FC = () => {
             status,
             payment_method,
             shipping_method,
-            order_items:order_items(id, product_name, unit_price, quantity)
+            order_items:order_items(id, product_id, product_name, unit_price, quantity)
           `)
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
@@ -63,36 +63,74 @@ const ClientDashboard: React.FC = () => {
       }
     };
 
-    const fetchConsortiums = async () => {
+    const fetchSubscriptions = async () => {
       if (!user) return;
       try {
-        setLoadingConsortiums(true);
+        setLoadingSubscriptions(true);
+        
         const { data, error } = await supabase
-          .from('consortium_participants')
+          .from('orders')
           .select(`
             id,
-            lucky_number,
+            created_at,
             status,
-            joined_at,
-            consortium_groups:consortium_groups(
-              name,
-              status,
-              products:products(name, price)
+            payment_method,
+            order_items:order_items(
+              id,
+              product_id,
+              product_name,
+              unit_price,
+              quantity
             )
           `)
-          .eq('user_id', user.id);
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
 
         if (error) throw error;
-        setConsortiums(data || []);
+
+        const telemedicinePlanIds = [
+          'd3b07384-d113-4171-bc01-9a7c936df312', // Individual Essencial
+          'd3b07384-d113-4171-bc02-9a7c936df312', // Individual Premium
+          'd3b07384-d113-4171-bc03-9a7c936df312', // Familiar Essencial
+          'd3b07384-d113-4171-bc04-9a7c936df312', // Familiar Premium
+        ];
+
+        const activePlans = (data || []).reduce((acc: any[], order: any) => {
+          const telemedItems = (order.order_items || []).filter((item: any) => {
+            const nameLower = (item.product_name || '').toLowerCase();
+            return (
+              telemedicinePlanIds.includes(item.product_id) ||
+              nameLower.includes('telemedicina')
+            );
+          });
+
+          if (telemedItems.length > 0) {
+            telemedItems.forEach((item: any) => {
+              acc.push({
+                id: `${order.id}-${item.id}`,
+                orderId: order.id,
+                planName: item.product_name,
+                price: item.unit_price,
+                quantity: item.quantity,
+                status: order.status,
+                joinedAt: order.created_at,
+                paymentMethod: order.payment_method
+              });
+            });
+          }
+          return acc;
+        }, []);
+
+        setSubscriptions(activePlans);
       } catch (err) {
-        console.error('Error fetching customer consortiums:', err);
+        console.error('Error fetching customer subscriptions:', err);
       } finally {
-        setLoadingConsortiums(false);
+        setLoadingSubscriptions(false);
       }
     };
 
     fetchOrders();
-    fetchConsortiums();
+    fetchSubscriptions();
   }, [user]);
 
   const formatCurrency = (value: number) => {
@@ -306,35 +344,37 @@ const ClientDashboard: React.FC = () => {
                 </p>
               </div>
 
-              {loadingConsortiums ? (
+              {loadingSubscriptions ? (
                 <div className="py-20 text-center">
                   <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#2980B9] mx-auto mb-4"></div>
                   <p className="text-slate-400 font-bold text-xs uppercase">Carregando assinaturas...</p>
                 </div>
-              ) : consortiums.length > 0 ? (
+              ) : subscriptions.length > 0 ? (
                 <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {consortiums.map((part) => {
-                    const group = part.consortium_groups;
-                    const product = group?.products;
-                    const isActive = part.status?.toLowerCase() === 'active' || part.status?.toLowerCase() === 'ativo';
+                  {subscriptions.map((sub) => {
+                    const statusLower = (sub.status || '').toLowerCase();
+                    const isActive = statusLower === 'pago' || statusLower === 'paid' || statusLower === 'completed' || statusLower === 'aprovado';
+                    const isPending = statusLower === 'pendente' || statusLower === 'pending' || statusLower === 'aguardando';
 
                     return (
-                      <div key={part.id} className="bg-slate-50 border border-slate-100 rounded-3xl p-6 relative overflow-hidden group">
+                      <div key={sub.id} className="bg-slate-50 border border-slate-100 rounded-3xl p-6 relative overflow-hidden group">
                         <div className="absolute right-0 top-0 w-24 h-24 bg-[#2980B9]/5 rounded-full -mr-5 -mt-5 transition-transform group-hover:scale-110"></div>
                         
                         <div className="flex justify-between items-start mb-4">
                           <div>
                             <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest">
-                              Plano
+                              Plano de Telemedicina
                             </span>
                             <h4 className="text-base font-black text-[#0B1221] mt-2">
-                              {group?.name || 'Plano de Assinatura'}
+                              {sub.planName}
                             </h4>
                           </div>
                           <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                            isActive ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-amber-50 text-amber-600 border border-amber-100'
+                            isActive ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                            isPending ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+                            'bg-red-50 text-red-600 border border-red-100'
                           }`}>
-                            {isActive ? 'Ativo' : 'Aguardando'}
+                            {isActive ? 'Ativo' : isPending ? 'Pendente' : 'Cancelado'}
                           </span>
                         </div>
 
@@ -342,14 +382,32 @@ const ClientDashboard: React.FC = () => {
                           <div className="flex justify-between">
                             <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Valor do Plano:</span>
                             <span className="font-black text-[#0B1221]">
-                              {product?.price ? formatCurrency(product.price) : 'R$ 0,00'}
+                              {formatCurrency(sub.price)}
                             </span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Data de Início:</span>
-                            <span className="font-black text-slate-700">{formatDate(part.joined_at)}</span>
+                            <span className="font-black text-slate-700">{formatDate(sub.joinedAt)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Meio de Pagamento:</span>
+                            <span className="font-black text-slate-700 capitalize">{sub.paymentMethod || 'Não informado'}</span>
                           </div>
                         </div>
+
+                        {isActive && (
+                          <div className="mt-6 flex flex-col gap-2">
+                            <a
+                              href="https://app.maisunidos.com.br/Conta/Entrar"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full bg-[#0B1221] hover:bg-[#2980B9] text-white py-3 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all text-center"
+                            >
+                              Acessar Telemedicina
+                              <ExternalLink className="w-4 h-4 text-white" />
+                            </a>
+                          </div>
+                        )}
                       </div>
                     );
                   })}

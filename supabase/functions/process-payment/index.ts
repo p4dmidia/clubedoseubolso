@@ -11,8 +11,10 @@ serve(async (req) => {
         return new Response('ok', { headers: corsHeaders })
     }
 
+    let requestBody: any = null;
     try {
         const body = await req.json();
+        requestBody = body;
         console.log('Incoming Request:', JSON.stringify(body, null, 2));
 
         const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
@@ -475,6 +477,15 @@ serve(async (req) => {
 
     } catch (error) {
         console.error("Payment Error:", error.message);
+        if (requestBody?.orderId) {
+            try {
+                console.log(`[Cleanup] Deleting order ${requestBody.orderId} due to payment failure...`);
+                await supabase.from('order_items').delete().eq('order_id', requestBody.orderId);
+                await supabase.from('orders').delete().eq('id', requestBody.orderId);
+            } catch (cleanupError) {
+                console.error("[Cleanup] Failed to delete order:", cleanupError.message);
+            }
+        }
         return new Response(JSON.stringify({ 
             error: true,
             message: error.message,
