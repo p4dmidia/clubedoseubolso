@@ -21,6 +21,7 @@ import { ORGANIZATION_ID } from '../lib/config';
 import AdminLayout from '../components/AdminLayout';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import { useAuth } from '../components/AuthContext';
 
 interface Order {
     id: string;
@@ -34,6 +35,7 @@ interface Order {
 }
 
 const AdminOrders: React.FC = () => {
+    const { profile } = useAuth();
     const [orders, setOrders] = useState<Order[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -269,35 +271,41 @@ const AdminOrders: React.FC = () => {
                                         </td>
                                         <td className="py-6 px-6 text-right">
                                             <div className="flex flex-col gap-2">
-                                                {(order.status === 'Pendente' || order.status === 'pending') && (
+                                                {profile?.role !== 'admin_op' ? (
                                                     <>
-                                                        <button 
-                                                            onClick={() => updateOrderStatus(order.id, 'Pago', 'paid')}
-                                                            className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-[9px] font-black uppercase hover:bg-emerald-600 transition-all"
-                                                            title="Marcar como Pago"
-                                                        >
-                                                            <CheckCircle2 className="w-3.5 h-3.5" />
-                                                            ATIVER PLANO
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => updateOrderStatus(order.id, 'Cancelado')}
-                                                            className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-[9px] font-black uppercase hover:bg-red-100 transition-all"
-                                                            title="Cancelar Pedido"
-                                                        >
-                                                            <XCircle className="w-3.5 h-3.5" />
-                                                            CANCELAR
-                                                        </button>
+                                                        {(order.status === 'Pendente' || order.status === 'pending') && (
+                                                            <>
+                                                                <button 
+                                                                    onClick={() => updateOrderStatus(order.id, 'Pago', 'paid')}
+                                                                    className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-[9px] font-black uppercase hover:bg-emerald-600 transition-all"
+                                                                    title="Marcar como Pago"
+                                                                >
+                                                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                                                    ATIVER PLANO
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => updateOrderStatus(order.id, 'Cancelado')}
+                                                                    className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-[9px] font-black uppercase hover:bg-red-100 transition-all"
+                                                                    title="Cancelar Pedido"
+                                                                >
+                                                                    <XCircle className="w-3.5 h-3.5" />
+                                                                    CANCELAR
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                        {(order.status === 'Pago' || order.status === 'completed') && (
+                                                            <button 
+                                                                onClick={() => updateOrderStatus(order.id, 'Cancelado')}
+                                                                className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-[9px] font-black uppercase hover:bg-red-100 transition-all"
+                                                                title="Revogar Acesso / Cancelar Plano"
+                                                            >
+                                                                <XCircle className="w-3.5 h-3.5" />
+                                                                REVOGAR PLANO
+                                                            </button>
+                                                        )}
                                                     </>
-                                                )}
-                                                {(order.status === 'Pago' || order.status === 'completed') && (
-                                                    <button 
-                                                        onClick={() => updateOrderStatus(order.id, 'Cancelado')}
-                                                        className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-[9px] font-black uppercase hover:bg-red-100 transition-all"
-                                                        title="Revogar Acesso / Cancelar Plano"
-                                                    >
-                                                        <XCircle className="w-3.5 h-3.5" />
-                                                        REVOGAR PLANO
-                                                    </button>
+                                                ) : (
+                                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">Visualização</span>
                                                 )}
                                                 <button className="flex items-center justify-center p-2 bg-slate-50 text-slate-400 rounded-lg hover:text-[#05080F] transition-all">
                                                     <Eye className="w-4 h-4" />

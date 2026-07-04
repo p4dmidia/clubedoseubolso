@@ -59,7 +59,8 @@ const AdminAffiliates: React.FC = () => {
         cpf: '',
         cnpj: '',
         login: '',
-        sponsor_code: ''
+        sponsor_code: '',
+        role: 'affiliate'
     });
 
     const itemsPerPage = 8;
@@ -240,7 +241,7 @@ const AdminAffiliates: React.FC = () => {
             const { error } = await supabase.rpc('admin_create_user', {
                 p_email: createFormData.email.trim(),
                 p_password: createFormData.password.trim(),
-                p_role: 'affiliate',
+                p_role: createFormData.role,
                 p_full_name: createFormData.name.trim(),
                 p_whatsapp: createFormData.phone.trim() || null,
                 p_cpf: createFormData.cpf.trim() || null,
@@ -251,7 +252,7 @@ const AdminAffiliates: React.FC = () => {
 
             if (error) throw error;
 
-            toast.success('Afiliado criado com sucesso!');
+            toast.success(createFormData.role === 'affiliate' ? 'Afiliado criado com sucesso!' : 'Cliente criado com sucesso!');
             setIsCreateModalOpen(false);
             setCreateFormData({
                 name: '',
@@ -261,7 +262,8 @@ const AdminAffiliates: React.FC = () => {
                 cpf: '',
                 cnpj: '',
                 login: '',
-                sponsor_code: ''
+                sponsor_code: '',
+                role: 'affiliate'
             });
             fetchAffiliates();
         } catch (error: any) {
@@ -1009,6 +1011,17 @@ const AdminAffiliates: React.FC = () => {
                         </div>
                         <form onSubmit={handleCreateAffiliate} className="flex-1 overflow-y-auto p-8 md:p-10 space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2 md:col-span-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Tipo de Perfil</label>
+                                    <select
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold outline-none focus:border-[#2980B9] appearance-none"
+                                        value={createFormData.role}
+                                        onChange={e => setCreateFormData({ ...createFormData, role: e.target.value })}
+                                    >
+                                        <option value="affiliate">Afiliado</option>
+                                        <option value="client">Cliente</option>
+                                    </select>
+                                </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Nome Completo</label>
                                     <input

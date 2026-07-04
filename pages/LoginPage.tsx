@@ -80,7 +80,7 @@ const LoginPage: React.FC = () => {
                     .eq('id', data.user.id)
                     .single();
                     
-                if (profileData?.role === 'admin_master' || profileData?.role === 'admin_op') {
+                if (profileData?.role === 'admin_master' || profileData?.role === 'admin_op' || profileData?.role === 'admin_gerente') {
                     navigate('/admin/dashboard');
                 } else if (profileData?.role === 'affiliate') {
                     navigate('/afiliado/dashboard');

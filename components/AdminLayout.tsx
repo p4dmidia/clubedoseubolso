@@ -22,12 +22,14 @@ import {
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from './AuthContext';
 
 interface AdminLayoutProps {
     children: React.ReactNode;
 }
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
+    const { profile } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
     const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
@@ -56,6 +58,13 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         { label: 'Segurança', icon: ShieldAlert, path: '/admin/security' },
     ];
 
+    const filteredMenuItems = menuItems.filter(item => {
+        if (item.path === '/admin/security') {
+            return profile?.role === 'admin_master' || profile?.role === 'admin' || profile?.role === 'admin_gerente';
+        }
+        return true;
+    });
+
     return (
         <div className="min-h-screen bg-[#F0F2F5]">
             {/* Sidebar Overlay */}
@@ -79,7 +88,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                 </div>
 
                 <nav className="flex-grow space-y-2">
-                    {menuItems.map((item) => {
+                    {filteredMenuItems.map((item) => {
                         const isActive = location.pathname === item.path;
                         return (
                             <Link
@@ -139,11 +148,15 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                         <div className="h-8 w-px bg-slate-200"></div>
                         <div className="flex items-center gap-3">
                             <div className="text-right hidden sm:block">
-                                <p className="text-sm font-black text-[#05080F]">Administrador</p>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Master Access</p>
+                                <p className="text-sm font-black text-[#05080F]">{profile?.full_name || 'Administrador'}</p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                    {profile?.role === 'admin_master' || profile?.role === 'admin' ? 'Master Access' :
+                                     profile?.role === 'admin_gerente' ? 'Gerente Access' :
+                                     profile?.role === 'admin_op' ? 'Operador Access' : 'Admin Access'}
+                                </p>
                             </div>
                             <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden">
-                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Admin" alt="Admin" />
+                                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.full_name || 'Admin'}`} alt="Admin" />
                             </div>
                         </div>
                     </div>

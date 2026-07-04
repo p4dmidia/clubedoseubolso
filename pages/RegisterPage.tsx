@@ -114,6 +114,29 @@ const RegisterPage: React.FC = () => {
         }));
     };
 
+    const handleDownloadContract = () => {
+        if (regType === 'affiliate') {
+            const link = document.createElement('a');
+            link.href = "/assets/termos_condicoes_afiliados.pdf";
+            link.download = "Contrato_de_Afiliação_Clube_do_Seu_Bolso.pdf";
+            link.target = "_blank";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } else {
+            const content = `CLUBE DO SEU BOLSO\n\nDocumento: Termos de Uso e Regulamento\n\nEste documento representa a cópia digitalizada e autenticada dos Termos de Uso e Regulamento do Clube do Seu Bolso.\nData de Emissão: ${new Date().toLocaleDateString('pt-BR')}\n\nEm conformidade com as regras do Clube do Seu Bolso e os regulamentos vigentes no Brasil.`;
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = "Termos_de_Uso_e_Regulamento_Clube_do_Seu_Bolso.txt";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+    };
+
     const handleSponsorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
         setSponsorCode(val);
@@ -579,7 +602,11 @@ const RegisterPage: React.FC = () => {
                                                     ? 'Leia as regras gerais de uso do clube' 
                                                     : 'Leia as regras de bonificação e termos de uso'}
                                             </p>
-                                            <button type="button" className="flex items-center gap-2 text-[#0B1221] text-[10px] font-black hover:text-[#2980B9] transition-colors bg-white px-4 py-2 rounded-lg border border-slate-100 shadow-sm uppercase tracking-widest">
+                                            <button
+                                                type="button"
+                                                onClick={handleDownloadContract}
+                                                className="flex items-center gap-2 text-[#0B1221] text-[10px] font-black hover:text-[#2980B9] transition-colors bg-white px-4 py-2 rounded-lg border border-slate-100 shadow-sm uppercase tracking-widest"
+                                            >
                                                 <Download className="w-3.5 h-3.5" /> BAIXAR PDF
                                             </button>
                                         </div>

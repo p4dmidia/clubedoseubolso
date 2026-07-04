@@ -81,15 +81,15 @@ const AppContent: React.FC = () => {
 
           {/* Admin Routes */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
-          <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={['admin_master', 'admin_op']}><AdminDashboard /></ProtectedRoute>} />
-          <Route path="/admin/affiliates" element={<ProtectedRoute allowedRoles={['admin_master', 'admin_op']}><AdminAffiliates /></ProtectedRoute>} />
-          <Route path="/admin/products" element={<ProtectedRoute allowedRoles={['admin_master', 'admin_op']}><AdminProducts /></ProtectedRoute>} />
-          <Route path="/admin/orders" element={<ProtectedRoute allowedRoles={['admin_master', 'admin_op']}><AdminOrders /></ProtectedRoute>} />
-          <Route path="/admin/financial" element={<ProtectedRoute allowedRoles={['admin_master', 'admin_op']}><AdminFinancial /></ProtectedRoute>} />
-          <Route path="/admin/security" element={<ProtectedRoute allowedRoles={['admin_master']}><AdminSecurity /></ProtectedRoute>} />
-          <Route path="/admin/commissions" element={<ProtectedRoute allowedRoles={['admin_master', 'admin_op']}><AdminCommissions /></ProtectedRoute>} />
-          <Route path="/admin/categories" element={<ProtectedRoute allowedRoles={['admin_master', 'admin_op']}><AdminCategories /></ProtectedRoute>} />
-          <Route path="/admin/materials" element={<ProtectedRoute allowedRoles={['admin_master', 'admin_op']}><AdminMaterials /></ProtectedRoute>} />
+          <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={['admin_master', 'admin_op', 'admin_gerente']}><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/admin/affiliates" element={<ProtectedRoute allowedRoles={['admin_master', 'admin_op', 'admin_gerente']}><AdminAffiliates /></ProtectedRoute>} />
+          <Route path="/admin/products" element={<ProtectedRoute allowedRoles={['admin_master', 'admin_op', 'admin_gerente']}><AdminProducts /></ProtectedRoute>} />
+          <Route path="/admin/orders" element={<ProtectedRoute allowedRoles={['admin_master', 'admin_op', 'admin_gerente']}><AdminOrders /></ProtectedRoute>} />
+          <Route path="/admin/financial" element={<ProtectedRoute allowedRoles={['admin_master', 'admin_op', 'admin_gerente']}><AdminFinancial /></ProtectedRoute>} />
+          <Route path="/admin/security" element={<ProtectedRoute allowedRoles={['admin_master', 'admin_gerente']}><AdminSecurity /></ProtectedRoute>} />
+          <Route path="/admin/commissions" element={<ProtectedRoute allowedRoles={['admin_master', 'admin_op', 'admin_gerente']}><AdminCommissions /></ProtectedRoute>} />
+          <Route path="/admin/categories" element={<ProtectedRoute allowedRoles={['admin_master', 'admin_op', 'admin_gerente']}><AdminCategories /></ProtectedRoute>} />
+          <Route path="/admin/materials" element={<ProtectedRoute allowedRoles={['admin_master', 'admin_op', 'admin_gerente']}><AdminMaterials /></ProtectedRoute>} />
         </Routes>
       </main>
       {!isDashboard && <Footer />}

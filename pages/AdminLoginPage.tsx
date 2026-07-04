@@ -66,7 +66,7 @@ const AdminLoginPage: React.FC = () => {
 
             if (profileError) throw new Error('Falha ao verificar permissões de acesso.');
 
-            if (profile?.role !== 'admin_master' && profile?.role !== 'admin_op') {
+            if (profile?.role !== 'admin_master' && profile?.role !== 'admin_op' && profile?.role !== 'admin_gerente') {
                 // Not an admin - Force Logout
                 await supabase.auth.signOut();
                 recordSecurityLog(email, 'login_failure', 'failure');
@@ -117,7 +117,7 @@ const AdminLoginPage: React.FC = () => {
 
             if (profileError) throw new Error('Falha ao verificar permissões de acesso.');
 
-            if (profile?.role !== 'admin_master' && profile?.role !== 'admin_op') {
+            if (profile?.role !== 'admin_master' && profile?.role !== 'admin_op' && profile?.role !== 'admin_gerente') {
                 await supabase.auth.signOut();
                 recordSecurityLog(tempUserEmail, 'login_failure', 'failure');
                 toast.error('Acesso negado. Esta área é restrita a administradores.');

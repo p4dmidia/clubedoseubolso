@@ -672,6 +672,30 @@ const ClientDashboard: React.FC = () => {
                 </div>
 
 
+                {/* Documento 2 */}
+                <div className="py-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 group">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-[#2980B9] transition-colors border border-slate-100 shadow-sm shrink-0">
+                      <FileText className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm text-[#0B1221]">Termos e Condições do Programa de Afiliados</h4>
+                      <p className="text-slate-400 text-xs font-medium mt-1">Regras de comissionamento, split de pagamento e permanência ativa</p>
+                    </div>
+                  </div>
+                  <a
+                    href="/assets/termos_condicoes_afiliados.pdf"
+                    download="Contrato_de_Afiliação_Clube_do_Seu_Bolso.pdf"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-5 py-3 bg-slate-50 border border-slate-100 hover:bg-[#2980B9] hover:text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+                  >
+                    <Download className="w-4 h-4" />
+                    Baixar (98 KB)
+                  </a>
+                </div>
+
+
                 {/* Documento 3 */}
                 <div className="py-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 group">
                   <div className="flex items-start gap-4">

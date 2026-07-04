@@ -26,6 +26,7 @@ import {
 import AdminLayout from '../components/AdminLayout';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import { useAuth } from '../components/AuthContext';
 
 interface SecurityLog {
     id: number;
@@ -47,6 +48,7 @@ interface AdminUser {
 }
 
 const AdminSecurity: React.FC = () => {
+    const { profile } = useAuth();
     const [accessLogs, setAccessLogs] = useState<SecurityLog[]>([]);
     const [admins, setAdmins] = useState<AdminUser[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -189,6 +191,10 @@ const AdminSecurity: React.FC = () => {
 
     const handleCreateAdmin = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (profile?.role !== 'admin_master' && profile?.role !== 'admin') {
+            toast.error('Acesso negado: Apenas administradores Master podem cadastrar outros administradores.');
+            return;
+        }
         if (!createFormData.email.trim() || !createFormData.password.trim() || !createFormData.name.trim()) {
             toast.error('Por favor, preencha Nome, E-mail e Senha.');
             return;
@@ -663,13 +669,15 @@ const AdminSecurity: React.FC = () => {
                         <div className="bg-[#05080F] rounded-[2.5rem] p-8 text-white shadow-xl shadow-[#05080F]/20">
                             <div className="flex items-center justify-between mb-8">
                                 <h3 className="text-xl font-black">Administradores</h3>
-                                <button 
-                                    onClick={() => setIsCreateModalOpen(true)}
-                                    className="p-2 bg-white/10 rounded-xl hover:bg-white/20 transition-all"
-                                    title="Cadastrar Administrador"
-                                >
-                                    <Plus className="w-4 h-4" />
-                                </button>
+                                {(profile?.role === 'admin_master' || profile?.role === 'admin') && (
+                                    <button 
+                                        onClick={() => setIsCreateModalOpen(true)}
+                                        className="p-2 bg-white/10 rounded-xl hover:bg-white/20 transition-all"
+                                        title="Cadastrar Administrador"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                    </button>
+                                )}
                             </div>
                             <div className="space-y-6">
                                 {admins.map((admin) => (
@@ -821,6 +829,7 @@ const AdminSecurity: React.FC = () => {
                                     onChange={e => setCreateFormData({ ...createFormData, role: e.target.value })}
                                 >
                                     <option value="admin_op">Operador (admin_op)</option>
+                                    <option value="admin_gerente">Gerente (admin_gerente)</option>
                                     <option value="admin_master">Master (admin_master)</option>
                                 </select>
                             </div>

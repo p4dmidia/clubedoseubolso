@@ -20,12 +20,16 @@ import {
     FileText,
     Upload,
     ExternalLink,
-    CreditCard
+    CreditCard,
+    X,
+    RefreshCcw,
+    ArrowUpDown
 } from 'lucide-react';
 import { ORGANIZATION_ID } from '../lib/config';
 import AdminLayout from '../components/AdminLayout';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import { useAuth } from '../components/AuthContext';
 
 interface WithdrawalRequest {
     id: string;
@@ -57,11 +61,64 @@ interface PendingPayout {
 }
 
 const AdminFinancial: React.FC = () => {
+    const { profile } = useAuth();
+    const [activeTab, setActiveTab] = useState<'payouts' | 'audit'>('payouts');
     const [requests, setRequests] = useState<WithdrawalRequest[]>([]);
     const [pendingPayouts, setPendingPayouts] = useState<PendingPayout[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'paid' | 'rejected'>('all');
     const [searchTerm, setSearchTerm] = useState('');
+
+    const [auditOrders, setAuditOrders] = useState<any[]>([]);
+    const [loadingAudit, setLoadingAudit] = useState(false);
+    const [affiliatesMap, setAffiliatesMap] = useState<Record<string, string>>({});
+    const [selectedAuditOrder, setSelectedAuditOrder] = useState<any | null>(null);
+    const [auditCurrentPage, setAuditCurrentPage] = useState(1);
+
+    const fetchAuditData = async () => {
+        setLoadingAudit(true);
+        try {
+            const { data: affData, error: affErr } = await supabase
+                .from('affiliates')
+                .select('user_id, full_name')
+                .eq('organization_id', ORGANIZATION_ID);
+            
+            if (affErr) throw affErr;
+
+            const map: Record<string, string> = {};
+            affData?.forEach(a => {
+                if (a.user_id) map[a.user_id] = a.full_name;
+            });
+            setAffiliatesMap(map);
+
+            const { data: orderData, error: orderErr } = await supabase
+                .from('orders')
+                .select('id, created_at, customer_name, total_amount, status, split_details, referral_code')
+                .eq('organization_id', ORGANIZATION_ID)
+                .order('created_at', { ascending: false });
+
+            if (orderErr) throw orderErr;
+            setAuditOrders(orderData || []);
+            setAuditCurrentPage(1);
+        } catch (err) {
+            console.error('Error fetching audit data:', err);
+            toast.error('Erro ao carregar dados de auditoria.');
+        } finally {
+            setLoadingAudit(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'audit') {
+            fetchAuditData();
+        }
+    }, [activeTab]);
+
+    const itemsPerAuditPage = 8;
+    const totalAuditPages = Math.ceil(auditOrders.length / itemsPerAuditPage);
+    const indexOfLastAuditItem = auditCurrentPage * itemsPerAuditPage;
+    const indexOfFirstAuditItem = indexOfLastAuditItem - itemsPerAuditPage;
+    const paginatedAuditOrders = auditOrders.slice(indexOfFirstAuditItem, indexOfLastAuditItem);
     
     // Modal controls
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -352,7 +409,29 @@ const AdminFinancial: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Dashboard Cards */}
+                {/* Tabs */}
+                {(profile?.role === 'admin_master' || profile?.role === 'admin') && (
+                    <div className="flex bg-slate-100 p-1.5 rounded-2xl w-fit border border-slate-200/50">
+                        <button
+                            onClick={() => setActiveTab('payouts')}
+                            className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'payouts' ? 'bg-[#05080F] text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
+                        >
+                            <Wallet className="w-4 h-4" />
+                            Saques e Payouts
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('audit')}
+                            className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'audit' ? 'bg-[#05080F] text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
+                        >
+                            <Coins className="w-4 h-4" />
+                            Auditoria GD Finance (Rastro)
+                        </button>
+                    </div>
+                )}
+
+                {activeTab === 'payouts' && (
+                    <>
+                        {/* Dashboard Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     <div className="bg-[#05080F] rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 text-white relative overflow-hidden group">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-[#2980B9]/10 blur-3xl rounded-full"></div>
@@ -430,12 +509,16 @@ const AdminFinancial: React.FC = () => {
                                             </p>
                                         </td>
                                         <td className="py-6 px-10 text-right">
-                                            <button 
-                                                onClick={() => { setSelectedPayout(p); setSelectedRequestToPay(null); setIsPaymentModalOpen(true); }}
-                                                className="bg-[#05080F] text-white text-[10px] font-black px-6 py-3 rounded-xl hover:bg-[#2980B9] hover:text-[#05080F] transition-all shadow-lg"
-                                            >
-                                                REGISTRAR PAGAMENTO
-                                            </button>
+                                            {profile?.role !== 'admin_op' ? (
+                                                <button 
+                                                    onClick={() => { setSelectedPayout(p); setSelectedRequestToPay(null); setIsPaymentModalOpen(true); }}
+                                                    className="bg-[#05080F] text-white text-[10px] font-black px-6 py-3 rounded-xl hover:bg-[#2980B9] hover:text-[#05080F] transition-all shadow-lg"
+                                                >
+                                                    REGISTRAR PAGAMENTO
+                                                </button>
+                                            ) : (
+                                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Visualização</span>
+                                            )}
                                         </td>
                                     </tr>
                                 )) : (
@@ -536,41 +619,51 @@ const AdminFinancial: React.FC = () => {
                                         )}
                                     </div>
                                 </div>
-                                {req.status === 'pending' && (
-                                    <div className="flex gap-3 pt-2">
-                                        <button
-                                            onClick={() => handleAction(req.id, 'rejected')}
-                                            className="flex-1 py-3 bg-red-50 text-red-500 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-100 transition-all border border-red-100"
-                                        >
-                                            REJEITAR
-                                        </button>
-                                        <button
-                                            onClick={() => handleAction(req.id, 'approved')}
-                                            className="flex-3 py-3 bg-[#05080F] text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[#2980B9] hover:text-[#05080F] transition-all border border-[#05080F]"
-                                        >
-                                            APROVAR SAQUE
-                                        </button>
-                                    </div>
-                                )}
-                                {req.status === 'approved' && (
-                                    <div className="flex gap-3 pt-2">
-                                        <button
-                                            onClick={() => handleAction(req.id, 'rejected')}
-                                            className="flex-1 py-3 bg-red-50 text-red-500 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-100 transition-all border border-red-100"
-                                        >
-                                            REJEITAR
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setSelectedRequestToPay(req);
-                                                setSelectedPayout(null);
-                                                setIsPaymentModalOpen(true);
-                                            }}
-                                            className="flex-3 py-3 bg-[#2980B9] text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[#1f6391] transition-all border border-[#2980B9]"
-                                        >
-                                            REGISTRAR PAGAMENTO
-                                        </button>
-                                    </div>
+                                {profile?.role !== 'admin_op' ? (
+                                    <>
+                                        {req.status === 'pending' && (
+                                            <div className="flex gap-3 pt-2">
+                                                <button
+                                                    onClick={() => handleAction(req.id, 'rejected')}
+                                                    className="flex-1 py-3 bg-red-50 text-red-500 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-100 transition-all border border-red-100"
+                                                >
+                                                    REJEITAR
+                                                </button>
+                                                <button
+                                                    onClick={() => handleAction(req.id, 'approved')}
+                                                    className="flex-3 py-3 bg-[#05080F] text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[#2980B9] hover:text-[#05080F] transition-all border border-[#05080F]"
+                                                >
+                                                    APROVAR SAQUE
+                                                </button>
+                                            </div>
+                                        )}
+                                        {req.status === 'approved' && (
+                                            <div className="flex gap-3 pt-2">
+                                                <button
+                                                    onClick={() => handleAction(req.id, 'rejected')}
+                                                    className="flex-1 py-3 bg-red-50 text-red-500 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-red-100 transition-all border border-red-100"
+                                                >
+                                                    REJEITAR
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedRequestToPay(req);
+                                                        setSelectedPayout(null);
+                                                        setIsPaymentModalOpen(true);
+                                                    }}
+                                                    className="flex-3 py-3 bg-[#2980B9] text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[#1f6391] transition-all border border-[#2980B9]"
+                                                >
+                                                    REGISTRAR PAGAMENTO
+                                                </button>
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    (req.status === 'pending' || req.status === 'approved') && (
+                                        <div className="pt-2 text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest bg-slate-50 py-3 rounded-xl border border-slate-100">
+                                            Visualização Apenas
+                                        </div>
+                                    )
                                 )}
                                 {req.proof_url && (
                                     <div className="pt-2">
@@ -663,41 +756,49 @@ const AdminFinancial: React.FC = () => {
                                         </td>
                                         <td className="py-6 px-10 text-right">
                                             <div className="flex justify-end items-center gap-2">
-                                                {req.status === 'pending' && (
+                                                {profile?.role !== 'admin_op' ? (
                                                     <>
-                                                        <button
-                                                            onClick={() => handleAction(req.id, 'rejected')}
-                                                            className="px-3 py-1.5 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all"
-                                                        >
-                                                            Rejeitar
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleAction(req.id, 'approved')}
-                                                            className="px-3 py-1.5 bg-[#05080F] text-white hover:bg-[#2980B9] hover:text-[#05080F] rounded-lg text-[9px] font-black uppercase tracking-wider transition-all"
-                                                        >
-                                                            Aprovar
-                                                        </button>
+                                                        {req.status === 'pending' && (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => handleAction(req.id, 'rejected')}
+                                                                    className="px-3 py-1.5 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all"
+                                                                >
+                                                                    Rejeitar
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleAction(req.id, 'approved')}
+                                                                    className="px-3 py-1.5 bg-[#05080F] text-white hover:bg-[#2980B9] hover:text-[#05080F] rounded-lg text-[9px] font-black uppercase tracking-wider transition-all"
+                                                                >
+                                                                    Aprovar
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                        {req.status === 'approved' && (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => handleAction(req.id, 'rejected')}
+                                                                    className="px-3 py-1.5 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all"
+                                                                >
+                                                                    Rejeitar
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setSelectedRequestToPay(req);
+                                                                        setSelectedPayout(null);
+                                                                        setIsPaymentModalOpen(true);
+                                                                    }}
+                                                                    className="px-3 py-1.5 bg-[#2980B9] text-white hover:bg-[#1f6391] rounded-lg text-[9px] font-black uppercase tracking-wider transition-all"
+                                                                >
+                                                                    Pagar
+                                                                </button>
+                                                            </>
+                                                        )}
                                                     </>
-                                                )}
-                                                {req.status === 'approved' && (
-                                                    <>
-                                                        <button
-                                                            onClick={() => handleAction(req.id, 'rejected')}
-                                                            className="px-3 py-1.5 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all"
-                                                        >
-                                                            Rejeitar
-                                                        </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                setSelectedRequestToPay(req);
-                                                                setSelectedPayout(null);
-                                                                setIsPaymentModalOpen(true);
-                                                            }}
-                                                            className="px-3 py-1.5 bg-[#2980B9] text-white hover:bg-[#1f6391] rounded-lg text-[9px] font-black uppercase tracking-wider transition-all"
-                                                        >
-                                                            Pagar
-                                                        </button>
-                                                    </>
+                                                ) : (
+                                                    (req.status === 'pending' || req.status === 'approved') && (
+                                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Visualização</span>
+                                                    )
                                                 )}
                                                 {req.proof_url && (
                                                     <a 
@@ -728,6 +829,267 @@ const AdminFinancial: React.FC = () => {
                         </table>
                     </div>
                 </div>
+                </>
+            )}
+
+                {activeTab === 'audit' && (profile?.role === 'admin_master' || profile?.role === 'admin') && (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        {/* Audit Header Info */}
+                        <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                            <div className="space-y-1">
+                                <h3 className="text-lg font-black text-[#05080F]">Auditoria de Comissões e Splits (GD Finance)</h3>
+                                <p className="text-slate-500 font-medium text-sm">Rastreie o destino de cada centavo das compras efetuadas na plataforma.</p>
+                            </div>
+                            <button
+                                onClick={fetchAuditData}
+                                disabled={loadingAudit}
+                                className="flex items-center gap-2 px-5 py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200/50 rounded-xl text-xs font-black uppercase tracking-wider transition-all"
+                            >
+                                <RefreshCcw className={`w-4 h-4 ${loadingAudit && 'animate-spin'}`} />
+                                Atualizar
+                            </button>
+                        </div>
+
+                        {/* Audit Table */}
+                        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="bg-slate-50/50 border-b border-slate-100">
+                                            <th className="text-left py-5 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Pedido / Data</th>
+                                            <th className="text-left py-5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente</th>
+                                            <th className="text-left py-5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor Total</th>
+                                            <th className="text-left py-5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-emerald-600">Repassado Rede</th>
+                                            <th className="text-left py-5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-amber-600">Retido GD Finance</th>
+                                            <th className="text-left py-5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-blue-600">Líquido Plataforma</th>
+                                            <th className="text-right py-5 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ação</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {loadingAudit ? (
+                                            <tr>
+                                                <td colSpan={7} className="py-20 text-center">
+                                                    <Loader2 className="w-8 h-8 text-[#2980B9] animate-spin mx-auto mb-4" />
+                                                    <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Carregando transações...</p>
+                                                </td>
+                                            </tr>
+                                        ) : paginatedAuditOrders.length > 0 ? (
+                                            paginatedAuditOrders.map((order) => {
+                                                const splits = Array.isArray(order.split_details) ? order.split_details : [];
+                                                const totalSplits = splits.reduce((acc: number, curr: any) => acc + (parseFloat(curr.amount) || 0), 0);
+                                                
+                                                const redeAmount = splits
+                                                    .filter((s: any) => s.status === 'split_sent')
+                                                    .reduce((acc: number, curr: any) => acc + (parseFloat(curr.amount) || 0), 0);
+                                                    
+                                                const gdFinanceAmount = splits
+                                                    .filter((s: any) => s.status === 'held_in_gd_finance' || s.status === 'no_wallet_configured' || s.status === 'no_wallet')
+                                                    .reduce((acc: number, curr: any) => acc + (parseFloat(curr.amount) || 0), 0);
+                                                    
+                                                const platformAmount = Math.max(0, parseFloat(order.total_amount) - totalSplits);
+
+                                                return (
+                                                    <tr key={order.id} className="hover:bg-slate-50/20 transition-all">
+                                                        <td className="py-5 px-8">
+                                                            <p className="font-black text-sm text-[#05080F]">{order.id}</p>
+                                                            <p className="text-[10px] font-bold text-slate-400 mt-1">
+                                                                {new Date(order.created_at).toLocaleDateString('pt-BR')} às {new Date(order.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                                            </p>
+                                                        </td>
+                                                        <td className="py-5 px-4">
+                                                            <p className="font-bold text-sm text-[#05080F]">{order.customer_name}</p>
+                                                            {order.referral_code && (
+                                                                <span className="inline-flex mt-1 px-2 py-0.5 rounded text-[8px] font-extrabold uppercase bg-slate-100 text-slate-600 border border-slate-200">
+                                                                    Ref: {order.referral_code}
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="py-5 px-4 font-black text-[#05080F]">
+                                                            R$ {parseFloat(order.total_amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        </td>
+                                                        <td className="py-5 px-4 font-black text-emerald-600">
+                                                            R$ {redeAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        </td>
+                                                        <td className="py-5 px-4 font-black text-amber-600">
+                                                            R$ {gdFinanceAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        </td>
+                                                        <td className="py-5 px-4 font-black text-blue-600">
+                                                            R$ {platformAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        </td>
+                                                        <td className="py-5 px-8 text-right">
+                                                            <button
+                                                                onClick={() => setSelectedAuditOrder({ ...order, redeAmount, gdFinanceAmount, platformAmount })}
+                                                                className="px-4 py-2 bg-slate-50 border border-slate-200/50 hover:bg-[#05080F] hover:text-white hover:border-[#05080F] rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ml-auto"
+                                                            >
+                                                                <ArrowUpRight className="w-3.5 h-3.5" />
+                                                                Rastro
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        ) : (
+                                            <tr>
+                                                <td colSpan={7} className="py-20 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">
+                                                    Nenhuma transação encontrada.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Audit Pagination */}
+                            {totalAuditPages > 1 && (
+                                <div className="p-8 md:p-10 border-t border-slate-50 flex flex-col sm:flex-row justify-between items-center gap-6">
+                                    <p className="text-xs md:text-sm text-slate-400 font-bold order-2 sm:order-1">
+                                        Mostrando <span className="text-[#05080F]">{indexOfFirstAuditItem + 1}</span>-
+                                        <span className="text-[#05080F]">{Math.min(indexOfLastAuditItem, auditOrders.length)}</span> de 
+                                        <span className="text-[#05080F]">{auditOrders.length}</span> resultados
+                                    </p>
+                                    <div className="flex items-center gap-2 order-1 sm:order-2">
+                                        <button
+                                            onClick={() => setAuditCurrentPage(prev => Math.max(1, prev - 1))}
+                                            disabled={auditCurrentPage === 1}
+                                            className="w-11 h-11 border border-slate-100 rounded-2xl flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-[#05080F] transition-all disabled:opacity-20 disabled:hover:bg-transparent"
+                                        >
+                                            <ArrowUpDown className="w-4 h-4 rotate-90" />
+                                        </button>
+                                        {[...Array(totalAuditPages)].map((_, i) => (
+                                            <button
+                                                key={i}
+                                                onClick={() => setAuditCurrentPage(i + 1)}
+                                                className={`w-11 h-11 rounded-2xl text-[10px] md:text-sm font-black transition-all ${auditCurrentPage === i + 1 ? 'bg-[#05080F] text-white shadow-xl shadow-[#05080F]/10' : 'bg-white border border-slate-50 hover:bg-slate-50 text-slate-400'}`}
+                                            >
+                                                {i + 1}
+                                            </button>
+                                        ))}
+                                        <button
+                                            onClick={() => setAuditCurrentPage(prev => Math.min(totalAuditPages, prev + 1))}
+                                            disabled={auditCurrentPage === totalAuditPages}
+                                            className="w-11 h-11 border border-slate-100 rounded-2xl flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-[#05080F] transition-all disabled:opacity-20 disabled:hover:bg-transparent"
+                                        >
+                                            <ArrowUpDown className="w-4 h-4 -rotate-90" />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Money Trail Modal */}
+                {selectedAuditOrder && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
+                        <div className="absolute inset-0 bg-[#05080F]/80 backdrop-blur-md" onClick={() => setSelectedAuditOrder(null)}></div>
+                        <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
+                            <div className="p-8 md:p-10 border-b border-slate-100 flex justify-between items-center shrink-0">
+                                <div>
+                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-1">Auditoria GD Finance</p>
+                                    <h2 className="text-xl md:text-2xl font-black text-[#05080F]">Rastro do Dinheiro</h2>
+                                </div>
+                                <button onClick={() => setSelectedAuditOrder(null)} className="p-2 hover:bg-slate-50 rounded-xl transition-all">
+                                    <X className="w-5 h-5 text-slate-400" />
+                                </button>
+                            </div>
+                            
+                            <div className="flex-1 overflow-y-auto p-8 md:p-10 space-y-8">
+                                <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 flex flex-col md:flex-row justify-between gap-6">
+                                    <div className="space-y-1">
+                                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Identificador da Venda</p>
+                                        <h4 className="text-lg font-black text-[#05080F]">{selectedAuditOrder.id}</h4>
+                                        <p className="text-[10px] font-bold text-slate-500">Cliente: {selectedAuditOrder.customer_name}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Valor Pago</p>
+                                        <h3 className="text-2xl font-black text-[#05080F]">
+                                            R$ {parseFloat(selectedAuditOrder.total_amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </h3>
+                                    </div>
+                                </div>
+
+                                <div className="relative pl-8 border-l border-slate-100 ml-4 space-y-8">
+                                    <div className="relative">
+                                        <div className="absolute -left-[45px] top-0 w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400">
+                                            <CreditCard className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-black text-sm text-[#05080F]">Entrada de Recurso</h4>
+                                            <p className="text-slate-500 font-medium text-xs mt-1">
+                                                Valor de <b>R$ {parseFloat(selectedAuditOrder.total_amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b> pago por <b>{selectedAuditOrder.customer_name}</b>.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="relative">
+                                        <div className="absolute -left-[45px] top-0 w-8 h-8 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+                                            <ShieldCheck className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-black text-sm text-[#05080F]">Retido pela Plataforma (Clube do Seu Bolso)</h4>
+                                            <p className="text-slate-500 font-medium text-xs mt-1">
+                                                O Clube do Seu Bolso retém o valor líquido de <b>R$ {selectedAuditOrder.platformAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b> em sua carteira principal Asaas.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="relative">
+                                        <div className="absolute -left-[45px] top-0 w-8 h-8 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+                                            <Coins className="w-4 h-4" />
+                                        </div>
+                                        <div className="space-y-4">
+                                            <div>
+                                                <h4 className="font-black text-sm text-[#05080F]">Divisão de Comissões da Rede</h4>
+                                                <p className="text-slate-500 font-medium text-xs mt-1">
+                                                    Divisão multinível calculada para cada geração de indicação:
+                                                </p>
+                                            </div>
+
+                                            <div className="space-y-3 bg-slate-50/50 p-5 rounded-2xl border border-slate-100">
+                                                {Array.isArray(selectedAuditOrder.split_details) && selectedAuditOrder.split_details.length > 0 ? (
+                                                    selectedAuditOrder.split_details.map((split: any, idx: number) => {
+                                                        const name = split.user_id ? (affiliatesMap[split.user_id] || `Afiliado ID: ${split.user_id.substring(0, 8)}...`) : 'Sem Patrocinador/Topo da Rede';
+                                                        const isSent = split.status === 'split_sent';
+                                                        return (
+                                                            <div key={idx} className="flex justify-between items-start gap-4 text-xs">
+                                                                <div>
+                                                                    <p className="font-bold text-[#05080F]">{split.level}ª Geração: {name}</p>
+                                                                    <p className="text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-wide flex items-center gap-1">
+                                                                        {isSent ? (
+                                                                            <span className="text-emerald-600">✓ Pago via Split Asaas</span>
+                                                                        ) : (
+                                                                            <span className="text-amber-600">⚠ Desviado para GD Finance ({split.status === 'held_in_gd_finance' ? 'Afiliado Inativo' : 'Carteira Não Configurada'})</span>
+                                                                        )}
+                                                                    </p>
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <p className={`font-black ${isSent ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                                                        R$ {parseFloat(split.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })
+                                                ) : (
+                                                    <p className="text-slate-400 font-bold text-center text-xs py-4">Sem indicações vinculadas a este pedido.</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-8 md:p-10 border-t border-slate-100 flex justify-end shrink-0 bg-slate-50">
+                                <button
+                                    onClick={() => setSelectedAuditOrder(null)}
+                                    className="px-8 py-4 bg-[#05080F] hover:bg-[#2980B9] hover:text-[#05080F] text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-all"
+                                >
+                                    FECHAR AUDITORIA
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Payment Registration Modal */}
                 {isPaymentModalOpen && (selectedPayout || selectedRequestToPay) && (
