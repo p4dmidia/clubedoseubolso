@@ -1066,7 +1066,7 @@ const AdminAffiliates: React.FC = () => {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">CPF</label>
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">CPF (Opcional)</label>
                                     <input
                                         type="text"
                                         className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"

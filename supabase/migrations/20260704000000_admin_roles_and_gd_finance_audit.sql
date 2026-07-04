@@ -113,3 +113,64 @@ CREATE POLICY "Admins can insert audit logs" ON public.admin_audit_logs
 DROP POLICY IF EXISTS "Admins can view anti fraud logs" ON public.anti_fraud_logs;
 CREATE POLICY "Admins can view anti fraud logs" ON public.anti_fraud_logs
   FOR SELECT USING (public.is_admin());
+
+-- 5. Criar função para atualizar dados de administradores de forma segura (admin_update_admin_user)
+CREATE OR REPLACE FUNCTION public.admin_update_admin_user(
+    p_user_id uuid,
+    p_email text,
+    p_password text,
+    p_role text,
+    p_full_name text,
+    p_whatsapp text,
+    p_cpf text
+)
+RETURNS void AS $$
+DECLARE
+    v_encrypted_pw text;
+BEGIN
+    -- Verificar se quem está chamando é admin Master
+    IF NOT EXISTS (
+        SELECT 1 FROM public.user_profiles
+        WHERE id = auth.uid() AND role IN ('admin', 'admin_master')
+    ) THEN
+        RAISE EXCEPTION 'Acesso negado: Apenas administradores Master podem alterar dados de outros administradores.';
+    END IF;
+
+    -- Atualizar user_profiles
+    UPDATE public.user_profiles
+    SET 
+        email = p_email,
+        role = p_role,
+        full_name = p_full_name,
+        whatsapp = p_whatsapp,
+        cpf = NULLIF(p_cpf, ''),
+        updated_at = now()
+    WHERE id = p_user_id;
+
+    -- Atualizar auth.users
+    UPDATE auth.users
+    SET 
+        email = p_email,
+        raw_user_meta_data = raw_user_meta_data || 
+            jsonb_build_object(
+                'role', p_role,
+                'nome', p_full_name,
+                'whatsapp', p_whatsapp,
+                'cpf', p_cpf
+            ),
+        updated_at = now()
+    WHERE id = p_user_id;
+
+    -- Se senha informada, atualizar encrypted_password
+    IF p_password IS NOT NULL AND p_password <> '' THEN
+        v_encrypted_pw := crypt(p_password, gen_salt('bf'));
+        UPDATE auth.users
+        SET encrypted_password = v_encrypted_pw
+        WHERE id = p_user_id;
+    END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth, extensions;
+
+-- Conceder permissão de execução
+GRANT EXECUTE ON FUNCTION public.admin_update_admin_user(uuid, text, text, text, text, text, text) TO authenticated;
+

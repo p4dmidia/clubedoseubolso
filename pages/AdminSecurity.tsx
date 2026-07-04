@@ -68,6 +68,11 @@ const AdminSecurity: React.FC = () => {
         role: 'admin_op'
     });
 
+    const [editingAdmin, setEditingAdmin] = useState<any | null>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [originalEmail, setOriginalEmail] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+
     // Pagination & Filter States
     const [searchTerm, setSearchTerm] = useState('');
     const [startDate, setStartDate] = useState('');
@@ -230,6 +235,81 @@ const AdminSecurity: React.FC = () => {
         } catch (error: any) {
             console.error('Error creating admin:', error);
             toast.error(error.message || 'Erro ao cadastrar administrador');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleUpdateAdmin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingAdmin) return;
+
+        if (profile?.role !== 'admin_master' && profile?.role !== 'admin') {
+            toast.error('Acesso negado: Apenas administradores Master podem alterar dados.');
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            const { error } = await supabase.rpc('admin_update_admin_user', {
+                p_user_id: editingAdmin.id,
+                p_email: editingAdmin.email.trim(),
+                p_password: newPassword.trim() || null,
+                p_role: editingAdmin.role,
+                p_full_name: editingAdmin.full_name.trim(),
+                p_whatsapp: editingAdmin.whatsapp?.trim() || null,
+                p_cpf: editingAdmin.cpf?.trim() || null
+            });
+
+            if (error) {
+                if (error.message.includes('unique constraint') || error.message.includes('cpf_key')) {
+                    throw new Error('Erro: O CPF informado já está sendo utilizado por outro perfil.');
+                }
+                if (error.message.includes('already being used') || error.message.includes('email')) {
+                    throw new Error('Erro: Este e-mail já está sendo utilizado por outro perfil.');
+                }
+                throw error;
+            }
+
+            toast.success('Administrador atualizado com sucesso!');
+            setIsEditModalOpen(false);
+            setEditingAdmin(null);
+            fetchSecurityData();
+        } catch (error: any) {
+            console.error('Error updating admin:', error);
+            toast.error(error.message || 'Erro ao atualizar administrador');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDeleteAdmin = async () => {
+        if (!editingAdmin) return;
+        
+        if (editingAdmin.id === profile?.id) {
+            toast.error('Acesso negado: Você não pode remover o seu próprio acesso.');
+            return;
+        }
+
+        if (!window.confirm(`Tem certeza de que deseja revogar o acesso administrativo de ${editingAdmin.full_name || editingAdmin.email}? Esta ação é irreversível.`)) {
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            const { error } = await supabase.rpc('admin_delete_user', {
+                p_user_id: editingAdmin.id
+            });
+
+            if (error) throw error;
+
+            toast.success('Acesso administrativo revogado com sucesso!');
+            setIsEditModalOpen(false);
+            setEditingAdmin(null);
+            fetchSecurityData();
+        } catch (error: any) {
+            console.error('Error deleting admin:', error);
+            toast.error(error.message || 'Erro ao remover administrador.');
         } finally {
             setIsSaving(false);
         }
@@ -681,7 +761,25 @@ const AdminSecurity: React.FC = () => {
                             </div>
                             <div className="space-y-6">
                                 {admins.map((admin) => (
-                                    <div key={admin.id} className="flex items-center justify-between group cursor-pointer">
+                                    <div 
+                                        key={admin.id} 
+                                        onClick={() => {
+                                            if (profile?.role === 'admin_master' || profile?.role === 'admin') {
+                                                setEditingAdmin({
+                                                    id: admin.id,
+                                                    email: admin.email,
+                                                    role: admin.role,
+                                                    full_name: admin.full_name || '',
+                                                    whatsapp: admin.whatsapp || '',
+                                                    cpf: admin.cpf || ''
+                                                });
+                                                setOriginalEmail(admin.email);
+                                                setNewPassword('');
+                                                setIsEditModalOpen(true);
+                                            }
+                                        }}
+                                        className="flex items-center justify-between group cursor-pointer"
+                                    >
                                         <div className="flex items-center gap-4">
                                             <div className="w-10 h-10 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center font-black group-hover:bg-[#2980B9] group-hover:text-[#05080F] transition-all uppercase">
                                                 {admin.email[0]}
@@ -812,7 +910,7 @@ const AdminSecurity: React.FC = () => {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">CPF</label>
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">CPF (Opcional)</label>
                                 <input
                                     type="text"
                                     className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"
@@ -849,6 +947,119 @@ const AdminSecurity: React.FC = () => {
                                     {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4 text-[#2980B9]" />}
                                     CADASTRAR ADMIN
                                 </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {isEditModalOpen && editingAdmin && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-[#05080F]/80 backdrop-blur-md" onClick={() => { setIsEditModalOpen(false); setEditingAdmin(null); }}></div>
+                    <div className="bg-white w-full max-w-lg rounded-[3rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
+                        <div className="p-8 border-b border-slate-100 flex justify-between items-center shrink-0">
+                            <div>
+                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-1">Segurança</p>
+                                <h2 className="text-xl font-black text-[#05080F]">Editar Administrador</h2>
+                            </div>
+                            <button onClick={() => { setIsEditModalOpen(false); setEditingAdmin(null); }} className="p-2 hover:bg-slate-50 rounded-xl transition-all">
+                                <X className="w-5 h-5 text-slate-400" />
+                            </button>
+                        </div>
+                        <form onSubmit={handleUpdateAdmin} className="flex-1 overflow-y-auto p-8 space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Nome Completo</label>
+                                <input
+                                    type="text"
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"
+                                    value={editingAdmin.full_name || ''}
+                                    onChange={e => setEditingAdmin({ ...editingAdmin, full_name: e.target.value })}
+                                    placeholder="Ex: George Master"
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">E-mail</label>
+                                <input
+                                    type="email"
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"
+                                    value={editingAdmin.email || ''}
+                                    onChange={e => setEditingAdmin({ ...editingAdmin, email: e.target.value })}
+                                    placeholder="email@exemplo.com"
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Nova Senha (Opcional)</label>
+                                <input
+                                    type="password"
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"
+                                    value={newPassword}
+                                    onChange={e => setNewPassword(e.target.value)}
+                                    placeholder="Deixe em branco para manter a mesma"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">WhatsApp</label>
+                                <input
+                                    type="text"
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"
+                                    value={editingAdmin.whatsapp || ''}
+                                    onChange={e => setEditingAdmin({ ...editingAdmin, whatsapp: e.target.value })}
+                                    placeholder="(11) 99999-9999"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">CPF (Opcional)</label>
+                                <input
+                                    type="text"
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"
+                                    value={editingAdmin.cpf || ''}
+                                    onChange={e => setEditingAdmin({ ...editingAdmin, cpf: e.target.value })}
+                                    placeholder="000.000.000-00"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Nível de Permissão</label>
+                                <select
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-bold outline-none focus:border-[#2980B9] appearance-none"
+                                    value={editingAdmin.role || 'admin_op'}
+                                    onChange={e => setEditingAdmin({ ...editingAdmin, role: e.target.value })}
+                                >
+                                    <option value="admin_master">Master (Acesso Total)</option>
+                                    <option value="admin_gerente">Gerente (Audit GD Fin Oculta)</option>
+                                    <option value="admin_op">Operador (Sem Exclusões/Aprovações)</option>
+                                </select>
+                            </div>
+
+                            <div className="pt-4 flex flex-col sm:flex-row gap-4">
+                                {editingAdmin.id !== profile?.id && (
+                                    <button
+                                        type="button"
+                                        onClick={handleDeleteAdmin}
+                                        disabled={isSaving}
+                                        className="py-4 px-6 bg-red-50 text-red-500 hover:bg-red-100 rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
+                                    >
+                                        REMOVER ACESSO
+                                    </button>
+                                )}
+                                <div className="flex-1 flex gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => { setIsEditModalOpen(false); setEditingAdmin(null); }}
+                                        className="flex-1 py-4 border border-slate-100 text-slate-400 rounded-2xl font-black text-xs uppercase tracking-widest"
+                                    >
+                                        CANCELAR
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isSaving}
+                                        className="flex-[2] py-4 bg-[#05080F] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#2980B9] hover:text-[#05080F] transition-all flex items-center justify-center gap-2"
+                                    >
+                                        {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4 text-[#2980B9]" />}
+                                        SALVAR ALTERAÇÕES
+                                    </button>
+                                </div>
                             </div>
                         </form>
                     </div>
