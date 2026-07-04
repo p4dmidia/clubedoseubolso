@@ -72,6 +72,14 @@ serve(async (req) => {
         return new Response('ok', { headers: corsHeaders })
     }
 
+    const asaasToken = req.headers.get("asaas-access-token");
+    const configuredToken = Deno.env.get("ASAAS_WEBHOOK_SECRET");
+
+    if (!configuredToken || asaasToken !== configuredToken) {
+        console.warn(`[Asaas Webhook] Acesso não autorizado. Header token recebido: ${asaasToken}`);
+        return new Response("Unauthorized", { status: 401 });
+    }
+
     try {
         const body = await req.json();
         console.log('[Asaas Webhook] Payload Recebido:', JSON.stringify(body, null, 2));

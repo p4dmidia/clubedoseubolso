@@ -53,6 +53,9 @@ const AffiliateFinancial: React.FC = () => {
     const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
     const [withdrawalMethod, setWithdrawalMethod] = useState<'pix' | 'bank_transfer'>('pix');
     const [withdrawAmount, setWithdrawAmount] = useState('');
+    const [isActive, setIsActive] = useState(true);
+    const [withdrawSource, setWithdrawSource] = useState<'available' | 'blocked'>('available');
+    const [authorizeFee, setAuthorizeFee] = useState(false);
 
     // Financial Data States
     const [balance, setBalance] = useState({
@@ -78,6 +81,17 @@ const AffiliateFinancial: React.FC = () => {
             fetchFinancialData();
         }
     }, [user]);
+
+    useEffect(() => {
+        if (showWithdrawalModal) {
+            if (balance.available >= 50) {
+                setWithdrawSource('available');
+            } else if (balance.frozen >= 50) {
+                setWithdrawSource('blocked');
+            }
+            setAuthorizeFee(false);
+        }
+    }, [showWithdrawalModal, balance.available, balance.frozen]);
 
     const fetchFinancialData = async () => {
         try {
@@ -121,6 +135,10 @@ const AffiliateFinancial: React.FC = () => {
                 frozen: Number(settings.frozen_balance || 0),
                 withdrawn: totalWithdrawn
             });
+
+            // Buscar se o afiliado está ativo mensalmente
+            const { data: activeRes } = await supabase.rpc('is_affiliate_active', { p_user_id: user?.id });
+            setIsActive(activeRes ?? false);
 
             setWithdrawals(withdrawData || []);
             
@@ -185,8 +203,19 @@ const AffiliateFinancial: React.FC = () => {
             return;
         }
 
-        if (amount > balance.available) {
+        const maxAvailable = withdrawSource === 'available' ? balance.available : balance.frozen;
+        if (amount > maxAvailable) {
             toast.error('Saldo insuficiente para o saque solicitado.');
+            return;
+        }
+
+        if (withdrawSource === 'blocked' && amount < 17) {
+            toast.error('O valor do saque bloqueado deve ser no mínimo R$ 17,00 para cobrir a taxa.');
+            return;
+        }
+
+        if (withdrawSource === 'blocked' && !authorizeFee) {
+            toast.error('Você precisa autorizar o desconto da taxa de ativação de R$ 17,00.');
             return;
         }
 
@@ -206,13 +235,18 @@ const AffiliateFinancial: React.FC = () => {
         try {
             setSubmitting(true);
 
+            const isBlockedWithdrawal = withdrawSource === 'blocked';
+            const feeAmount = isBlockedWithdrawal ? 17.00 : 0.00;
+            const netAmount = amount - feeAmount;
+
             // 1. Create withdrawal record
             const { error: withdrawErr } = await supabase
                 .from('withdrawals')
                 .insert([{
                     user_id: user?.id,
                     amount_requested: amount,
-                    net_amount: amount,
+                    fee_amount: feeAmount,
+                    net_amount: netAmount,
                     pix_key: withdrawalMethod === 'pix' ? bankDetails.pix_key : 'Transferência Bancária',
                     status: 'pending',
                     payment_method: withdrawalMethod,
@@ -221,19 +255,23 @@ const AffiliateFinancial: React.FC = () => {
                     bank_account: withdrawalMethod === 'bank_transfer' ? bankDetails.bank_account : null,
                     bank_account_type: withdrawalMethod === 'bank_transfer' ? bankDetails.bank_account_type : null,
                     bank_document: withdrawalMethod === 'bank_transfer' ? bankDetails.bank_document : null,
-                    organization_id: ORGANIZATION_ID
+                    organization_id: ORGANIZATION_ID,
+                    is_blocked_withdrawal: isBlockedWithdrawal
                 }]);
 
             if (withdrawErr) throw withdrawErr;
 
-            // 2. Deduct available balance in user_settings
-            const newAvailable = balance.available - amount;
+            // 2. Deduct balance in user_settings
+            const updateFields: any = { updated_at: new Date().toISOString() };
+            if (isBlockedWithdrawal) {
+                updateFields.frozen_balance = balance.frozen - amount;
+            } else {
+                updateFields.available_balance = balance.available - amount;
+            }
+
             const { error: balanceErr } = await supabase
                 .from('user_settings')
-                .update({ 
-                    available_balance: newAvailable,
-                    updated_at: new Date().toISOString()
-                })
+                .update(updateFields)
                 .eq('user_id', user?.id)
                 .eq('organization_id', ORGANIZATION_ID);
 
@@ -265,7 +303,7 @@ const AffiliateFinancial: React.FC = () => {
     const stats = [
         { label: 'Saldo Total', value: formatCurrency(balance.total), icon: DollarSign, color: 'text-[#0B1221]', bg: 'bg-slate-100' },
         { label: 'Saldo Disponível', value: formatCurrency(balance.available), icon: Wallet, color: 'text-[#2980B9]', bg: 'bg-amber-50' },
-        { label: 'Aguardando Liberação', value: formatCurrency(balance.frozen), icon: Clock, color: 'text-blue-500', bg: 'bg-blue-50' },
+        { label: isActive ? 'Aguardando Liberação' : 'Saldo Bloqueado (Inativo)', value: formatCurrency(balance.frozen), icon: Clock, color: 'text-blue-500', bg: 'bg-blue-50' },
         { label: 'Total Sacado', value: formatCurrency(balance.withdrawn), icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-50' },
     ];
 
@@ -274,18 +312,32 @@ const AffiliateFinancial: React.FC = () => {
 
     return (
         <AffiliateLayout>
+            {/* Active Status Banner */}
+            {!isActive && (
+                <div className="mb-8 bg-amber-50 border border-amber-200/80 p-6 rounded-[2rem] flex items-start gap-4 shadow-sm animate-in fade-in duration-300">
+                    <AlertCircle className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" />
+                    <div className="text-sm">
+                        <h4 className="font-black text-[#0B1221] mb-1">Conta Inativa no Sistema</h4>
+                        <p className="text-slate-600 font-medium leading-relaxed">
+                            Suas comissões geradas no período de inatividade estão sendo retidas como <strong>Saldo Bloqueado</strong>. 
+                            Você pode se reativar indicando um novo cliente ou solicitando o saque do seu Saldo Bloqueado abaixo (a taxa de ativação de R$ 17,00 será descontada automaticamente do saque).
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* Header */}
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
                 <div>
                     <h1 className="text-3xl font-black text-[#0B1221]">Financeiro</h1>
-                    <p className="text-slate-500 font-medium">Acompanhe seus ganhos e solicite saques manuais.</p>
+                    <p className="text-slate-500 font-medium font-inter">Acompanhe seus ganhos e solicite saques manuais.</p>
                 </div>
                 <div className="flex gap-3 w-full md:w-auto">
                     <button
                         onClick={() => setShowWithdrawalModal(true)}
-                        disabled={balance.available < 50}
+                        disabled={balance.available < 50 && balance.frozen < 50}
                         className="px-6 py-4 bg-[#2980B9] hover:bg-[#1f6391] text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-blue-200/50 flex-1 md:flex-none flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        title={balance.available < 50 ? 'Saldo mínimo de R$ 50,00 necessário' : ''}
+                        title={balance.available < 50 && balance.frozen < 50 ? 'Saldo mínimo de R$ 50,00 necessário' : ''}
                     >
                         <ArrowUpRight className="w-5 h-5" />
                         SOLICITAR SAQUE
@@ -474,9 +526,43 @@ const AffiliateFinancial: React.FC = () => {
                 <div className="fixed inset-0 bg-[#0B1221]/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-[2.5rem] w-full max-w-md p-10 shadow-2xl animate-in fade-in zoom-in duration-300">
                         <h3 className="text-2xl font-black text-[#0B1221] mb-2">Solicitar Saque</h3>
-                        <p className="text-slate-500 text-sm mb-8 font-medium">Escolha como e quanto deseja transferir do seu saldo disponível.</p>
+                        <p className="text-slate-500 text-sm mb-8 font-medium">Escolha como e quanto deseja transferir do seu saldo.</p>
 
                         <form onSubmit={handleRequestWithdrawal} className="space-y-6">
+                            {/* Balance Source Selector (Only if they have blocked balance) */}
+                            {balance.frozen >= 50 && (
+                                <div className="space-y-2">
+                                    <label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Origem do Saldo</label>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <button
+                                            type="button"
+                                            disabled={balance.available < 50}
+                                            onClick={() => setWithdrawSource('available')}
+                                            className={`py-3.5 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all border flex flex-col items-center gap-1.5 ${
+                                                withdrawSource === 'available'
+                                                    ? 'border-[#2980B9] bg-blue-50/20 text-[#2980B9]'
+                                                    : 'border-slate-200 text-slate-400 hover:border-slate-300 disabled:opacity-55 disabled:cursor-not-allowed'
+                                            }`}
+                                        >
+                                            <span className="text-[10px] uppercase font-black">Disponível</span>
+                                            <span className="text-xs font-bold">{formatCurrency(balance.available)}</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setWithdrawSource('blocked')}
+                                            className={`py-3.5 rounded-2xl font-bold text-xs uppercase tracking-wider transition-all border flex flex-col items-center gap-1.5 ${
+                                                withdrawSource === 'blocked'
+                                                    ? 'border-[#2980B9] bg-blue-50/20 text-[#2980B9]'
+                                                    : 'border-slate-200 text-slate-400 hover:border-slate-300'
+                                            }`}
+                                        >
+                                            <span className="text-[10px] uppercase font-black text-amber-600">Bloqueado</span>
+                                            <span className="text-xs font-bold text-amber-700">{formatCurrency(balance.frozen)}</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Method selector */}
                             <div className="space-y-2">
                                 <label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Método de Recebimento</label>
@@ -543,7 +629,7 @@ const AffiliateFinancial: React.FC = () => {
                                 <div className="flex justify-between items-center ml-1">
                                     <label className="text-xs font-black uppercase tracking-widest text-slate-400">Valor do Saque</label>
                                     <span className="text-[10px] font-bold text-slate-400">
-                                        Disponível: {formatCurrency(balance.available)}
+                                        Máximo: {formatCurrency(withdrawSource === 'available' ? balance.available : balance.frozen)}
                                     </span>
                                 </div>
                                 <div className="relative">
@@ -563,6 +649,30 @@ const AffiliateFinancial: React.FC = () => {
                                 <p className="text-[10px] text-slate-400 font-bold ml-1 uppercase tracking-wider">Mínimo de R$ 50,00.</p>
                             </div>
 
+                            {/* Fee Authorization Notice (Only if Blocked) */}
+                            {withdrawSource === 'blocked' && (
+                                <div className="bg-amber-50 border border-amber-100/70 p-4 rounded-2xl flex flex-col gap-2">
+                                    <p className="text-xs font-bold text-amber-800 leading-relaxed">
+                                        Atenção: Ao sacar do saldo bloqueado, será descontada a taxa de ativação de R$ 17,00.
+                                    </p>
+                                    <p className="text-[10px] text-amber-700 font-medium">
+                                        Seu recebimento líquido será de {formatCurrency(Math.max(0, Number(withdrawAmount) - 17))}. Após a aprovação e pagamento deste saque, sua conta de afiliado será reativada no sistema por 30 dias.
+                                    </p>
+                                    <label className="flex items-center gap-2 mt-2 cursor-pointer select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={authorizeFee}
+                                            onChange={(e) => setAuthorizeFee(e.target.checked)}
+                                            className="rounded text-[#2980B9] focus:ring-[#2980B9]"
+                                            required
+                                        />
+                                        <span className="text-[10px] font-black text-amber-900 uppercase tracking-wide">
+                                            Autorizo o desconto de R$ 17,00
+                                        </span>
+                                    </label>
+                                </div>
+                            )}
+
                             {/* Submit and Cancel */}
                             <div className="flex gap-4">
                                 <button
@@ -577,7 +687,8 @@ const AffiliateFinancial: React.FC = () => {
                                     type="submit"
                                     disabled={
                                         submitting || 
-                                        balance.available < 50 || 
+                                        (withdrawSource === 'available' && balance.available < 50) ||
+                                        (withdrawSource === 'blocked' && (balance.frozen < 50 || !authorizeFee)) ||
                                         (withdrawalMethod === 'pix' && !hasPixKey) || 
                                         (withdrawalMethod === 'bank_transfer' && !hasBankDetails)
                                     }

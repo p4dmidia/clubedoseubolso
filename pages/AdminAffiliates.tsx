@@ -20,7 +20,8 @@ import {
     Eye,
     Pencil,
     Shield,
-    Clock
+    Clock,
+    Award
 } from 'lucide-react';
 import { ORGANIZATION_ID } from '../lib/config';
 import AdminLayout from '../components/AdminLayout';
@@ -85,10 +86,31 @@ const AdminAffiliates: React.FC = () => {
             const userIds = affData.map(aff => aff.user_id).filter(id => id);
             const { data: settingsData, error: settingsError } = await supabase
                 .from('user_settings')
-                .select('user_id, total_earnings')
+                .select('user_id, total_earnings, active_until, available_balance, frozen_balance')
                 .in('user_id', userIds);
 
             if (settingsError) throw settingsError;
+
+            // Fetch recent referrals for these users
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+            let referralsData: any[] = [];
+            if (userIds.length > 0) {
+                const { data: refData } = await supabase
+                    .from('user_profiles')
+                    .select('sponsor_id')
+                    .in('sponsor_id', userIds)
+                    .eq('role', 'client')
+                    .gte('created_at', thirtyDaysAgo.toISOString());
+                referralsData = refData || [];
+            }
+
+            const recentReferralsCountMap = new Map();
+            referralsData.forEach(r => {
+                const count = recentReferralsCountMap.get(r.sponsor_id) || 0;
+                recentReferralsCountMap.set(r.sponsor_id, count + 1);
+            });
 
             let profilesData: any[] = [];
             if (userIds.length > 0) {
@@ -123,6 +145,11 @@ const AdminAffiliates: React.FC = () => {
 
             const formattedAffs = affData.map(aff => {
                 const settings = settingsMap.get(aff.user_id);
+                const createdDate = new Date(aff.created_at);
+                const activeUntilDate = settings?.active_until ? new Date(settings.active_until) : null;
+                const hasRecentReferrals = (recentReferralsCountMap.get(aff.user_id) || 0) > 0;
+                const isMonthlyActive = (createdDate > thirtyDaysAgo) || (activeUntilDate && activeUntilDate > new Date()) || hasRecentReferrals;
+
                 return {
                     id: aff.id,
                     name: aff.full_name || 'Sem Nome',
@@ -141,7 +168,11 @@ const AdminAffiliates: React.FC = () => {
                     cpf: aff.cpf || '',
                     cnpj: aff.cnpj || profilesMap.get(aff.user_id)?.cnpj || '',
                     registration_type: profilesMap.get(aff.user_id)?.registration_type || 'business',
-                    role: profilesMap.get(aff.user_id)?.role || 'affiliate'
+                    role: profilesMap.get(aff.user_id)?.role || 'affiliate',
+                    isMonthlyActive,
+                    active_until: settings?.active_until || null,
+                    frozen_balance: settings?.frozen_balance || 0,
+                    available_balance: settings?.available_balance || 0
                 };
             });
 
@@ -165,6 +196,35 @@ const AdminAffiliates: React.FC = () => {
         } finally {
             setIsLoading(true);
             setTimeout(() => setIsLoading(false), 500);
+        }
+    };
+
+    const handleManualActivation = async (userId: string) => {
+        try {
+            const activeUntil = new Date();
+            activeUntil.setDate(activeUntil.getDate() + 30);
+            
+            const { error } = await supabase
+                .from('user_settings')
+                .update({ active_until: activeUntil.toISOString() })
+                .eq('user_id', userId)
+                .eq('organization_id', ORGANIZATION_ID);
+                
+            if (error) throw error;
+            toast.success('Afiliado ativado manualmente por 30 dias!');
+            
+            fetchAffiliates();
+            
+            if (viewingAffiliate && viewingAffiliate.user_id === userId) {
+                setViewingAffiliate(prev => ({
+                    ...prev,
+                    active_until: activeUntil.toISOString(),
+                    isMonthlyActive: true
+                }));
+            }
+        } catch (err: any) {
+            console.error(err);
+            toast.error('Erro ao ativar afiliado.');
         }
     };
 
@@ -721,9 +781,43 @@ const AdminAffiliates: React.FC = () => {
                                         <Lock className="w-3.5 h-3.5 text-slate-400" /> {viewingAffiliate.cpf || viewingAffiliate.cnpj || 'Não inf.'}
                                     </div>
                                 </div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ativação Mensal</p>
+                                    <div className="flex items-center gap-2 text-sm font-bold text-[#05080F]">
+                                        <Award className={`w-3.5 h-3.5 ${viewingAffiliate.isMonthlyActive ? 'text-emerald-500' : 'text-rose-500'}`} />
+                                        {viewingAffiliate.isMonthlyActive ? 'Ativo' : 'Inativo'}
+                                    </div>
+                                </div>
+                                <div className="space-y-1 col-span-2">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ativo até</p>
+                                    <div className="flex items-center gap-2 text-sm font-bold text-[#05080F]">
+                                        <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                                        {viewingAffiliate.active_until ? new Date(viewingAffiliate.active_until).toLocaleDateString('pt-BR') : 'Sem ativação manual ativa'}
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Saldo Disponível</p>
+                                    <div className="flex items-center gap-2 text-sm font-bold text-[#05080F]">
+                                        <Wallet className="w-3.5 h-3.5 text-[#2980B9]" />
+                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(viewingAffiliate.available_balance || 0)}
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Saldo Bloqueado</p>
+                                    <div className="flex items-center gap-2 text-sm font-bold text-[#05080F]">
+                                        <Lock className="w-3.5 h-3.5 text-amber-500" />
+                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(viewingAffiliate.frozen_balance || 0)}
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div className="p-10">
+                        <div className="p-10 flex flex-col gap-3">
+                            <button
+                                onClick={() => handleManualActivation(viewingAffiliate.user_id)}
+                                className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/10"
+                            >
+                                ATIVAR AFILIADO MANUALMENTE (+30 DIAS)
+                            </button>
                             <button
                                 onClick={() => setViewingAffiliate(null)}
                                 className="w-full py-4 bg-[#05080F] text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-[#2980B9] hover:text-[#05080F] transition-all shadow-xl shadow-[#05080F]/10"

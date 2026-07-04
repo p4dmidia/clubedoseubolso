@@ -795,7 +795,7 @@ const CheckoutSuccess: React.FC = () => {
                         onChange={(e) => setTermsAccepted(e.target.checked)}
                       />
                       <span className="text-xs font-bold text-slate-600 leading-relaxed uppercase tracking-wider">
-                        Declaro que li e concordo com os Termos de Uso e Política de Privacidade da plataforma.
+                        Declaro que li e concordo com os <a href="https://app.maisunidos.com.br/TermosDeAdesao" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-[#2980B9] hover:underline">Termos de Uso e Política de Privacidade</a> da plataforma.
                       </span>
                     </label>
                   </div>

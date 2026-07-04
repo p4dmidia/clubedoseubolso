@@ -199,21 +199,21 @@ const AffiliateLayout: React.FC<AffiliateLayoutProps> = ({ children }) => {
                                     <ShieldAlert className="w-10 h-10 animate-bounce" />
                                 </div>
                                                         <h2 className="text-3xl font-black text-[#0B1221] mb-4">
-                                    Chave da Carteira Asaas Obrigatória
+                                    Receba suas comissões direto na sua conta!
                                 </h2>
                                 
                                 <p className="text-slate-500 font-medium text-sm max-w-xl leading-relaxed mb-8">
-                                    Seja bem-vindo ao Clube do Seu Bolso! Para liberar o seu link de indicações, divulgar os produtos do clube e começar a receber suas comissões direto na sua conta, é obrigatório preencher a sua **Chave da Carteira** (Wallet ID) do Asaas.
+                                    Seja bem-vindo ao Clube do Seu Bolso! Para que você possa receber suas comissões direto na sua conta de forma automática e segura, nós utilizamos a plataforma de pagamentos **Asaas**. Para começar a divulgar os produtos e ativar o seu link de indicações, basta criar uma conta gratuita no Asaas e depois conectar a sua carteira aqui.
                                 </p>
 
                                 <div className="w-full bg-slate-50 rounded-2xl p-6 border border-slate-100/50 mb-10 text-left space-y-4">
                                     <div className="flex items-center gap-3">
                                         <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0" />
-                                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Cadastro gratuito na plataforma Asaas</span>
+                                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Cadastro 100% gratuito e rápido no Asaas</span>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <CheckCircle className="w-5 h-5 text-[#2980B9] shrink-0" />
-                                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Ativação automática do link de indicação</span>
+                                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Ativação imediata do seu link de indicações</span>
                                     </div>
                                 </div>
 
@@ -224,14 +224,14 @@ const AffiliateLayout: React.FC<AffiliateLayoutProps> = ({ children }) => {
                                         className="flex-1 bg-transparent border-2 border-slate-200 text-slate-700 py-5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center justify-center gap-3 text-center"
                                     >
                                         <Info className="w-5 h-5 text-[#2980B9]" />
-                                        VER TUTORIAL DO ASAAS
+                                        VER PASSO A PASSO
                                     </button>
                                     <Link
                                         to="/afiliado/settings?tab=bank"
                                         className="flex-1 bg-[#0B1221] text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#2980B9] transition-all flex items-center justify-center gap-3 shadow-xl hover:shadow-[#2980B9]/20 text-center"
                                     >
                                         <Settings className="w-5 h-5" />
-                                        CONFIGURAR CHAVE ASAAS
+                                        VINCULAR CONTA ASAAS
                                     </Link>
                                 </div>
                             </div>
@@ -248,8 +248,8 @@ const AffiliateLayout: React.FC<AffiliateLayoutProps> = ({ children }) => {
                         {/* Header */}
                         <div className="p-8 pb-4 border-b border-slate-50 flex justify-between items-start">
                             <div>
-                                <h3 className="text-xl font-black text-[#0B1221] text-left">Como obter sua Chave da Carteira Asaas</h3>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 text-left">Siga o passo a passo para configurar suas comissões</p>
+                                <h3 className="text-xl font-black text-[#0B1221] text-left">Como obter o identificador da sua carteira Asaas</h3>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 text-left">Siga o passo a passo para configurar seus recebimentos</p>
                             </div>
                             <button 
                                 type="button"
@@ -301,7 +301,7 @@ const AffiliateLayout: React.FC<AffiliateLayoutProps> = ({ children }) => {
                                         3
                                     </div>
                                     <div>
-                                        <h4 className="font-black text-[#0B1221] text-sm">Obter o Wallet ID / Chave da Carteira</h4>
+                                        <h4 className="font-black text-[#0B1221] text-sm">Copiar o identificador (Wallet ID) da carteira</h4>
                                         <p className="mt-1 text-xs">
                                             Nas configurações de integração, copie o identificador da sua carteira. O código é um identificador único de formato padrão (ex: `8a7b6c5d-4e3f-2a1b-0c9d-8e7f6a5b4c3d`) contendo letras, números e traços.
                                         </p>
@@ -313,9 +313,9 @@ const AffiliateLayout: React.FC<AffiliateLayoutProps> = ({ children }) => {
                                         4
                                     </div>
                                     <div>
-                                        <h4 className="font-black text-[#0B1221] text-sm">Salvar a chave no Clube do Seu Bolso</h4>
+                                        <h4 className="font-black text-[#0B1221] text-sm">Vincular a carteira no Clube do Seu Bolso</h4>
                                         <p className="mt-1 text-xs">
-                                            Com o Wallet ID copiado, feche esta tela de tutorial, clique no botão **Configurar Chave Asaas** e cole a chave no campo **Chave da Carteira Asaas (Wallet ID)**. Por fim, salve as configurações.
+                                            Com o Wallet ID copiado, feche esta tela de tutorial, clique no botão **Vincular Conta Asaas** e cole a chave no campo **Identificador da Carteira Asaas (Wallet ID)**. Por fim, salve as configurações.
                                         </p>
                                     </div>
                                 </div>
@@ -326,7 +326,24 @@ const AffiliateLayout: React.FC<AffiliateLayoutProps> = ({ children }) => {
                                 <div className="text-xs leading-relaxed text-[#0B1221]">
                                     <h5 className="font-black uppercase tracking-wider mb-1">Por que isso é necessário?</h5>
                                     <p className="text-slate-600 font-medium">
-                                        Para fins de segurança e transparência financeira, toda a sua transacionalidade e os pagamentos de bonificações MMN são automatizados através do gateway Asaas. Cadastrar sua chave garante que seus ganhos caiam diretamente no seu saldo da forma mais rápida possível.
+                                        Para a sua segurança e comodidade, todos os pagamentos de comissões são processados de forma automatizada pelo Asaas. Conectar a sua carteira garante que seus ganhos sejam transferidos de forma imediata e sem burocracia.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="bg-amber-50/50 border border-amber-100/60 rounded-3xl p-6 flex gap-4 items-start">
+                                <ShieldAlert className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                                <div className="text-xs leading-relaxed text-[#0B1221]">
+                                    <h5 className="font-black uppercase tracking-wider mb-1">Regra de Ativação Mensal</h5>
+                                    <p className="text-slate-600 font-medium">
+                                        Para ter direito ao recebimento automático das comissões, você deve se manter ativo mensalmente. A ativação ocorre de duas maneiras:
+                                    </p>
+                                    <ul className="list-disc pl-4 mt-2 space-y-1 text-slate-600 font-medium">
+                                        <li>Indicar pelo menos 1 novo assinante (cliente) a cada 30 dias; ou</li>
+                                        <li>Pagar a taxa de ativação de R$ 17,00 (descontada do seu saldo de comissões, conforme o Contrato de Afiliação).</li>
+                                    </ul>
+                                    <p className="text-slate-600 font-medium mt-2">
+                                        Se inativo, as comissões geradas no período irão para a conta da GD Finance e constarão em seu painel como <strong>Saldo Bloqueado</strong>. Você poderá solicitar o resgate assim que se reativar, autorizando o desconto da taxa.
                                     </p>
                                 </div>
                             </div>

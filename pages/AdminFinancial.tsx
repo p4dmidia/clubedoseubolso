@@ -43,6 +43,7 @@ interface WithdrawalRequest {
     created_at: string;
     status: 'pending' | 'approved' | 'paid' | 'rejected';
     proof_url?: string;
+    is_blocked_withdrawal?: boolean;
     affiliate?: {
         full_name: string;
     };
@@ -148,7 +149,7 @@ const AdminFinancial: React.FC = () => {
             // 1. Fetch current withdrawal details to check status and handle estorno if rejected
             const { data: wData, error: fetchErr } = await supabase
                 .from('withdrawals')
-                .select('user_id, amount_requested, status')
+                .select('user_id, amount_requested, status, is_blocked_withdrawal')
                 .eq('id', id)
                 .single();
 
@@ -174,22 +175,23 @@ const AdminFinancial: React.FC = () => {
                 // Fetch settings for the user
                 const { data: settingsData, error: settingsErr } = await supabase
                     .from('user_settings')
-                    .select('available_balance')
+                    .select('available_balance, frozen_balance')
                     .eq('user_id', wData.user_id)
                     .eq('organization_id', ORGANIZATION_ID)
                     .single();
 
                 if (settingsErr) throw settingsErr;
 
-                const currentBalance = Number(settingsData?.available_balance || 0);
-                const newBalance = currentBalance + Number(wData.amount_requested);
+                const updateFields: any = { updated_at: new Date().toISOString() };
+                if (wData.is_blocked_withdrawal) {
+                    updateFields.frozen_balance = Number(settingsData?.frozen_balance || 0) + Number(wData.amount_requested);
+                } else {
+                    updateFields.available_balance = Number(settingsData?.available_balance || 0) + Number(wData.amount_requested);
+                }
 
                 const { error: balanceErr } = await supabase
                     .from('user_settings')
-                    .update({ 
-                        available_balance: newBalance,
-                        updated_at: new Date().toISOString()
-                    })
+                    .update(updateFields)
                     .eq('user_id', wData.user_id)
                     .eq('organization_id', ORGANIZATION_ID);
 
@@ -282,6 +284,21 @@ const AdminFinancial: React.FC = () => {
                     .eq('organization_id', ORGANIZATION_ID);
 
                 if (drawError) throw drawError;
+
+                // 3. If it was a blocked withdrawal, activate the affiliate for 30 days
+                if (selectedRequestToPay.is_blocked_withdrawal) {
+                    const activeUntil = new Date();
+                    activeUntil.setDate(activeUntil.getDate() + 30);
+                    
+                    const { error: activateErr } = await supabase
+                        .from('user_settings')
+                        .update({ active_until: activeUntil.toISOString() })
+                        .eq('user_id', selectedRequestToPay.user_id)
+                        .eq('organization_id', ORGANIZATION_ID);
+
+                    if (activateErr) throw activateErr;
+                    toast.success('Afiliado ativado mensalmente com sucesso (Taxa paga)!');
+                }
             }
 
             toast.success('Pagamento registrado com sucesso!');
@@ -473,6 +490,11 @@ const AdminFinancial: React.FC = () => {
                                     <div>
                                         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Afiliado</p>
                                         <p className="font-black text-[#05080F] text-sm">{req.affiliate?.full_name || 'Usuário Desconhecido'}</p>
+                                        {req.is_blocked_withdrawal && (
+                                            <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded text-[8px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200">
+                                                Saldo Bloqueado (Mensalidade)
+                                            </span>
+                                        )}
                                         {req.payment_method === 'bank_transfer' ? (
                                             <div className="text-[10px] font-bold text-slate-400 mt-1 space-y-0.5">
                                                 <p className="flex items-center gap-1 text-blue-600">
@@ -507,6 +529,11 @@ const AdminFinancial: React.FC = () => {
                                     <div>
                                         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Valor</p>
                                         <p className="font-black text-[#05080F]">R$ {req.amount_requested.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                        {req.is_blocked_withdrawal && (
+                                            <p className="text-[9px] text-slate-400 font-bold mt-0.5">
+                                                Líquido: R$ {req.net_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (-R$ 17)
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                                 {req.status === 'pending' && (
@@ -586,6 +613,11 @@ const AdminFinancial: React.FC = () => {
                                         <td className="py-6 px-10">
                                             <div>
                                                 <p className="font-black text-[#05080F] text-sm">{req.affiliate?.full_name || 'Usuário Desconhecido'}</p>
+                                                {req.is_blocked_withdrawal && (
+                                                    <span className="inline-block mt-1 px-2 py-0.5 rounded text-[8px] font-extrabold uppercase bg-amber-50 text-amber-700 border border-amber-200">
+                                                        Saldo Bloqueado (Mensalidade)
+                                                    </span>
+                                                )}
                                                 {req.payment_method === 'bank_transfer' ? (
                                                     <div className="text-[10px] font-bold text-slate-400 mt-1 space-y-0.5">
                                                         <p className="flex items-center gap-1 text-blue-600">
@@ -609,6 +641,11 @@ const AdminFinancial: React.FC = () => {
                                         </td>
                                         <td className="py-6 px-4">
                                             <p className="font-black text-[#05080F]">R$ {req.amount_requested.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                            {req.is_blocked_withdrawal && (
+                                                <p className="text-[9px] text-slate-400 font-bold mt-0.5">
+                                                    Líquido: R$ {req.net_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (-R$ 17)
+                                                </p>
+                                            )}
                                         </td>
                                         <td className="py-6 px-4">
                                             <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider ${req.status === 'paid' ? 'bg-emerald-50 text-emerald-600' :

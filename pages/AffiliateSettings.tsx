@@ -324,7 +324,7 @@ const AffiliateSettings: React.FC = () => {
         const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
         if (walletId && !uuidRegex.test(walletId)) {
-            toast.error('A Chave de Acesso Asaas (Wallet ID) informada é inválida. Ela deve ter o formato padrão (ex: 8a7b6c5d-4e3f-2a1b-0c9d-8e7f6a5b4c3d) com 36 caracteres.');
+            toast.error('O identificador da carteira Asaas (Wallet ID) informado é inválido. Certifique-se de copiar o código correto no painel do Asaas (ex: 8a7b6c5d-4e3f-2a1b-0c9d-8e7f6a5b4c3d).');
             return;
         }
 
@@ -915,7 +915,7 @@ const AffiliateSettings: React.FC = () => {
 
                                     {/* Campo Asaas Wallet ID */}
                                     <div className="space-y-2 md:col-span-2">
-                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Chave de Acesso Asaas (Wallet ID) *</label>
+                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Identificador da Carteira Asaas (Wallet ID) *</label>
                                         <input
                                             type="text"
                                             value={bankData.asaas_wallet_id}
@@ -925,7 +925,7 @@ const AffiliateSettings: React.FC = () => {
                                             required
                                         />
                                         <p className="text-[10px] text-slate-400 font-bold ml-1 uppercase tracking-wider">
-                                            Obrigatório. Cadastre-se na plataforma Asaas, obtenha a Chave de Acesso da sua carteira (Wallet ID) e preencha aqui para ativar seu link de indicações e receber suas comissões.
+                                            Para receber suas comissões, crie uma conta gratuita no Asaas, obtenha o identificador da sua carteira (Wallet ID) e insira aqui. Isso ativará automaticamente o seu link de indicações.
                                         </p>
                                     </div>
 

@@ -12,10 +12,11 @@ import {
     Award,
     ShoppingCart,
     UserPlus,
-    AlertCircle
+    AlertCircle,
+    Lock
 } from 'lucide-react';
 import { ORGANIZATION_ID } from '../lib/config';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import AffiliateLayout from '../components/AffiliateLayout';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/AuthContext';
@@ -32,6 +33,7 @@ const AffiliateDashboard: React.FC = () => {
     const [recentReferrals, setRecentReferrals] = useState<any[]>([]);
     const [recentCommissions, setRecentCommissions] = useState<any[]>([]);
     const [copied, setCopied] = useState(false);
+    const [isActive, setIsActive] = useState(true);
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -75,6 +77,11 @@ const AffiliateDashboard: React.FC = () => {
                         .limit(1);
 
                     if (!walletErr && walletDataList && walletDataList.length > 0) setWalletData(walletDataList[0]);
+
+                    // Buscar se o afiliado está ativo mensalmente
+                    const { data: activeRes } = await supabase
+                        .rpc('is_affiliate_active', { p_user_id: user.id });
+                    setIsActive(activeRes ?? false);
 
                     // 3. Buscar status do Consórcio (removido - apenas assinaturas)
 
@@ -235,6 +242,24 @@ const AffiliateDashboard: React.FC = () => {
             color: 'text-[#2980B9]'
         },
         {
+            label: 'Saldo Bloqueado',
+            value: formatCurrency(walletData?.frozen_balance || 0),
+            description: 'Acumulado enquanto inativo',
+            icon: Lock,
+            color: 'text-amber-500',
+            badge: walletData?.frozen_balance > 0 ? { text: 'Bloqueado', active: false } : null
+        },
+        {
+            label: 'Ativação Mensal',
+            value: isActive ? 'Ativo' : 'Inativo',
+            description: isActive 
+                ? 'Elegível para receber comissões' 
+                : 'Regularize com indicação ou taxa',
+            icon: Award,
+            color: isActive ? 'text-emerald-500' : 'text-rose-500',
+            badge: { text: isActive ? 'Ativo' : 'Inativo', active: isActive }
+        },
+        {
             label: 'Total Ganhos',
             value: formatCurrency(walletData?.total_earnings || 0),
             description: 'Histórico total acumulado',
@@ -252,10 +277,11 @@ const AffiliateDashboard: React.FC = () => {
             label: 'Conta Asaas',
             value: walletData?.asaas_wallet_id ? 'Configurada' : 'Pendente',
             description: walletData?.asaas_wallet_id 
-                ? 'Chave de Acesso ativa para comissões direct' 
-                : 'Configure sua Chave Asaas para indicar',
+                ? 'Carteira vinculada com sucesso' 
+                : 'Vincule sua conta para indicar',
             icon: Clock,
-            color: isAccountActive ? 'text-emerald-500' : 'text-rose-500'
+            color: walletData?.asaas_wallet_id ? 'text-emerald-500' : 'text-rose-500',
+            badge: { text: walletData?.asaas_wallet_id ? 'Pronto' : 'Pendente', active: !!walletData?.asaas_wallet_id }
         },
     ];
 
@@ -315,7 +341,21 @@ const AffiliateDashboard: React.FC = () => {
                 </button>
             </header>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+            {!isActive && (
+                <div className="mb-8 bg-amber-50 border border-amber-200/80 p-6 rounded-[2rem] flex items-start gap-4 shadow-sm animate-in fade-in duration-300">
+                    <AlertCircle className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" />
+                    <div className="text-sm">
+                        <h4 className="font-black text-[#0B1221] mb-1">Atenção: Sua conta de afiliado está Inativa</h4>
+                        <p className="text-slate-600 font-medium leading-relaxed">
+                            Para liberar suas comissões acumuladas e receber seus ganhos futuros automaticamente, você precisa se manter ativo mensalmente.
+                            Você pode se ativar indicando um novo cliente nos últimos 30 dias ou efetuando o pagamento da mensalidade de R$ 17,00 na aba <Link to="/afiliado/financial" className="text-[#2980B9] font-black underline hover:text-[#1f6391]">Financeiro</Link>.
+                            Enquanto inativo, seus ganhos são retidos e direcionados para o <strong>Saldo Bloqueado</strong>.
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
                 {stats.map((stat, idx) => (
                     <div key={idx} className="bg-white p-7 rounded-[2.5rem] shadow-sm border border-slate-100 hover:shadow-[0_20px_50px_rgba(0,0,0,0.05)] transition-all group overflow-hidden relative">
                         <div className="absolute -right-4 -top-4 w-24 h-24 bg-slate-50 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-500 transform scale-0 group-hover:scale-100"></div>
@@ -324,14 +364,16 @@ const AffiliateDashboard: React.FC = () => {
                                 <div className={`p-4 rounded-2xl bg-slate-50 ${stat.color} group-hover:scale-110 transition-transform duration-500`}>
                                     <stat.icon className="w-6 h-6" />
                                 </div>
-                                <div className={`flex items-center text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest ${
-                                    isAccountActive 
-                                        ? 'text-emerald-500 bg-emerald-50' 
-                                        : 'text-rose-500 bg-rose-50'
-                                }`}>
-                                    <ArrowUpRight className={`w-3 h-3 mr-1 ${!isAccountActive && 'transform rotate-90'}`} />
-                                    {isAccountActive ? 'Ativo' : 'Inativo'}
-                                </div>
+                                {stat.badge && (
+                                    <div className={`flex items-center text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest ${
+                                        stat.badge.active 
+                                            ? 'text-emerald-500 bg-emerald-50' 
+                                            : 'text-rose-500 bg-rose-50'
+                                    }`}>
+                                        <ArrowUpRight className={`w-3 h-3 mr-1 ${!stat.badge.active && 'transform rotate-90'}`} />
+                                        {stat.badge.text}
+                                    </div>
+                                )}
                             </div>
                             <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest leading-none mb-2">{stat.label}</p>
                             <h3 className="text-2xl font-black text-[#0B1221]">{stat.value}</h3>

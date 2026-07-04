@@ -332,9 +332,20 @@ serve(async (req) => {
                                         .eq('user_id', aff.user_id)
                                         .maybeSingle();
 
-                                    if (userSettings?.asaas_wallet_id) {
-                                        targetWalletId = userSettings.asaas_wallet_id;
-                                        status = 'split_sent';
+                                    // Verificar se o afiliado está ativo mensalmente no sistema usando RPC
+                                    const { data: isActive } = await supabase.rpc('is_affiliate_active', { p_user_id: aff.user_id });
+
+                                    if (isActive) {
+                                        if (userSettings?.asaas_wallet_id) {
+                                            targetWalletId = userSettings.asaas_wallet_id;
+                                            status = 'split_sent';
+                                        } else {
+                                            targetWalletId = null;
+                                            status = 'no_wallet_configured';
+                                        }
+                                    } else {
+                                        targetWalletId = null; // Envia para a GD Finance
+                                        status = 'held_in_gd_finance';
                                     }
                                     
                                     // Avançar para o patrocinador do próximo nível

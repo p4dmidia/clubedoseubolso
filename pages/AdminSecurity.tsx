@@ -75,8 +75,116 @@ const AdminSecurity: React.FC = () => {
     const [isLogsLoading, setIsLogsLoading] = useState(false);
     const logsPerPage = 10;
 
+    // MFA States
+    const [isMfaEnabled, setIsMfaEnabled] = useState(false);
+    const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+    const [isMfaEnrollModalOpen, setIsMfaEnrollModalOpen] = useState(false);
+    const [mfaQrCode, setMfaQrCode] = useState<string | null>(null);
+    const [mfaSecret, setMfaSecret] = useState<string | null>(null);
+    const [mfaEnrollFactorId, setMfaEnrollFactorId] = useState<string | null>(null);
+    const [mfaVerificationCode, setMfaVerificationCode] = useState('');
+    const [isVerifyingMfa, setIsVerifyingMfa] = useState(false);
+
+    const checkMfaStatus = async () => {
+        try {
+            const { data, error } = await supabase.auth.mfa.listFactors();
+            if (error) throw error;
+
+            const verifiedFactor = data.all.find(f => f.status === 'verified');
+            if (verifiedFactor) {
+                setIsMfaEnabled(true);
+                setMfaFactorId(verifiedFactor.id);
+            } else {
+                setIsMfaEnabled(false);
+                setMfaFactorId(null);
+            }
+        } catch (err) {
+            console.error('Error checking MFA status:', err);
+        }
+    };
+
+    const handleEnrollMfa = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                toast.error('Usuário não autenticado.');
+                return;
+            }
+
+            const { data, error } = await supabase.auth.mfa.enroll({
+                factorType: 'totp',
+                issuer: 'ClubeDoSeuBolso',
+                friendlyName: user.email
+            });
+
+            if (error) throw error;
+
+            setMfaEnrollFactorId(data.id);
+            setMfaQrCode(data.totp.qr_code);
+            setMfaSecret(data.totp.secret);
+            setIsMfaEnrollModalOpen(true);
+        } catch (err: any) {
+            console.error('Error enrolling MFA:', err);
+            toast.error(err.message || 'Erro ao iniciar ativação de MFA.');
+        }
+    };
+
+    const handleVerifyEnrollMfa = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!mfaEnrollFactorId || !mfaVerificationCode.trim()) {
+            toast.error('Por favor, digite o código de 6 dígitos.');
+            return;
+        }
+
+        setIsVerifyingMfa(true);
+        try {
+            const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+                factorId: mfaEnrollFactorId
+            });
+            if (challengeError) throw challengeError;
+
+            const { error: verifyError } = await supabase.auth.mfa.verify({
+                factorId: mfaEnrollFactorId,
+                challengeId: challengeData.id,
+                code: mfaVerificationCode.trim()
+            });
+
+            if (verifyError) throw verifyError;
+
+            toast.success('Dupla autenticação (MFA) ativada com sucesso!');
+            setIsMfaEnrollModalOpen(false);
+            setMfaVerificationCode('');
+            checkMfaStatus();
+        } catch (err: any) {
+            console.error('Error verifying MFA enrollment:', err);
+            toast.error(err.message || 'Código inválido. Tente novamente.');
+        } finally {
+            setIsVerifyingMfa(false);
+        }
+    };
+
+    const handleUnenrollMfa = async () => {
+        if (!mfaFactorId) return;
+        if (!confirm('Deseja realmente desativar a autenticação em duas etapas (MFA) da sua conta? Isso reduzirá a segurança de seu acesso.')) return;
+
+        try {
+            const { error } = await supabase.auth.mfa.unenroll({
+                factorId: mfaFactorId
+            });
+
+            if (error) throw error;
+
+            toast.success('MFA desativado com sucesso.');
+            checkMfaStatus();
+        } catch (err: any) {
+            console.error('Error unenrolling MFA:', err);
+            toast.error(err.message || 'Erro ao desativar MFA.');
+        }
+    };
+
     useEffect(() => {
         fetchSecurityData();
+        checkMfaStatus();
     }, []);
 
     const handleCreateAdmin = async (e: React.FormEvent) => {
@@ -585,6 +693,24 @@ const AdminSecurity: React.FC = () => {
                         <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm">
                             <h3 className="text-xl font-black text-[#05080F] mb-6">Configurações Rápidas</h3>
                             <div className="space-y-4">
+                                <button
+                                    onClick={isMfaEnabled ? handleUnenrollMfa : handleEnrollMfa}
+                                    className="w-full flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-slate-100 transition-all group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Smartphone className="w-5 h-5 text-[#2980B9]" />
+                                        <div className="text-left">
+                                            <p className="text-sm font-black text-[#05080F]">Autenticação 2FA/MFA</p>
+                                            <p className="text-[10px] font-bold text-slate-400">
+                                                {isMfaEnabled ? 'ATIVADA (Google Authenticator)' : 'DESATIVADA (Toque para ativar)'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className={`w-10 h-6 rounded-full p-1 relative transition-colors duration-300 ${isMfaEnabled ? 'bg-emerald-500' : 'bg-slate-300'}`}>
+                                        <div className={`w-4 h-4 bg-white rounded-full absolute transition-all duration-300 ${isMfaEnabled ? 'right-1' : 'left-1'}`}></div>
+                                    </div>
+                                </button>
+
                                 <button className="w-full flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-slate-100 transition-all group">
                                     <div className="flex items-center gap-3">
                                         <Key className="w-5 h-5 text-[#2980B9]" />
@@ -716,6 +842,65 @@ const AdminSecurity: React.FC = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {isMfaEnrollModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-[#05080F]/80 backdrop-blur-md" onClick={() => setIsMfaEnrollModalOpen(false)}></div>
+                    <div className="bg-white w-full max-w-md rounded-[3rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col p-8">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-1">Segurança</p>
+                                <h2 className="text-xl font-black text-[#05080F]">Ativar Autenticação 2FA</h2>
+                            </div>
+                            <button onClick={() => setIsMfaEnrollModalOpen(false)} className="p-2 hover:bg-slate-50 rounded-xl transition-all">
+                                <X className="w-5 h-5 text-slate-400" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-6 flex flex-col items-center text-center">
+                            <p className="text-xs font-semibold text-slate-500">
+                                Escaneie o QR Code abaixo com seu aplicativo autenticador (Google Authenticator, Authy, etc.).
+                            </p>
+
+                            {mfaQrCode && (
+                                <div className="p-4 bg-slate-50 border border-slate-100 rounded-3xl" dangerouslySetInnerHTML={{ __html: mfaQrCode }} />
+                            )}
+
+                            {mfaSecret && (
+                                <div className="w-full bg-[#05080F]/5 p-4 rounded-2xl border border-slate-100 text-left">
+                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1">Chave Secreta Manual</p>
+                                    <p className="text-xs font-black text-slate-600 font-mono break-all">{mfaSecret}</p>
+                                </div>
+                            )}
+
+                            <form onSubmit={handleVerifyEnrollMfa} className="w-full space-y-4">
+                                <div className="space-y-2 text-left">
+                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Código de Confirmação</label>
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        maxLength={6}
+                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 text-center font-black text-lg tracking-[0.5em]"
+                                        value={mfaVerificationCode}
+                                        onChange={e => setMfaVerificationCode(e.target.value.replace(/\D/g, ''))}
+                                        placeholder="000000"
+                                        required
+                                    />
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={isVerifyingMfa}
+                                    className="w-full bg-[#05080F] text-white py-4 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-slate-800 transition-all disabled:opacity-50"
+                                >
+                                    {isVerifyingMfa ? <Loader2 className="w-4 h-4 animate-spin" /> : 'ATIVAR DISPOSITIVO'}
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             )}
