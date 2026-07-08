@@ -410,7 +410,13 @@ serve(async (req) => {
                 const orgDomain = org?.domain || "clubedoseubolso.com.br";
                 requestOrigin = orgDomain.startsWith("http") ? orgDomain : `https://${orgDomain}`;
             }
-            const successUrl = `${requestOrigin}/checkout/success/${order.id}`;
+            
+            // Força o uso do subdomínio autorizado pelo Asaas em produção para evitar bloqueio de redirecionamento
+            let successUrlBase = requestOrigin;
+            if (!successUrlBase.includes("localhost") && !successUrlBase.includes("127.0.0.1")) {
+                successUrlBase = "https://clube.maisunidos.com.br";
+            }
+            const successUrl = `${successUrlBase}/checkout/success/${order.id}`;
 
             const paymentData = {
                 customer: asaasCustomerId,

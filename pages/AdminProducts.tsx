@@ -6,8 +6,6 @@ import {
     Plus,
     Edit,
     Trash2,
-    CheckCircle,
-    XCircle,
     Layers,
     Tag,
     BarChart,
@@ -88,7 +86,6 @@ const AdminProducts: React.FC = () => {
     // States
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState('Todos');
-    const [filterStatus, setFilterStatus] = useState('Todos');
     const [isNewModalOpen, setIsNewModalOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [isLoading, setIsLoading] = useState(true);
@@ -346,23 +343,6 @@ const AdminProducts: React.FC = () => {
         }
     };
 
-    const toggleProductStatus = async (id: string, currentStatus: boolean) => {
-        try {
-            const { error } = await supabase
-                .from('products')
-                .update({ is_active: !currentStatus })
-                .eq('id', id)
-                .eq('organization_id', ORGANIZATION_ID);
-
-            if (error) throw error;
-
-            toast.success(`Plano ${!currentStatus ? 'ativado' : 'desativado'} com sucesso!`);
-            fetchProducts();
-        } catch (error) {
-            toast.error('Erro ao atualizar status');
-        }
-    };
-
     const resetForm = () => {
         setFormData({
             name: '',
@@ -534,21 +514,12 @@ const AdminProducts: React.FC = () => {
         });
     };
 
-    const getStatusInfo = (prod: Product) => {
-        if (!prod.is_active) return { text: 'Inativo', color: 'bg-slate-50 text-slate-600' };
-        return { text: 'Ativo', color: 'bg-emerald-50 text-emerald-600' };
-    };
-
     const filteredProducts = products.filter(prod => {
         const matchesSearch = prod.name.toLowerCase().includes(searchTerm.toLowerCase());
         const planType = prod.variations?.plan_type || 'Individual';
         const matchesType = filterType === 'Todos' || planType === filterType;
 
-        let statusText = 'Ativo';
-        if (!prod.is_active) statusText = 'Inativo';
-        const matchesStatus = filterStatus === 'Todos' || statusText === filterStatus;
-
-        return matchesSearch && matchesType && matchesStatus;
+        return matchesSearch && matchesType;
     });
 
     const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
@@ -602,19 +573,6 @@ const AdminProducts: React.FC = () => {
                                     <option value="Familiar">Familiar</option>
                                 </select>
                             </div>
-
-                            <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Status:</span>
-                                <select
-                                    value={filterStatus}
-                                    onChange={(e) => setFilterStatus(e.target.value)}
-                                    className="bg-slate-50 border border-slate-100 rounded-xl py-2.5 px-4 font-bold text-[#05080F] outline-none text-xs"
-                                >
-                                    <option value="Todos">Todos</option>
-                                    <option value="Ativo">Ativo</option>
-                                    <option value="Inativo">Inativo</option>
-                                </select>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -633,7 +591,6 @@ const AdminProducts: React.FC = () => {
                                         <th className="text-left py-6 px-4 text-xs font-black text-slate-400 uppercase tracking-widest leading-none">Custo Plataforma</th>
                                         <th className="text-left py-6 px-4 text-xs font-black text-slate-400 uppercase tracking-widest leading-none">Comissão Adesão</th>
                                         <th className="text-left py-6 px-4 text-xs font-black text-slate-400 uppercase tracking-widest leading-none">Comissão Mensal</th>
-                                        <th className="text-center py-6 px-4 text-xs font-black text-slate-400 uppercase tracking-widest leading-none">Status</th>
                                         <th className="text-right py-6 px-8 text-xs font-black text-slate-400 uppercase tracking-widest leading-none">Ações</th>
                                     </tr>
                                 </thead>
@@ -648,12 +605,10 @@ const AdminProducts: React.FC = () => {
                                                 <td className="py-6 px-4"><div className="h-6 w-12 bg-slate-100 rounded-lg"></div></td>
                                                 <td className="py-6 px-4"><div className="h-6 w-12 bg-slate-100 rounded-lg"></div></td>
                                                 <td className="py-6 px-4"><div className="h-6 w-12 bg-slate-100 rounded-lg"></div></td>
-                                                <td className="py-6 px-4"><div className="h-8 w-20 bg-slate-100 rounded-full mx-auto"></div></td>
                                                 <td className="py-6 px-8"><div className="h-10 w-24 bg-slate-100 rounded-xl ml-auto"></div></td>
                                             </tr>
                                         ))
                                     ) : currentData.map((prod) => {
-                                        const statusInfo = getStatusInfo(prod);
                                         return (
                                             <tr key={prod.id} className="group hover:bg-slate-50/50 transition-colors">
                                                 <td className="py-6 px-8">
@@ -690,11 +645,6 @@ const AdminProducts: React.FC = () => {
                                                 <td className="py-6 px-4 font-black text-emerald-600">
                                                     {formatCurrency(prod.variations?.comissao_mensal || 0)}
                                                 </td>
-                                                <td className="py-6 px-4 text-center">
-                                                    <span className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider ${statusInfo.color}`}>
-                                                        {statusInfo.text}
-                                                    </span>
-                                                </td>
                                                 <td className="py-6 px-8 text-right">
                                                     <div className="flex items-center justify-end gap-2">
                                                         <button
@@ -703,13 +653,6 @@ const AdminProducts: React.FC = () => {
                                                             title="Editar"
                                                         >
                                                             <Edit className="w-5 h-5" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => toggleProductStatus(prod.id, prod.is_active)}
-                                                            className={`p-2 rounded-xl transition-all ${prod.is_active ? 'text-amber-500 hover:bg-amber-50' : 'text-emerald-500 hover:bg-emerald-50'}`}
-                                                            title={prod.is_active ? 'Desativar' : 'Ativar'}
-                                                        >
-                                                            {prod.is_active ? <XCircle className="w-5 h-5" /> : <CheckCircle className="w-5 h-5" />}
                                                         </button>
                                                         <button
                                                             onClick={() => handleDeleteProduct(prod.id)}
@@ -745,7 +688,6 @@ const AdminProducts: React.FC = () => {
                             ))
                         ) : currentData.length > 0 ? (
                             currentData.map((prod) => {
-                                const statusInfo = getStatusInfo(prod);
                                 return (
                                     <div key={prod.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm space-y-4">
                                         <div className="flex items-center gap-4">
@@ -761,11 +703,6 @@ const AdminProducts: React.FC = () => {
                                                 <span className={`inline-flex px-2 py-0.5 mt-1 rounded-full text-[9px] font-black uppercase ${prod.variations?.plan_type === 'Familiar' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
                                                     {prod.variations?.plan_type || 'Individual'}
                                                 </span>
-                                                <div className="mt-2">
-                                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${statusInfo.color}`}>
-                                                        {statusInfo.text}
-                                                    </span>
-                                                </div>
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50 text-xs">
@@ -793,12 +730,6 @@ const AdminProducts: React.FC = () => {
                                                     className="p-3 bg-slate-50 text-slate-400 hover:text-[#2980B9] hover:bg-[#2980B9]/10 rounded-xl transition-all"
                                                 >
                                                     <Edit className="w-5 h-5" />
-                                                </button>
-                                                <button
-                                                    onClick={() => toggleProductStatus(prod.id, prod.is_active)}
-                                                    className={`p-3 rounded-xl transition-all ${prod.is_active ? 'bg-amber-50 text-amber-500' : 'bg-emerald-50 text-emerald-500'}`}
-                                                >
-                                                    {prod.is_active ? <XCircle className="w-5 h-5" /> : <CheckCircle className="w-5 h-5" />}
                                                 </button>
                                                 <button
                                                     onClick={() => handleDeleteProduct(prod.id)}

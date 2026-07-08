@@ -56,6 +56,7 @@ const AffiliateFinancial: React.FC = () => {
     const [isActive, setIsActive] = useState(true);
     const [withdrawSource, setWithdrawSource] = useState<'available' | 'blocked'>('available');
     const [authorizeFee, setAuthorizeFee] = useState(false);
+    const [activating, setActivating] = useState(false);
 
     // Financial Data States
     const [balance, setBalance] = useState({
@@ -93,9 +94,34 @@ const AffiliateFinancial: React.FC = () => {
         }
     }, [showWithdrawalModal, balance.available, balance.frozen]);
 
+    const handleActivateWithBalance = async () => {
+        if (balance.available + balance.frozen < 17) {
+            toast.error('Saldo total insuficiente para ativação. Você precisa de no mínimo R$ 17,00.');
+            return;
+        }
+
+        try {
+            setActivating(true);
+            const { error } = await supabase.rpc('activate_affiliate_with_balance', {
+                p_user_id: user?.id
+            });
+
+            if (error) throw error;
+
+            toast.success('Sua conta foi reativada com sucesso utilizando seu saldo!');
+            fetchFinancialData();
+        } catch (error: any) {
+            console.error('Erro ao ativar com saldo:', error);
+            toast.error(error.message || 'Erro ao processar ativação por saldo.');
+        } finally {
+            setActivating(false);
+        }
+    };
+
     const fetchFinancialData = async () => {
         try {
             setLoading(true);
+
 
             // 1. Fetch Balances & Bank info (user_settings)
             const { data: settingsData, error: settingsError } = await supabase
@@ -314,17 +340,37 @@ const AffiliateFinancial: React.FC = () => {
         <AffiliateLayout>
             {/* Active Status Banner */}
             {!isActive && (
-                <div className="mb-8 bg-amber-50 border border-amber-200/80 p-6 rounded-[2rem] flex items-start gap-4 shadow-sm animate-in fade-in duration-300">
-                    <AlertCircle className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" />
-                    <div className="text-sm">
-                        <h4 className="font-black text-[#0B1221] mb-1">Conta Inativa no Sistema</h4>
-                        <p className="text-slate-600 font-medium leading-relaxed">
-                            Suas comissões geradas no período de inatividade estão sendo retidas como <strong>Saldo Bloqueado</strong>. 
-                            Você pode se reativar indicando um novo cliente ou solicitando o saque do seu Saldo Bloqueado abaixo (a taxa de ativação de R$ 17,00 será descontada automaticamente do saque).
-                        </p>
+                <div className="mb-8 bg-amber-50 border border-amber-200/80 p-6 rounded-[2rem] flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm animate-in fade-in duration-300">
+                    <div className="flex items-start gap-4">
+                        <AlertCircle className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" />
+                        <div className="text-sm">
+                            <h4 className="font-black text-[#0B1221] mb-1">Conta Inativa no Sistema</h4>
+                            <p className="text-slate-600 font-medium leading-relaxed">
+                                Suas comissões geradas no período de inatividade estão sendo retidas como <strong>Saldo Bloqueado</strong>. 
+                                Você pode se reativar indicando um novo cliente ou pagando a taxa de manutenção de R$ 17,00 (via PIX ou usando seu saldo retido/disponível).
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-3 shrink-0">
+                        <button
+                            onClick={() => navigate('/checkout?buy=d3b07384-d113-4171-bc06-9a7c936df312')}
+                            className="px-5 py-3 bg-[#2980B9] hover:bg-[#1f6391] text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all text-center flex items-center justify-center gap-1 shadow-sm shrink-0"
+                        >
+                            Ativar via PIX (R$ 17,00)
+                        </button>
+                        {balance.available + balance.frozen >= 17 && (
+                            <button
+                                onClick={handleActivateWithBalance}
+                                disabled={activating}
+                                className="px-5 py-3 bg-white border border-slate-200 hover:border-[#2980B9] text-[#0B1221] hover:text-[#2980B9] rounded-xl font-bold text-xs uppercase tracking-wider transition-all text-center flex items-center justify-center gap-1 disabled:opacity-50 shrink-0"
+                            >
+                                {activating ? 'Ativando...' : 'Ativar com Saldo (R$ 17,00)'}
+                            </button>
+                        )}
                     </div>
                 </div>
             )}
+
 
             {/* Header */}
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">

@@ -52,7 +52,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         { label: 'Categorias', icon: Layers, path: '/admin/categories' },
         { label: 'Produtos', icon: Package, path: '/admin/products' },
         { label: 'Assinaturas', icon: ShoppingCart, path: '/admin/orders' },
-        { label: 'Comissões', icon: Percent, path: '/admin/commissions' },
         { label: 'Materiais', icon: Library, path: '/admin/materials' },
         { label: 'Financeiro', icon: Wallet, path: '/admin/financial' },
         { label: 'Segurança', icon: ShieldAlert, path: '/admin/security' },

@@ -342,18 +342,26 @@ const AffiliateDashboard: React.FC = () => {
             </header>
 
             {!isActive && (
-                <div className="mb-8 bg-amber-50 border border-amber-200/80 p-6 rounded-[2rem] flex items-start gap-4 shadow-sm animate-in fade-in duration-300">
-                    <AlertCircle className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" />
-                    <div className="text-sm">
-                        <h4 className="font-black text-[#0B1221] mb-1">Atenção: Sua conta de afiliado está Inativa</h4>
-                        <p className="text-slate-600 font-medium leading-relaxed">
-                            Para liberar suas comissões acumuladas e receber seus ganhos futuros automaticamente, você precisa se manter ativo mensalmente.
-                            Você pode se ativar indicando um novo cliente nos últimos 30 dias ou efetuando o pagamento da mensalidade de R$ 17,00 na aba <Link to="/afiliado/financial" className="text-[#2980B9] font-black underline hover:text-[#1f6391]">Financeiro</Link>.
-                            Enquanto inativo, seus ganhos são retidos e direcionados para o <strong>Saldo Bloqueado</strong>.
-                        </p>
+                <div className="mb-8 bg-amber-50 border border-amber-200/80 p-6 rounded-[2rem] flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm animate-in fade-in duration-300">
+                    <div className="flex items-start gap-4">
+                        <AlertCircle className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" />
+                        <div className="text-sm">
+                            <h4 className="font-black text-[#0B1221] mb-1">Atenção: Sua conta de afiliado está Inativa</h4>
+                            <p className="text-slate-600 font-medium leading-relaxed">
+                                Para liberar suas comissões acumuladas e receber seus ganhos futuros automaticamente, você precisa se manter ativo mensalmente.
+                                Você pode se ativar indicando um novo cliente nos últimos 30 dias ou efetuando o pagamento da mensalidade de R$ 17,00 na aba <Link to="/afiliado/financial" className="text-[#2980B9] font-black underline hover:text-[#1f6391]">Financeiro</Link>.
+                            </p>
+                        </div>
                     </div>
+                    <button
+                        onClick={() => navigate('/checkout?buy=d3b07384-d113-4171-bc06-9a7c936df312')}
+                        className="px-5 py-3 bg-[#2980B9] hover:bg-[#1f6391] text-white rounded-xl font-bold text-xs uppercase tracking-wider transition-all text-center flex items-center justify-center gap-1 shadow-sm shrink-0"
+                    >
+                        Ativar via PIX (R$ 17,00)
+                    </button>
                 </div>
             )}
+
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
                 {stats.map((stat, idx) => (
