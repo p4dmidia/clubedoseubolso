@@ -14,7 +14,8 @@ import {
     Box,
     Loader2,
     Info,
-    ChevronDown
+    ChevronDown,
+    Link2
 } from 'lucide-react';
 import { ORGANIZATION_ID } from '../lib/config';
 import AdminLayout from '../components/AdminLayout';
@@ -103,6 +104,7 @@ const AdminProducts: React.FC = () => {
         commission_adesao: '',
         commission_mensal: '',
         description: '',
+        is_active: true,
     });
 
     const [selectedImages, setSelectedImages] = useState<File[]>([]);
@@ -316,6 +318,7 @@ const AdminProducts: React.FC = () => {
             commission_adesao: prod.variations?.comissao_adesao?.toString() || '',
             commission_mensal: prod.variations?.comissao_mensal?.toString() || '',
             description: prod.description || '',
+            is_active: prod.is_active !== false,
         });
         const imgs = (prod.image_url || '').split(',').map(s => s.trim()).filter(Boolean);
         setExistingImages(imgs);
@@ -352,7 +355,8 @@ const AdminProducts: React.FC = () => {
             cost_platform: '',
             commission_adesao: '',
             commission_mensal: '',
-            description: ''
+            description: '',
+            is_active: true,
         });
         setEditingProduct(null);
         setSelectedImages([]);
@@ -428,7 +432,7 @@ const AdminProducts: React.FC = () => {
                 stock_quantity: 999, // ilimitado para planos
                 description: formData.description,
                 image_url: imageUrl || (formData.plan_type === 'Familiar' ? 'https://placehold.co/600x600?text=Familiar' : 'https://placehold.co/600x600?text=Individual'),
-                is_active: true,
+                is_active: formData.is_active,
                 weight: 0,
                 length: 0,
                 width: 0,
@@ -621,7 +625,14 @@ const AdminProducts: React.FC = () => {
                                                             )}
                                                         </div>
                                                         <div className="min-w-0">
-                                                            <p className="font-black text-[#05080F] truncate">{prod.name}</p>
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="font-black text-[#05080F] truncate">{prod.name}</p>
+                                                                {prod.is_active === false && (
+                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-50 text-amber-600 border border-amber-100 shrink-0">
+                                                                        Oculto (Teste)
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </td>
@@ -647,6 +658,17 @@ const AdminProducts: React.FC = () => {
                                                 </td>
                                                 <td className="py-6 px-8 text-right">
                                                     <div className="flex items-center justify-end gap-2">
+                                                        <button
+                                                            onClick={() => {
+                                                                const link = `${window.location.origin}/checkout?buy=${prod.id}`;
+                                                                navigator.clipboard.writeText(link);
+                                                                toast.success('Link de checkout copiado!');
+                                                            }}
+                                                            className="p-2 text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all"
+                                                            title="Copiar Link de Checkout"
+                                                        >
+                                                            <Link2 className="w-5 h-5" />
+                                                        </button>
                                                         <button
                                                             onClick={() => handleOpenEdit(prod)}
                                                             className="p-2 text-slate-300 hover:text-[#2980B9] hover:bg-[#2980B9]/10 rounded-xl transition-all"
@@ -699,7 +721,14 @@ const AdminProducts: React.FC = () => {
                                                 )}
                                             </div>
                                             <div className="min-w-0">
-                                                <h3 className="font-black text-[#05080F] text-lg truncate">{prod.name}</h3>
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <h3 className="font-black text-[#05080F] text-lg truncate">{prod.name}</h3>
+                                                    {prod.is_active === false && (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-50 text-amber-600 border border-amber-100 shrink-0">
+                                                            Oculto (Teste)
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <span className={`inline-flex px-2 py-0.5 mt-1 rounded-full text-[9px] font-black uppercase ${prod.variations?.plan_type === 'Familiar' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
                                                     {prod.variations?.plan_type || 'Individual'}
                                                 </span>
@@ -725,6 +754,17 @@ const AdminProducts: React.FC = () => {
                                         </div>
                                         <div className="flex items-center justify-between gap-2 pt-4 border-t border-slate-50">
                                             <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => {
+                                                        const link = `${window.location.origin}/checkout?buy=${prod.id}`;
+                                                        navigator.clipboard.writeText(link);
+                                                        toast.success('Link de checkout copiado!');
+                                                    }}
+                                                    className="p-3 bg-slate-50 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all"
+                                                    title="Copiar Link de Checkout"
+                                                >
+                                                    <Link2 className="w-5 h-5" />
+                                                </button>
                                                 <button
                                                     onClick={() => handleOpenEdit(prod)}
                                                     className="p-3 bg-slate-50 text-slate-400 hover:text-[#2980B9] hover:bg-[#2980B9]/10 rounded-xl transition-all"
@@ -868,6 +908,21 @@ const AdminProducts: React.FC = () => {
                                                 className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-4 font-bold text-[#05080F] outline-none focus:border-[#2980B9] text-sm"
                                                 placeholder="R$ 0,00"
                                             />
+                                        </div>
+
+                                        <div className="space-y-2 col-span-1 md:col-span-2 flex items-center bg-slate-50 p-4 rounded-2xl border border-slate-100 mt-2">
+                                            <label className="flex items-center gap-3.5 cursor-pointer w-full select-none">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={formData.is_active}
+                                                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                                                    className="w-5 h-5 rounded-lg border-slate-300 text-[#2980B9] focus:ring-[#2980B9] cursor-pointer"
+                                                />
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs font-black uppercase text-[#05080F] tracking-widest">Plano Ativo (Visível no Site)</span>
+                                                    <span className="text-[10px] font-bold text-slate-400 mt-0.5">Se desativado, o plano não aparece na Home Page ou na Loja, mas pode ser comprado usando o link direto do checkout.</span>
+                                                </div>
+                                            </label>
                                         </div>
                                     </div>
 

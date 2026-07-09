@@ -441,12 +441,13 @@ serve(async (req) => {
                 body: JSON.stringify(paymentData)
             });
 
+            let paymentErrText = "";
             if (!paymentResponse.ok) {
-                const errText = await paymentResponse.text();
-                console.warn(`Primeira tentativa de cobrança falhou: ${errText}`);
+                paymentErrText = await paymentResponse.text();
+                console.warn(`Primeira tentativa de cobrança falhou: ${paymentErrText}`);
                 
                 // Se o erro for de callback/domínio inválido, tenta criar novamente sem as opções de callback
-                if (errText.includes("callback") || errText.includes("domínio") || errText.includes("dominio")) {
+                if (paymentErrText.includes("callback") || paymentErrText.includes("domínio") || paymentErrText.includes("dominio")) {
                     console.log("Tentando criar cobrança novamente sem as configurações de callback...");
                     const { callback: _, ...paymentDataFallback } = paymentData;
 
@@ -459,12 +460,15 @@ serve(async (req) => {
                         },
                         body: JSON.stringify(paymentDataFallback)
                     });
+
+                    if (!paymentResponse.ok) {
+                        paymentErrText = await paymentResponse.text();
+                    }
                 }
             }
 
             if (!paymentResponse.ok) {
-                const errText = await paymentResponse.text();
-                throw new Error(`Erro ao criar cobrança no Asaas: ${errText}`);
+                throw new Error(`Erro ao criar cobrança no Asaas: ${paymentErrText}`);
             }
 
             const paymentResult = await paymentResponse.json();

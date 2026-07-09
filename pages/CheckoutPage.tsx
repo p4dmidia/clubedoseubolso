@@ -25,6 +25,7 @@ const CheckoutPage: React.FC = () => {
     const navigate = useNavigate();
     const { cart, cartTotal, addToCart, removeFromCart, updateQuantity, clearCart } = useCart();
     const { user } = useAuth();
+    const hasProcessedDirectBuy = React.useRef(false);
     const [acceptedConsorcio, setAcceptedConsorcio] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<'credit' | 'pix'>('credit');
     const [isLoading, setIsLoading] = useState(false);
@@ -88,7 +89,13 @@ const CheckoutPage: React.FC = () => {
         const buyId = params.get('buy');
         const varsEncoded = params.get('vars');
 
-        if (buyId) {
+        if (buyId && !hasProcessedDirectBuy.current) {
+            hasProcessedDirectBuy.current = true;
+            
+            // Clear params from URL synchronously to prevent other mounts/effects from seeing it
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, '', newUrl);
+
             const processDirectBuy = async () => {
                 try {
                     // Fallback local products (specifically subscription plans)
@@ -179,11 +186,9 @@ const CheckoutPage: React.FC = () => {
                         image: images[0] || 'https://placehold.co/600x600?text=Classe+A'
                     };
 
+                    // Force the cart to contain ONLY this product for direct checkout flow
+                    clearCart();
                     addToCart(formattedProduct, selectedVars);
-                    
-                    // Clear params from URL to prevent re-adding on refresh
-                    const newUrl = window.location.pathname;
-                    window.history.replaceState({}, '', newUrl);
                     
                     toast.success(`${product.name} adicionado para compra rápida!`, { icon: '🛒' });
                 } catch (e) {
