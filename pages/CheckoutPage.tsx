@@ -311,23 +311,21 @@ const CheckoutPage: React.FC = () => {
                 throw new Error(paymentResult.message || 'Erro ao processar pagamento.');
             }
 
-            if (paymentMethod === 'pix') {
-                if (!paymentResult.ticket_url) {
-                    throw new Error('Erro ao gerar link do PIX. Tente novamente.');
-                }
-                
-                clearCart();
-                // Redirecionamento direto para a página de finalização do Mercado Pago (Ticket PIX)
-                window.location.href = paymentResult.ticket_url;
-                toast.success('Redirecionando para o pagamento...');
-            } else {
-                // Checkout Pro Redirect
-                if (!paymentResult.init_point) {
-                    throw new Error('Link de pagamento não gerado. Verifique os dados do cartão.');
-                }
-                clearCart();
-                window.location.href = paymentResult.init_point;
+            const paymentUrl = paymentResult.ticket_url || paymentResult.init_point;
+            
+            if (!paymentUrl) {
+                throw new Error('Link de pagamento não gerado pelo gateway.');
             }
+
+            clearCart();
+            
+            // Redirect the user immediately to our success screen
+            navigate(`/checkout/success/${orderId}`);
+
+            // Open the Asaas payment page in a new window/tab
+            window.open(paymentUrl, '_blank');
+            
+            toast.success('Pedido gerado! Abrindo página de pagamento...', { duration: 5000 });
 
         } catch (error: any) {
             console.error('Checkout error:', error);

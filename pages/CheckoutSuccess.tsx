@@ -16,7 +16,8 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
-  Lock
+  Lock,
+  CreditCard
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
@@ -503,8 +504,37 @@ const CheckoutSuccess: React.FC = () => {
               </div>
             </div>
 
-            {/* PIX Section (Only if Pending and PIX) */}
-            {!isPaid && order.payment_method?.toLowerCase().includes('pix') && (
+            {/* Asaas Payment Link Section (if Pending and has payment_preference_id) */}
+            {!isPaid && order.payment_preference_id && (
+              <div className="bg-slate-50 border-t border-slate-100 p-8 md:p-12">
+                <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-200 text-center max-w-xl mx-auto space-y-6">
+                  <div className="w-16 h-16 bg-[#2980B9]/10 rounded-2xl flex items-center justify-center mx-auto text-[#2980B9]">
+                    <CreditCard className="w-8 h-8 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-[#0B1221] uppercase tracking-wide">Pagamento Pendente</h3>
+                    <p className="text-slate-500 text-sm font-medium mt-2">
+                      Para concluir o seu pedido, por favor clique no botão abaixo para abrir a página de pagamento seguro do Asaas.
+                    </p>
+                  </div>
+                  <a 
+                    href={order.payment_preference_id}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full bg-[#2980B9] text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest text-center shadow-xl shadow-[#2980B9]/15 flex items-center justify-center gap-2 hover:-translate-y-1 hover:shadow-2xl transition-all"
+                  >
+                    Ir Para o Pagamento (Asaas)
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                  <p className="text-[10px] font-bold text-slate-400">
+                    Após efetuar o pagamento, esta tela será atualizada automaticamente em alguns instantes.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* PIX Section (Only if Pending and PIX and NO payment_preference_id) */}
+            {!isPaid && order.payment_method?.toLowerCase().includes('pix') && !order.payment_preference_id && (
               <div className="bg-slate-50 border-t border-slate-100 p-8 md:p-12">
                 <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-200">
                   <div className="flex flex-col md:flex-row gap-8 items-center">
