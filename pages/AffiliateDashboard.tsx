@@ -164,7 +164,7 @@ const AffiliateDashboard: React.FC = () => {
 
     const handleSupportWhatsApp = () => {
         const message = encodeURIComponent('Olá, preciso de suporte com minha conta de afiliado, não está vinculada.');
-        window.open(`https://wa.me/5541996285667?text=${message}`, '_blank');
+        window.open(`https://wa.me/5571999772129?text=${message}`, '_blank');
     };
 
     const handleAutoLink = async () => {

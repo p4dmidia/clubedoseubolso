@@ -565,7 +565,7 @@ const ClientDashboard: React.FC = () => {
                     </p>
                   </div>
                   <a
-                    href="https://wa.me/5541996285667"
+                    href="https://wa.me/5571999772129"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-full bg-white border border-slate-200 text-[#0B1221] py-3 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-slate-50 transition-all text-center"

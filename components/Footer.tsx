@@ -46,20 +46,25 @@ const Footer: React.FC = () => {
               <li><a href="#" className="hover:text-[#2980B9] transition-colors">Negócio Clube do Seu Bolso (MMN)</a></li>
               <li><a href="/register?type=affiliate" className="hover:text-[#2980B9] transition-colors">Seja um Afiliado</a></li>
               <li><a href="#" className="hover:text-[#2980B9] transition-colors">Política de Privacidade</a></li>
-              <li><a href="#" className="hover:text-[#2980B9] transition-colors">Termos de Uso</a></li>
+              <li><a href="/termos-de-uso" className="hover:text-[#2980B9] transition-colors">Termos de Uso</a></li>
             </ul>
           </div>
-
+ 
           <div>
             <h4 className="font-bold text-slate-800 mb-6 uppercase text-xs tracking-widest">Atendimento</h4>
             <ul className="space-y-4 text-sm text-slate-600">
               <li className="flex items-center gap-3">
                 <Mail className="w-4 h-4 text-[#2980B9]" />
-                suporte@clubedoseubolso.com.br
+                contato@clubedoseubolso.com.br
+              </li>
+              <li className="flex items-center gap-3">
+                <Phone className="w-4 h-4 text-[#2980B9]" />
+                (71) 99977-2129
               </li>
               <li className="flex items-start gap-3">
                 <MapPin className="w-4 h-4 text-[#2980B9] shrink-0" />
-                Luiz Barreto Murat 1754 Curitiba
+                AVENIDA AFRANIO PEIXOTO, 7, CASA 7, PRAIA GRANDE<br />
+                CEP: 40720690 - Salvador - BA
               </li>
             </ul>
             
@@ -73,7 +78,7 @@ const Footer: React.FC = () => {
                   Dúvidas sobre o sistema? Nossa equipe está pronta para te ajudar via WhatsApp.
                 </p>
                 <a 
-                  href="https://api.whatsapp.com/send/?phone=5541996285667&text=Ol%C3%A1%2C+preciso+de+suporte%2C+pode+me+ajudar%3F&type=phone_number&app_absent=0"
+                  href="https://api.whatsapp.com/send/?phone=5571999772129&text=Ol%C3%A1%2C+preciso+de+suporte%2C+pode+me+ajudar%3F&type=phone_number&app_absent=0"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block w-full bg-white text-black text-center py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-black hover:text-white transition-all shadow-sm animate-pulse-subtle"

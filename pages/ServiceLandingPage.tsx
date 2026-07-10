@@ -180,7 +180,7 @@ const ServiceLandingPage: React.FC = () => {
         }
     }, [serviceSlug]);
 
-    const whatsAppUrl = `https://api.whatsapp.com/send/?phone=5541996285667&text=${encodeURIComponent(service.whatsappText)}&type=phone_number&app_absent=0`;
+    const whatsAppUrl = `https://api.whatsapp.com/send/?phone=5571999772129&text=${encodeURIComponent(service.whatsappText)}&type=phone_number&app_absent=0`;
 
     return (
         <div className="bg-[#f7f9fe] text-[#0B1221] font-sans antialiased min-h-screen">

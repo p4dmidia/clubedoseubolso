@@ -484,14 +484,14 @@ const HomePageTest: React.FC = () => {
                         <ul className="space-y-2 text-sm text-gray-400">
                             <li><a href="#" className="hover:text-white transition-colors">Central de Ajuda</a></li>
                             <li><a href="#" className="hover:text-white transition-colors">Política de Privacidade</a></li>
-                            <li><a href="#" className="hover:text-white transition-colors">Termos de Uso</a></li>
+                            <li><a href="/termos-de-uso" className="hover:text-white transition-colors">Termos de Uso</a></li>
                         </ul>
                     </div>
                     <div>
                         <h4 className="text-white font-bold mb-4 text-sm uppercase tracking-wider">Contato</h4>
                         <ul className="space-y-2 text-sm text-gray-400">
-                            <li>suporte@clubedoseubolso.com.br</li>
-                            <li>(11) 99999-8888</li>
+                            <li>contato@clubedoseubolso.com.br</li>
+                            <li>(71) 99977-2129</li>
                             <li>@clubedoseubolso</li>
                         </ul>
                     </div>
