@@ -453,7 +453,7 @@ const RegisterPage: React.FC = () => {
                                             </div>
                                         ) : (
                                             <div className="space-y-1">
-                                                <p className="uppercase text-[9px] tracking-widest text-emerald-600 font-black">Regra de Qualificação MMN</p>
+                                                <p className="uppercase text-[9px] tracking-widest text-emerald-600 font-black">Regra de Qualificação do Afiliado</p>
                                                 <p>✓ Cadastro 100% gratuito com acesso imediato ao Escritório Virtual.</p>
                                                 <p>✓ Para receber comissões e poder indicar: Cadastre sua Chave de Acesso Asaas nas configurações.</p>
                                                 <p>✓ Ganhos de rede de alta profundidade com unificação automática.</p>

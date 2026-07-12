@@ -47,6 +47,40 @@ const CheckoutPage: React.FC = () => {
 
     const [isEditingProfile, setIsEditingProfile] = useState(true);
 
+    const [creditCardInfo, setCreditCardInfo] = useState({
+        holderName: '',
+        number: '',
+        expiry: '',
+        cvv: '',
+        billingCep: '',
+        billingNumber: ''
+    });
+
+    const handleCardNumberChange = (val: string) => {
+        const clean = val.replace(/\D/g, '').substring(0, 16);
+        const formatted = clean.replace(/(\d{4})(?=\d)/g, '$1 ');
+        setCreditCardInfo(prev => ({ ...prev, number: formatted }));
+    };
+
+    const handleCardExpiryChange = (val: string) => {
+        let clean = val.replace(/\D/g, '').substring(0, 4);
+        if (clean.length > 2) {
+            clean = `${clean.substring(0, 2)}/${clean.substring(2)}`;
+        }
+        setCreditCardInfo(prev => ({ ...prev, expiry: clean }));
+    };
+
+    const handleCardCvvChange = (val: string) => {
+        const clean = val.replace(/\D/g, '').substring(0, 4);
+        setCreditCardInfo(prev => ({ ...prev, cvv: clean }));
+    };
+
+    const handleBillingCepChange = (val: string) => {
+        const clean = val.replace(/\D/g, '').substring(0, 8);
+        const formatted = clean.length > 5 ? `${clean.substring(0, 5)}-${clean.substring(5)}` : clean;
+        setCreditCardInfo(prev => ({ ...prev, billingCep: formatted }));
+    };
+
     React.useEffect(() => {
         if (user) {
             const fetchProfile = async () => {
@@ -213,9 +247,29 @@ const CheckoutPage: React.FC = () => {
             return;
         }
 
-        // Full address validation is disabled because only digital subscriptions are sold
-
-
+        // Credit Card validation
+        if (paymentMethod === 'credit') {
+            if (!creditCardInfo.holderName || !creditCardInfo.number || !creditCardInfo.expiry || !creditCardInfo.cvv || !creditCardInfo.billingCep || !creditCardInfo.billingNumber) {
+                toast.error('Por favor, preencha todos os campos do cartão de crédito.');
+                return;
+            }
+            if (creditCardInfo.number.replace(/\s/g, '').length < 16) {
+                toast.error('Número de cartão de crédito inválido.');
+                return;
+            }
+            if (!creditCardInfo.expiry.includes('/') || creditCardInfo.expiry.split('/')[0].trim().length !== 2 || creditCardInfo.expiry.split('/')[1].trim().length !== 2) {
+                toast.error('Validade do cartão inválida. Use o formato MM/AA.');
+                return;
+            }
+            if (creditCardInfo.cvv.length < 3) {
+                toast.error('Código de segurança (CVV) inválido.');
+                return;
+            }
+            if (creditCardInfo.billingCep.replace(/\D/g, '').length !== 8) {
+                toast.error('CEP de cobrança inválido.');
+                return;
+            }
+        }
 
         const isConsorcioInCart = cart.some(item => item.category === 'Consórcio' || item.name.includes('CONSÓRCIO'));
         if (isConsorcioInCart && !acceptedConsorcio) {
@@ -282,9 +336,35 @@ const CheckoutPage: React.FC = () => {
             if (itemsError) throw itemsError;
 
             // 3. Process Payment via Edge Function
-            console.log('Invoking process-payment with:', { orderId, paymentMethod });
+            let processPaymentBody: any = { 
+                orderId, 
+                paymentMethod, 
+                customerCpf: customerInfo.cpf, 
+                origin: window.location.origin 
+            };
+
+            if (paymentMethod === 'credit') {
+                const [expMonth, expYear] = creditCardInfo.expiry.split('/');
+                processPaymentBody.creditCard = {
+                    holderName: creditCardInfo.holderName,
+                    number: creditCardInfo.number.replace(/\s/g, ''),
+                    expiryMonth: expMonth.trim(),
+                    expiryYear: '20' + expYear.trim(),
+                    cvv: creditCardInfo.cvv
+                };
+                processPaymentBody.creditCardHolderInfo = {
+                    name: customerInfo.name,
+                    email: customerInfo.email,
+                    cpfCnpj: customerInfo.cpf,
+                    postalCode: creditCardInfo.billingCep.replace(/\D/g, ''),
+                    addressNumber: creditCardInfo.billingNumber,
+                    phone: customerInfo.phone
+                };
+            }
+
+            console.log('Invoking process-payment with:', processPaymentBody);
             const { data: paymentResult, error: paymentError } = await supabase.functions.invoke('process-payment', {
-                body: { orderId, paymentMethod, customerCpf: customerInfo.cpf, origin: window.location.origin }
+                body: processPaymentBody
             });
 
             if (paymentError) {
@@ -311,21 +391,28 @@ const CheckoutPage: React.FC = () => {
                 throw new Error(paymentResult.message || 'Erro ao processar pagamento.');
             }
 
-            const paymentUrl = paymentResult.ticket_url || paymentResult.init_point;
-            
-            if (!paymentUrl) {
-                throw new Error('Link de pagamento não gerado pelo gateway.');
-            }
-
             clearCart();
             
-            // Redirect the user immediately to our success screen
-            navigate(`/checkout/success/${orderId}`);
-
-            // Open the Asaas payment page in a new window/tab
-            window.open(paymentUrl, '_blank');
-            
-            toast.success('Pedido gerado! Abrindo página de pagamento...', { duration: 5000 });
+            if (paymentMethod === 'credit') {
+                toast.success('Pagamento confirmado com sucesso!');
+                navigate(`/checkout/success/${orderId}`);
+            } else if (paymentMethod === 'pix') {
+                toast.success('Pedido gerado! Escaneie o QR Code para pagar.');
+                navigate(`/checkout/success/${orderId}`, {
+                    state: {
+                        qrCodeBase64: paymentResult.pix_qr_code_base64,
+                        copyPaste: paymentResult.pix_copy_paste
+                    }
+                });
+            } else {
+                const paymentUrl = paymentResult.ticket_url || paymentResult.init_point;
+                if (!paymentUrl) {
+                    throw new Error('Link de pagamento não gerado pelo gateway.');
+                }
+                navigate(`/checkout/success/${orderId}`);
+                window.open(paymentUrl, '_blank');
+                toast.success('Pedido gerado! Abrindo página de pagamento...', { duration: 5000 });
+            }
 
         } catch (error: any) {
             console.error('Checkout error:', error);
@@ -545,6 +632,74 @@ const CheckoutPage: React.FC = () => {
                                     <span className="text-xs font-black uppercase tracking-widest">Pix</span>
                                 </button>
                             </div>
+                            {paymentMethod === 'credit' && (
+                                <div className="mt-8 space-y-6 pt-8 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Nome no Cartão</label>
+                                        <input
+                                            type="text"
+                                            className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"
+                                            placeholder="NOME COMO ESTÁ NO CARTÃO"
+                                            value={creditCardInfo.holderName}
+                                            onChange={(e) => setCreditCardInfo({ ...creditCardInfo, holderName: e.target.value.toUpperCase() })}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Número do Cartão</label>
+                                        <input
+                                            type="text"
+                                            className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"
+                                            placeholder="0000 0000 0000 0000"
+                                            value={creditCardInfo.number}
+                                            onChange={(e) => handleCardNumberChange(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Validade</label>
+                                            <input
+                                                type="text"
+                                                className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"
+                                                placeholder="MM/AA"
+                                                value={creditCardInfo.expiry}
+                                                onChange={(e) => handleCardExpiryChange(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">CVV</label>
+                                            <input
+                                                type="text"
+                                                className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"
+                                                placeholder="000"
+                                                value={creditCardInfo.cvv}
+                                                onChange={(e) => handleCardCvvChange(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">CEP de Cobrança</label>
+                                            <input
+                                                type="text"
+                                                className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"
+                                                placeholder="00000-000"
+                                                value={creditCardInfo.billingCep}
+                                                onChange={(e) => handleBillingCepChange(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Número (Endereço)</label>
+                                            <input
+                                                type="text"
+                                                className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"
+                                                placeholder="Ex: 123"
+                                                value={creditCardInfo.billingNumber}
+                                                onChange={(e) => setCreditCardInfo({ ...creditCardInfo, billingNumber: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 

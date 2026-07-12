@@ -37,6 +37,9 @@ const CheckoutSuccess: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordFields, setShowPasswordFields] = useState(true);
+  const [hasInitializedPasswordFields, setHasInitializedPasswordFields] = useState(false);
+
   const [formInfo, setFormInfo] = useState({
     cep: '',
     street: '',
@@ -69,6 +72,17 @@ const CheckoutSuccess: React.FC = () => {
   const isPasswordEasy = isSequentialOrRepeated(password);
 
   const isPasswordStrong = hasMinLength && hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar && !isPasswordEasy;
+
+  useEffect(() => {
+    if (order && !hasInitializedPasswordFields) {
+      if (currentUser && currentUser.email?.toLowerCase() === order.customer_email?.toLowerCase()) {
+        setShowPasswordFields(false);
+      } else {
+        setShowPasswordFields(true);
+      }
+      setHasInitializedPasswordFields(true);
+    }
+  }, [order, currentUser, hasInitializedPasswordFields]);
 
   useEffect(() => {
     if (!effectiveOrderId) {
@@ -205,8 +219,8 @@ const CheckoutSuccess: React.FC = () => {
       return;
     }
 
-    // Se o usuário logado não for o dono do pedido, valida senhas para criar a conta do cliente
-    if (!isOrderOwner) {
+    // Se precisar de senha, valida senhas para criar a conta do cliente
+    if (showPasswordFields) {
       if (!password || !confirmPassword) {
         toast.error('Por favor, defina uma senha para sua conta.');
         return;
@@ -252,6 +266,51 @@ const CheckoutSuccess: React.FC = () => {
         if (sessionUser && sessionUser.email?.toLowerCase() === order.customer_email?.toLowerCase()) {
           activeUserId = sessionUser.id;
           setCurrentUser(sessionUser);
+        }
+      }
+
+      // Se ainda não tiver activeUserId, verificar se o perfil já foi criado (ex: erro em tentativa anterior)
+      if (!activeUserId) {
+        let existingProfile = null;
+        const { data: byEmail } = await supabase
+          .from('user_profiles')
+          .select('id, email')
+          .eq('email', order.customer_email)
+          .maybeSingle();
+        existingProfile = byEmail;
+
+        if (!existingProfile && order.customer_cpf) {
+          const { data: byCpf } = await supabase
+            .from('user_profiles')
+            .select('id, email')
+            .eq('cpf', order.customer_cpf)
+            .maybeSingle();
+          existingProfile = byCpf;
+        }
+
+        if (existingProfile) {
+          console.log('Perfil já existente no banco de dados:', existingProfile.id);
+          activeUserId = existingProfile.id;
+          
+          // Se já estiver logado (ou logou na tentativa anterior), tenta atualizar a senha para a nova fornecida
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session && session.user.id === activeUserId) {
+              console.log('Sessão ativa detectada. Atualizando senha no Supabase...');
+              await supabase.auth.updateUser({ password: password });
+            } else {
+              // Tenta fazer login para restabelecer a sessão com a senha atual
+              const { data: signInData } = await supabase.auth.signInWithPassword({
+                email: existingProfile.email || order.customer_email,
+                password: password
+              });
+              if (signInData?.user) {
+                setCurrentUser(signInData.user);
+              }
+            }
+          } catch (err) {
+            console.warn('Erro ao atualizar ou restabelecer sessão:', err);
+          }
         }
       }
 
@@ -504,8 +563,8 @@ const CheckoutSuccess: React.FC = () => {
               </div>
             </div>
 
-            {/* Asaas Payment Link Section (if Pending and has payment_preference_id) */}
-            {!isPaid && order.payment_preference_id && (
+            {/* Asaas Payment Link Section (if Pending and has payment_preference_id and not PIX) */}
+            {!isPaid && !order.payment_method?.toLowerCase().includes('pix') && order.payment_preference_id && (
               <div className="bg-slate-50 border-t border-slate-100 p-8 md:p-12">
                 <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-200 text-center max-w-xl mx-auto space-y-6">
                   <div className="w-16 h-16 bg-[#2980B9]/10 rounded-2xl flex items-center justify-center mx-auto text-[#2980B9]">
@@ -533,8 +592,8 @@ const CheckoutSuccess: React.FC = () => {
               </div>
             )}
 
-            {/* PIX Section (Only if Pending and PIX and NO payment_preference_id) */}
-            {!isPaid && order.payment_method?.toLowerCase().includes('pix') && !order.payment_preference_id && (
+            {/* PIX Section (Only if Pending and PIX) */}
+            {!isPaid && order.payment_method?.toLowerCase().includes('pix') && (
               <div className="bg-slate-50 border-t border-slate-100 p-8 md:p-12">
                 <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-200">
                   <div className="flex flex-col md:flex-row gap-8 items-center">
@@ -754,7 +813,7 @@ const CheckoutSuccess: React.FC = () => {
                     </div>
                   </div>
 
-                  {!isOrderOwner && (
+                  {showPasswordFields && (
                     <>
                       <hr className="border-slate-100 my-4" />
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-2 duration-300">

@@ -166,7 +166,7 @@ const AdminCommissions: React.FC = () => {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
                     <div>
                         <h1 className="text-2xl md:text-3xl font-black text-[#05080F]">Regras de Bonificação</h1>
-                        <p className="text-sm md:text-base text-slate-500 font-medium">Configure a distribuição das comissões do MMN por gerações.</p>
+                        <p className="text-sm md:text-base text-slate-500 font-medium">Configure a distribuição das comissões da rede por gerações.</p>
                     </div>
                     <div className="flex flex-wrap gap-3 w-full sm:w-auto">
                         <button
@@ -200,7 +200,7 @@ const AdminCommissions: React.FC = () => {
                         </div>
                         <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                             <div className="text-center px-8 py-4 bg-white/5 rounded-2xl border border-white/10">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Total MMN</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Total da Rede</p>
                                 <p className="text-2xl font-black text-[#2980B9] truncate min-w-[120px]">
                                     {mmnLevels.slice(0, mmnGens).reduce((acc, curr) => acc + (curr.value || 0), 0).toFixed(1)}
                                     {mmnType === 'percent' ? '%' : 'R$'}
@@ -218,7 +218,7 @@ const AdminCommissions: React.FC = () => {
                                 <Layers className="w-5 h-5 md:w-6 md:h-6" />
                             </div>
                             <div>
-                                <h3 className="text-lg md:text-xl font-black text-[#05080F]">MMN Geral</h3>
+                                <h3 className="text-lg md:text-xl font-black text-[#05080F]">Comissão de Rede</h3>
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Configuração Única de Indicação</p>
                             </div>
                         </div>
@@ -243,7 +243,7 @@ const AdminCommissions: React.FC = () => {
                         <div className="space-y-4">
                             <div className="flex justify-between items-center px-1">
                                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Gerações Ativas: <span className="text-[#05080F]">{mmnGens}</span></label>
-                                <span className="text-[10px] font-black text-[#2980B9] uppercase tracking-widest">Profundidade MMN</span>
+                                <span className="text-[10px] font-black text-[#2980B9] uppercase tracking-widest">Profundidade da Rede</span>
                             </div>
                             <input
                                 type="range" min="1" max="7"
@@ -266,7 +266,7 @@ const AdminCommissions: React.FC = () => {
                     </div>
                     <div className="flex-grow text-center md:text-left">
                         <h4 className="font-black text-[#05080F]">Informação Importante</h4>
-                        <p className="text-slate-500 text-xs md:text-sm font-medium">As novas regras de MMN entram em vigor imediatamente para todos os novos pedidos pagos na plataforma.</p>
+                        <p className="text-slate-500 text-xs md:text-sm font-medium">As novas regras de comissão entram em vigor imediatamente para todos os novos pedidos pagos na plataforma.</p>
                     </div>
                     <button
                         onClick={handleSave}
@@ -274,7 +274,7 @@ const AdminCommissions: React.FC = () => {
                         className="w-full md:w-auto px-10 py-4 bg-[#2980B9] text-[#05080F] rounded-2xl font-black text-sm md:text-base shadow-xl shadow-[#2980B9]/10 hover:shadow-2xl transition-all flex items-center justify-center gap-2"
                     >
                         {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                        ATUALIZAR REGRAS MMN
+                        ATUALIZAR REGRAS DE REDE
                     </button>
                 </div>
             </div>

@@ -43,9 +43,9 @@ const Footer: React.FC = () => {
             <h4 className="font-bold text-slate-800 mb-6 uppercase text-xs tracking-widest">Institucional</h4>
             <ul className="space-y-3 text-sm text-slate-600">
               <li><a href="#" className="hover:text-[#2980B9] transition-colors">Sobre Nós</a></li>
-              <li><a href="#" className="hover:text-[#2980B9] transition-colors">Negócio Clube do Seu Bolso (MMN)</a></li>
+              <li><a href="#" className="hover:text-[#2980B9] transition-colors">Negócio Clube do Seu Bolso</a></li>
               <li><a href="/register?type=affiliate" className="hover:text-[#2980B9] transition-colors">Seja um Afiliado</a></li>
-              <li><a href="#" className="hover:text-[#2980B9] transition-colors">Política de Privacidade</a></li>
+              <li><a href="/politica-de-privacidade" className="hover:text-[#2980B9] transition-colors">Política de Privacidade</a></li>
               <li><a href="/termos-de-uso" className="hover:text-[#2980B9] transition-colors">Termos de Uso</a></li>
             </ul>
           </div>

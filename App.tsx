@@ -36,6 +36,7 @@ import PlanLandingPage from './pages/PlanLandingPage';
 import ServiceLandingPage from './pages/ServiceLandingPage';
 import ClientDashboard from './pages/ClientDashboard';
 import TermsPage from './pages/TermsPage';
+import PrivacyPage from './pages/PrivacyPage';
 
 import ProtectedRoute from './components/ProtectedRoute';
 import ReferralHandler from './components/ReferralHandler';
@@ -63,6 +64,7 @@ const AppContent: React.FC = () => {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/termos-de-uso" element={<TermsPage />} />
+          <Route path="/politica-de-privacidade" element={<PrivacyPage />} />
           <Route path="/ref/:referralCode" element={<ReferralHandler />} />
 
           {/* Client Routes */}

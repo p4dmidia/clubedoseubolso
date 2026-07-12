@@ -395,9 +395,11 @@ serve(async (req) => {
                 fixedValue: Number(amount.toFixed(2))
             })).filter(s => s.fixedValue > 0);
 
-            if (splitsToSend.length > 0) {
+            if (splitsToSend.length > 0 && asaasEnv !== 'sandbox') {
                 splitData = splitsToSend;
                 console.log('Splits consolidados:', JSON.stringify(splitData));
+            } else if (splitsToSend.length > 0 && asaasEnv === 'sandbox') {
+                console.log('Ambiente sandbox detectado. Ignorando splits no payload do Asaas para evitar erros de carteira inexistente.');
             }
 
             // Para compatibilidade com a trigger e logs do banco (Nível 1)
@@ -418,18 +420,44 @@ serve(async (req) => {
             }
             const successUrl = `${successUrlBase}/checkout/success/${order.id}`;
 
-            const paymentData = {
+            const paymentData: any = {
                 customer: asaasCustomerId,
-                billingType: "UNDEFINED",
                 value: Number(order.total_amount),
                 dueDate: dueDate,
                 externalReference: order.id,
-                callback: {
-                    successUrl: successUrl,
-                    autoRedirect: true
-                },
                 ...(splitData ? { splits: splitData } : {})
             };
+
+            if (targetPaymentMethod === 'pix') {
+                paymentData.billingType = "PIX";
+            } else if (targetPaymentMethod === 'credit') {
+                paymentData.billingType = "CREDIT_CARD";
+                if (!body.creditCard || !body.creditCardHolderInfo) {
+                    throw new Error("Dados do cartão de crédito e do titular são obrigatórios.");
+                }
+                paymentData.creditCard = {
+                    holderName: body.creditCard.holderName,
+                    number: body.creditCard.number,
+                    expiryMonth: body.creditCard.expiryMonth,
+                    expiryYear: body.creditCard.expiryYear,
+                    ccv: body.creditCard.cvv
+                };
+                paymentData.creditCardHolderInfo = {
+                    name: body.creditCardHolderInfo.name,
+                    email: body.creditCardHolderInfo.email || order.customer_email,
+                    cpfCnpj: body.creditCardHolderInfo.cpfCnpj.replace(/\D/g, ""),
+                    postalCode: body.creditCardHolderInfo.postalCode.replace(/\D/g, ""),
+                    addressNumber: body.creditCardHolderInfo.addressNumber,
+                    addressComplement: body.creditCardHolderInfo.addressComplement || undefined,
+                    phone: (body.creditCardHolderInfo.phone || order.customer_phone || "").replace(/\D/g, ""),
+                };
+            } else {
+                paymentData.billingType = "UNDEFINED";
+                paymentData.callback = {
+                    successUrl: successUrl,
+                    autoRedirect: true
+                };
+            }
 
             let paymentResponse = await fetch(`${baseUrl}/payments`, {
                 method: "POST",
@@ -447,7 +475,7 @@ serve(async (req) => {
                 console.warn(`Primeira tentativa de cobrança falhou: ${paymentErrText}`);
                 
                 // Se o erro for de callback/domínio inválido, tenta criar novamente sem as opções de callback
-                if (paymentErrText.includes("callback") || paymentErrText.includes("domínio") || paymentErrText.includes("dominio")) {
+                if (targetPaymentMethod !== 'pix' && targetPaymentMethod !== 'credit' && (paymentErrText.includes("callback") || paymentErrText.includes("domínio") || paymentErrText.includes("dominio"))) {
                     console.log("Tentando criar cobrança novamente sem as configurações de callback...");
                     const { callback: _, ...paymentDataFallback } = paymentData;
 
@@ -468,17 +496,55 @@ serve(async (req) => {
             }
 
             if (!paymentResponse.ok) {
+                try {
+                    const errJson = JSON.parse(paymentErrText);
+                    if (errJson.errors && errJson.errors.length > 0) {
+                        const descriptions = errJson.errors.map((e: any) => e.description).join("; ");
+                        throw new Error(descriptions);
+                    }
+                } catch (e: any) {
+                    if (e.message && e.message !== "Unexpected token < in JSON at position 0") {
+                        throw e;
+                    }
+                }
                 throw new Error(`Erro ao criar cobrança no Asaas: ${paymentErrText}`);
             }
 
             const paymentResult = await paymentResponse.json();
             console.log(`Cobrança criada com sucesso! ID Asaas: ${paymentResult.id}`);
 
+            // Se for PIX, buscar os dados do QR Code
+            if (targetPaymentMethod === 'pix') {
+                console.log(`Buscando QR Code do PIX para cobrança ${paymentResult.id}...`);
+                const qrResponse = await fetch(`${baseUrl}/payments/${paymentResult.id}/pixQrCode`, {
+                    method: "GET",
+                    headers: {
+                        "access_token": asaasToken,
+                        "Content-Type": "application/json",
+                        "User-Agent": "ClubeDoSeuBolsoIntegration"
+                    }
+                });
+
+                if (!qrResponse.ok) {
+                    const qrErrText = await qrResponse.text();
+                    console.error(`Erro ao buscar QR code no Asaas: ${qrErrText}`);
+                } else {
+                    const qrData = await qrResponse.json();
+                    paymentResult.pixCopyPaste = qrData.payload;
+                    paymentResult.pixQrCodeBase64 = qrData.encodedImage;
+                }
+            }
+
+            const isCreditCardApproved = targetPaymentMethod === 'credit' && (paymentResult.status === 'CONFIRMED' || paymentResult.status === 'RECEIVED');
+
             // 4. Salvar o payment_id do Asaas, split, split_details e a URL da fatura (invoiceUrl) no pedido
             await supabase.from("orders").update({
                 payment_id: paymentResult.id,
-                payment_preference_id: paymentResult.invoiceUrl,
-                status: 'Pendente',
+                payment_preference_id: targetPaymentMethod === 'credit' ? null : paymentResult.invoiceUrl,
+                pix_qr_code_base64: paymentResult.pixQrCodeBase64 || null,
+                pix_copy_paste: paymentResult.pixCopyPaste || null,
+                status: isCreditCardApproved ? 'Pago' : 'Pendente',
+                payment_status: isCreditCardApproved ? 'paid' : 'pending',
                 split_wallet_id: splitWalletId,
                 split_amount: splitAmount,
                 split_details: splitDetails,
@@ -488,9 +554,12 @@ serve(async (req) => {
             return new Response(JSON.stringify({
                 success: true,
                 payment_id: paymentResult.id,
-                invoiceUrl: paymentResult.invoiceUrl,
-                init_point: paymentResult.invoiceUrl, // Compatibilidade com frontend (Cartão)
-                ticket_url: paymentResult.invoiceUrl  // Compatibilidade com frontend (PIX)
+                status: isCreditCardApproved ? 'Pago' : 'Pendente',
+                pix_qr_code_base64: paymentResult.pixQrCodeBase64 || null,
+                pix_copy_paste: paymentResult.pixCopyPaste || null,
+                invoiceUrl: paymentResult.invoiceUrl || null,
+                init_point: paymentResult.invoiceUrl || null,
+                ticket_url: paymentResult.invoiceUrl || null
             }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
 

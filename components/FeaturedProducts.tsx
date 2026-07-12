@@ -114,7 +114,7 @@ const FeaturedProducts: React.FC = () => {
                       R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-1">
-                      MMN: DISPONÍVEL PARA AFILIADOS
+                      DISPONÍVEL PARA AFILIADOS
                     </p>
 
                     <div className="flex gap-2 mt-4">
