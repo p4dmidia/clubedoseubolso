@@ -280,10 +280,11 @@ const CheckoutSuccess: React.FC = () => {
         existingProfile = byEmail;
 
         if (!existingProfile && order.customer_cpf) {
+          const cleanCpf = order.customer_cpf.replace(/\D/g, '');
           const { data: byCpf } = await supabase
             .from('user_profiles')
             .select('id, email')
-            .eq('cpf', order.customer_cpf)
+            .or(`cpf.eq.${order.customer_cpf},cpf.eq.${cleanCpf}`)
             .maybeSingle();
           existingProfile = byCpf;
         }
@@ -343,7 +344,7 @@ const CheckoutSuccess: React.FC = () => {
               role: 'client',
               sponsor_code: order.referral_code || null,
               organization_id: order.organization_id,
-              cpf: order.customer_cpf,
+              cpf: order.customer_cpf.replace(/\D/g, ''),
               whatsapp: order.customer_phone || null,
               data_nascimento: formInfo.birthDate,
               lgpd_accepted_at: new Date().toISOString(),
@@ -911,7 +912,7 @@ const CheckoutSuccess: React.FC = () => {
             )}
 
             {/* General bottom links when registration is complete or waiting */}
-            {(!isPaid || isRegistrationComplete) && (
+            {isRegistrationComplete && (
               <div className="p-8 md:p-12 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-4 text-left">
                   <h4 className="font-black text-[#0B1221] uppercase tracking-widest text-xs flex items-center gap-2">

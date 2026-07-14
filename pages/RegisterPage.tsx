@@ -209,7 +209,7 @@ const RegisterPage: React.FC = () => {
                         role: regType === 'client' ? 'client' : 'affiliate',
                         sponsor_code: sponsorCode || null,
                         organization_id: ORGANIZATION_ID,
-                        cpf: formData.cpf,
+                        cpf: formData.cpf.replace(/\D/g, ''),
                         whatsapp: formData.whatsapp || null,
                         data_nascimento: formData.dataNascimento || null,
                         lgpd_accepted_at: new Date().toISOString(),

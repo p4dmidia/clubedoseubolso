@@ -298,7 +298,7 @@ const CheckoutPage: React.FC = () => {
                         customer_name: customerInfo.name,
                         customer_email: customerInfo.email,
                         customer_phone: customerInfo.phone,
-                        customer_cpf: customerInfo.cpf,
+                        customer_cpf: customerInfo.cpf.replace(/\D/g, ''),
                         shipping_address: fullAddressString,
                         total_amount: total,
                         shipping_cost: shipping,
@@ -316,7 +316,7 @@ const CheckoutPage: React.FC = () => {
                         .update({
                             full_name: customerInfo.name,
                             whatsapp: customerInfo.phone,
-                            cpf: customerInfo.cpf
+                            cpf: customerInfo.cpf.replace(/\D/g, '')
                         })
                         .eq('id', user.id);
                 }
@@ -339,7 +339,7 @@ const CheckoutPage: React.FC = () => {
             let processPaymentBody: any = { 
                 orderId, 
                 paymentMethod, 
-                customerCpf: customerInfo.cpf, 
+                customerCpf: customerInfo.cpf.replace(/\D/g, ''), 
                 origin: window.location.origin 
             };
 
@@ -355,7 +355,7 @@ const CheckoutPage: React.FC = () => {
                 processPaymentBody.creditCardHolderInfo = {
                     name: customerInfo.name,
                     email: customerInfo.email,
-                    cpfCnpj: customerInfo.cpf,
+                    cpfCnpj: customerInfo.cpf.replace(/\D/g, ''),
                     postalCode: creditCardInfo.billingCep.replace(/\D/g, ''),
                     addressNumber: creditCardInfo.billingNumber,
                     phone: customerInfo.phone
