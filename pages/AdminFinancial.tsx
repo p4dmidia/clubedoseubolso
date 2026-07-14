@@ -859,7 +859,7 @@ const AdminFinancial: React.FC = () => {
                                             <th className="text-left py-5 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Pedido / Data</th>
                                             <th className="text-left py-5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente</th>
                                             <th className="text-left py-5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor Total</th>
-                                            <th className="text-left py-5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-emerald-600">Repassado Rede</th>
+                                            <th className="text-left py-5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-emerald-600">Comissão Afiliado</th>
                                             <th className="text-left py-5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-amber-600">Retido GD Finance</th>
                                             <th className="text-left py-5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-blue-600">Líquido Plataforma</th>
                                             <th className="text-right py-5 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ação</th>
@@ -876,17 +876,16 @@ const AdminFinancial: React.FC = () => {
                                         ) : paginatedAuditOrders.length > 0 ? (
                                             paginatedAuditOrders.map((order) => {
                                                 const splits = Array.isArray(order.split_details) ? order.split_details : [];
-                                                const totalSplits = splits.reduce((acc: number, curr: any) => acc + (parseFloat(curr.amount) || 0), 0);
                                                 
                                                 const redeAmount = splits
-                                                    .filter((s: any) => s.status === 'split_sent')
+                                                    .filter((s: any) => s.status === 'split_sent' && s.user_id !== null)
                                                     .reduce((acc: number, curr: any) => acc + (parseFloat(curr.amount) || 0), 0);
                                                     
                                                 const gdFinanceAmount = splits
-                                                    .filter((s: any) => s.status === 'held_in_gd_finance' || s.status === 'no_wallet_configured' || s.status === 'no_wallet')
+                                                    .filter((s: any) => s.status === 'held_in_gd_finance' || s.status === 'no_wallet_configured' || s.status === 'no_wallet' || s.user_id === null)
                                                     .reduce((acc: number, curr: any) => acc + (parseFloat(curr.amount) || 0), 0);
                                                     
-                                                const platformAmount = Math.max(0, parseFloat(order.total_amount) - totalSplits);
+                                                const platformAmount = Math.max(0, parseFloat(order.total_amount) - (redeAmount + gdFinanceAmount));
 
                                                 return (
                                                     <tr key={order.id} className="hover:bg-slate-50/20 transition-all">
@@ -1039,9 +1038,9 @@ const AdminFinancial: React.FC = () => {
                                         </div>
                                         <div className="space-y-4">
                                             <div>
-                                                <h4 className="font-black text-sm text-[#05080F]">Divisão de Comissões da Rede</h4>
+                                                <h4 className="font-black text-sm text-[#05080F]">Comissão do Afiliado</h4>
                                                 <p className="text-slate-500 font-medium text-xs mt-1">
-                                                    Divisão multinível calculada para cada geração de indicação:
+                                                    Detalhamento do repasse de indicação direta via split:
                                                 </p>
                                             </div>
 
@@ -1053,7 +1052,7 @@ const AdminFinancial: React.FC = () => {
                                                         return (
                                                             <div key={idx} className="flex justify-between items-start gap-4 text-xs">
                                                                 <div>
-                                                                    <p className="font-bold text-[#05080F]">{split.level}ª Geração: {name}</p>
+                                                                    <p className="font-bold text-[#05080F]">Indicador: {name}</p>
                                                                     <p className="text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-wide flex items-center gap-1">
                                                                         {isSent ? (
                                                                             <span className="text-emerald-600">✓ Pago via Split Asaas</span>

@@ -232,154 +232,205 @@ serve(async (req) => {
             const day = String(dateSP.getDate()).padStart(2, '0');
             const dueDate = `${year}-${month}-${day}`;
 
-            // --- CÁLCULO DE SPLIT MULTINÍVEL ---
+            // --- CÁLCULO DE COMISSÃO DIRETA (NÍVEL ÚNICO) ---
             let splitData = null;
             const splitDetails: any[] = [];
             const gdFinanceWalletId = org?.gd_finance_wallet_id;
             
             console.log(`GD Finance Wallet ID: ${gdFinanceWalletId || 'Não configurada'}`);
 
-            // 1. Identificar se o pedido é Master (Colchão)
-            let isMaster = false;
-            if (order.order_items && order.order_items.length > 0) {
-                isMaster = order.order_items.some((item: any) => 
-                    (item.product_name && (item.product_name.toLowerCase().includes('colchão') || item.product_name.toLowerCase().includes('concorcio')))
-                );
+            // 1. Identificar o afiliado inicial (Geração 1)
+            let currentAffiliate = null;
+            if (order.referral_code) {
+                const { data: aff } = await supabase
+                    .from('affiliates')
+                    .select('*')
+                    .ilike('referral_code', order.referral_code)
+                    .eq('organization_id', order.organization_id)
+                    .maybeSingle();
+                currentAffiliate = aff;
             }
 
-            const configKey = isMaster ? 'mattress' : 'geral';
-            console.log(`Usando configuração de comissão: ${configKey}`);
-
-            // 2. Buscar configuração de comissão
-            const { data: configData } = await supabase
-                .from('commission_configs')
-                .select('*')
-                .eq('key', configKey)
-                .maybeSingle();
-
-            if (configData && Array.isArray(configData.levels) && configData.levels.length > 0) {
-                const activeGens = configData.active_generations || configData.levels.length;
+            if (!currentAffiliate && order.user_id) {
+                const { data: buyerProfile } = await supabase
+                    .from('user_profiles')
+                    .select('sponsor_id')
+                    .eq('id', order.user_id)
+                    .maybeSingle();
                 
-                // 3. Identificar o afiliado inicial (Geração 1)
-                let currentAffiliate = null;
-                if (order.referral_code) {
+                if (buyerProfile?.sponsor_id) {
                     const { data: aff } = await supabase
                         .from('affiliates')
                         .select('*')
-                        .ilike('referral_code', order.referral_code)
+                        .eq('user_id', buyerProfile.sponsor_id)
                         .eq('organization_id', order.organization_id)
                         .maybeSingle();
                     currentAffiliate = aff;
                 }
+            }
 
-                if (!currentAffiliate && order.user_id) {
-                    const { data: buyerProfile } = await supabase
-                        .from('user_profiles')
-                        .select('sponsor_id')
-                        .eq('id', order.user_id)
+            // Determinar o usuário de destino (caso não haja patrocinador, vai para o ID Master)
+            let targetUserId = null;
+            if (currentAffiliate) {
+                targetUserId = currentAffiliate.user_id;
+            } else {
+                // Buscar o ID Master da organização (referral_code = 'master' ou sponsor_id IS NULL)
+                const { data: masterAff } = await supabase
+                    .from('affiliates')
+                    .select('user_id')
+                    .eq('organization_id', order.organization_id)
+                    .or('referral_code.eq.master,sponsor_id.is.null')
+                    .order('created_at', { ascending: true })
+                    .limit(1)
+                    .maybeSingle();
+                
+                if (masterAff) {
+                    targetUserId = masterAff.user_id;
+                } else {
+                    const { data: firstAff } = await supabase
+                        .from('affiliates')
+                        .select('user_id')
+                        .eq('organization_id', order.organization_id)
+                        .order('created_at', { ascending: true })
+                        .limit(1)
+                        .maybeSingle();
+                    targetUserId = firstAff?.user_id;
+                }
+            }
+
+            // 2. Calcular o valor total da comissão direta e custo de plataforma com base nos itens
+            let totalCommission = 0;
+            let totalPlatformCost = 0;
+            if (order.order_items && order.order_items.length > 0) {
+                for (const item of order.order_items) {
+                    // Buscar a categoria e variações do produto
+                    const { data: prod } = await supabase
+                        .from('products')
+                        .select('category_id, name, variations')
+                        .eq('id', item.product_id)
                         .maybeSingle();
                     
-                    if (buyerProfile?.sponsor_id) {
-                        const { data: aff } = await supabase
-                            .from('affiliates')
-                            .select('*')
-                            .eq('user_id', buyerProfile.sponsor_id)
-                            .eq('organization_id', order.organization_id)
+                    let categoryName = '';
+                    if (prod?.category_id) {
+                        const { data: cat } = await supabase
+                            .from('product_categories')
+                            .select('name')
+                            .eq('id', prod.category_id)
                             .maybeSingle();
-                        currentAffiliate = aff;
+                        categoryName = cat?.name || '';
                     }
-                }
 
-                // 4. Varrer a árvore de patrocinadores e calcular as comissões por nível
-                let currentSponsorId = currentAffiliate?.id;
-                let levelCount = 0;
+                    let commissionVal = 0;
+                    const variations = prod?.variations || {};
+                    const platformCostVal = parseFloat(variations.custo_plataforma || 0);
 
-                while (levelCount < activeGens) {
-                    levelCount++;
-                    
-                    // Buscar o percentual do nível atual
-                    const levelConfig = configData.levels.find((l: any) => l.level === levelCount);
-                    const rateValue = levelConfig ? parseFloat(levelConfig.value) : 0;
+                    if (categoryName === 'Planos' || prod?.name?.toLowerCase().includes('telemedicina')) {
+                        // Verificar se é renovação (recorrência)
+                        const { data: pastOrders } = await supabase
+                            .from('orders')
+                            .select('id')
+                            .eq('user_id', order.user_id)
+                            .eq('status', 'Pago')
+                            .neq('id', order.id);
 
-                    if (rateValue > 0) {
-                        let levelAmount = 0;
-                        if (configData.type === 'fixed') {
-                            levelAmount = rateValue;
-                        } else {
-                            levelAmount = Number((Number(order.total_amount) * (rateValue / 100)).toFixed(2));
+                        let isRenewal = false;
+                        if (pastOrders && pastOrders.length > 0) {
+                            const pastOrderIds = pastOrders.map(o => o.id);
+                            const { data: pastItems } = await supabase
+                                .from('order_items')
+                                .select('product_id, product_name')
+                                .in('order_id', pastOrderIds);
+                            
+                            if (pastItems && pastItems.length > 0) {
+                                for (const pi of pastItems) {
+                                    const { data: pProd } = await supabase
+                                        .from('products')
+                                        .select('category_id, name')
+                                        .eq('id', pi.product_id)
+                                        .maybeSingle();
+                                    
+                                    let pCatName = '';
+                                    if (pProd?.category_id) {
+                                        const { data: pCat } = await supabase
+                                            .from('product_categories')
+                                            .select('name')
+                                            .eq('id', pProd.category_id)
+                                            .maybeSingle();
+                                        pCatName = pCat?.name || '';
+                                    }
+
+                                    if (pCatName === 'Planos' || pProd?.name?.toLowerCase().includes('telemedicina') || pi.product_name?.toLowerCase().includes('telemedicina')) {
+                                        isRenewal = true;
+                                        break;
+                                    }
+                                }
+                            }
                         }
 
-                        if (levelAmount > 0) {
-                            let targetUserId = null;
-                            let targetWalletId = null;
-                            let status = 'held_in_gd_finance';
-
-                            if (currentSponsorId) {
-                                // Buscar dados do afiliado atual
-                                const { data: aff } = await supabase
-                                    .from('affiliates')
-                                    .select('user_id, sponsor_id')
-                                    .eq('id', currentSponsorId)
-                                    .maybeSingle();
-
-                                if (aff) {
-                                    targetUserId = aff.user_id;
-                                    
-                                    // Buscar o wallet do afiliado para split automático
-                                    const { data: userSettings } = await supabase
-                                        .from('user_settings')
-                                        .select('asaas_wallet_id')
-                                        .eq('user_id', aff.user_id)
-                                        .maybeSingle();
-
-                                    // Verificar se o afiliado está ativo mensalmente no sistema usando RPC
-                                    const { data: isActive } = await supabase.rpc('is_affiliate_active', { p_user_id: aff.user_id });
-
-                                    if (isActive) {
-                                        if (userSettings?.asaas_wallet_id) {
-                                            targetWalletId = userSettings.asaas_wallet_id;
-                                            status = 'split_sent';
-                                        } else {
-                                            targetWalletId = null;
-                                            status = 'no_wallet_configured';
-                                        }
-                                    } else {
-                                        targetWalletId = null; // Envia para a GD Finance
-                                        status = 'held_in_gd_finance';
-                                    }
-                                    
-                                    // Avançar para o patrocinador do próximo nível
-                                    currentSponsorId = aff.sponsor_id;
-                                } else {
-                                    currentSponsorId = null;
-                                }
-                            } else {
-                                currentSponsorId = null;
-                            }
-
-                            // Define a carteira final: carteira do afiliado ou da GD Finance como fallback
-                            const finalWalletId = targetWalletId || gdFinanceWalletId;
-
-                            splitDetails.push({
-                                level: levelCount,
-                                user_id: targetUserId,
-                                amount: levelAmount,
-                                wallet_id: finalWalletId,
-                                status: finalWalletId ? status : 'no_wallet_configured'
-                            });
+                        if (isRenewal) {
+                            commissionVal = parseFloat(variations.comissao_mensal || 0);
+                        } else {
+                            commissionVal = parseFloat(variations.comissao_adesao || 0);
                         }
                     } else {
-                        // Se a comissão for 0, ainda avançamos na árvore para o próximo nível
-                        if (currentSponsorId) {
-                            const { data: aff } = await supabase
-                                .from('affiliates')
-                                .select('sponsor_id')
-                                .eq('id', currentSponsorId)
-                                .maybeSingle();
-                            currentSponsorId = aff?.sponsor_id || null;
-                        }
+                        commissionVal = parseFloat(variations.comissao || 0);
                     }
+
+                    totalCommission += commissionVal * (item.quantity || 1);
+                    totalPlatformCost += platformCostVal * (item.quantity || 1);
                 }
+            }
+
+            const gdFinanceShare = Math.max(0, Number((Number(order.total_amount) - totalPlatformCost - totalCommission).toFixed(2)));
+
+            // 3. Processar o split se houver comissão e destinatário
+            if (totalCommission > 0 && targetUserId) {
+                // Verificar se o afiliado está ativo
+                const { data: isActive } = await supabase.rpc('is_affiliate_active', { p_user_id: targetUserId });
+                
+                // Buscar carteira do afiliado
+                const { data: userSettings } = await supabase
+                    .from('user_settings')
+                    .select('asaas_wallet_id')
+                    .eq('user_id', targetUserId)
+                    .maybeSingle();
+
+                let status = 'held_in_gd_finance';
+                let targetWalletId = null;
+
+                if (isActive) {
+                    if (userSettings?.asaas_wallet_id) {
+                        targetWalletId = userSettings.asaas_wallet_id;
+                        status = 'split_sent';
+                    } else {
+                        targetWalletId = null;
+                        status = 'no_wallet_configured';
+                    }
+                } else {
+                    targetWalletId = null;
+                    status = 'held_in_gd_finance';
+                }
+
+                const finalWalletId = targetWalletId || gdFinanceWalletId;
+
+                splitDetails.push({
+                    level: 1,
+                    user_id: targetUserId,
+                    amount: totalCommission,
+                    wallet_id: finalWalletId,
+                    status: finalWalletId ? status : 'no_wallet_configured'
+                });
+            }
+
+            // 4. Adicionar a comissão própria da GD Finance (Merchant) no split se configurada
+            if (gdFinanceShare > 0 && gdFinanceWalletId) {
+                splitDetails.push({
+                    level: 0,
+                    user_id: null,
+                    amount: gdFinanceShare,
+                    wallet_id: gdFinanceWalletId,
+                    status: 'split_sent'
+                });
             }
 
             // Consolidar splits por walletId para evitar carteiras repetidas no payload
