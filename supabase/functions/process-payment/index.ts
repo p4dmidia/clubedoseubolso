@@ -269,38 +269,29 @@ serve(async (req) => {
                 }
             }
 
-            // Determinar o usuário de destino (caso não haja patrocinador, vai para o ID Master)
+            // Determinar o usuário de destino (caso não haja patrocinador, vai para o ID Master se configurado)
             let targetUserId = null;
             if (currentAffiliate) {
                 targetUserId = currentAffiliate.user_id;
             } else {
-                // Buscar o ID Master da organização (referral_code = 'master' ou sponsor_id IS NULL)
+                // Buscar o ID Master da organização (apenas se houver um afiliado com código 'master')
                 const { data: masterAff } = await supabase
                     .from('affiliates')
                     .select('user_id')
                     .eq('organization_id', order.organization_id)
-                    .or('referral_code.eq.master,sponsor_id.is.null')
-                    .order('created_at', { ascending: true })
-                    .limit(1)
+                    .eq('referral_code', 'master')
                     .maybeSingle();
                 
                 if (masterAff) {
                     targetUserId = masterAff.user_id;
-                } else {
-                    const { data: firstAff } = await supabase
-                        .from('affiliates')
-                        .select('user_id')
-                        .eq('organization_id', order.organization_id)
-                        .order('created_at', { ascending: true })
-                        .limit(1)
-                        .maybeSingle();
-                    targetUserId = firstAff?.user_id;
                 }
             }
 
             // 2. Calcular o valor total da comissão direta e custo de plataforma com base nos itens
-            let totalCommission = 0;
+            let totalAdesaoCommission = 0;
+            let totalMensalCommission = 0;
             let totalPlatformCost = 0;
+
             if (order.order_items && order.order_items.length > 0) {
                 for (const item of order.order_items) {
                     // Buscar a categoria e variações do produto
@@ -369,57 +360,76 @@ serve(async (req) => {
 
                         if (isRenewal) {
                             commissionVal = parseFloat(variations.comissao_mensal || 0);
+                            totalMensalCommission += commissionVal * (item.quantity || 1);
                         } else {
                             commissionVal = parseFloat(variations.comissao_adesao || 0);
+                            totalAdesaoCommission += commissionVal * (item.quantity || 1);
                         }
                     } else {
                         commissionVal = parseFloat(variations.comissao || 0);
+                        totalAdesaoCommission += commissionVal * (item.quantity || 1);
                     }
 
-                    totalCommission += commissionVal * (item.quantity || 1);
                     totalPlatformCost += platformCostVal * (item.quantity || 1);
                 }
             }
 
+            const totalCommission = totalAdesaoCommission + totalMensalCommission;
             const gdFinanceShare = Math.max(0, Number((Number(order.total_amount) - totalPlatformCost - totalCommission).toFixed(2)));
 
-            // 3. Processar o split se houver comissão e destinatário
-            if (totalCommission > 0 && targetUserId) {
-                // Verificar se o afiliado está ativo
-                const { data: isActive } = await supabase.rpc('is_affiliate_active', { p_user_id: targetUserId });
-                
-                // Buscar carteira do afiliado
-                const { data: userSettings } = await supabase
-                    .from('user_settings')
-                    .select('asaas_wallet_id')
-                    .eq('user_id', targetUserId)
-                    .maybeSingle();
+            // 3. Processar o split se houver comissão
+            if (totalCommission > 0) {
+                if (targetUserId) {
+                    // Verificar se o afiliado está ativo no banco
+                    const { data: isActive } = await supabase.rpc('is_affiliate_active', { p_user_id: targetUserId });
+                    
+                    // Buscar carteira do afiliado
+                    const { data: userSettings } = await supabase
+                        .from('user_settings')
+                        .select('asaas_wallet_id')
+                        .eq('user_id', targetUserId)
+                        .maybeSingle();
 
-                let status = 'held_in_gd_finance';
-                let targetWalletId = null;
+                    let status = 'held_in_gd_finance';
+                    let targetWalletId = null;
 
-                if (isActive) {
-                    if (userSettings?.asaas_wallet_id) {
-                        targetWalletId = userSettings.asaas_wallet_id;
-                        status = 'split_sent';
+                    // Regra: Uma comissão de adesão (primeira compra) sempre ativa o afiliado,
+                    // então ignoramos a verificação de inatividade para esse tipo de comissão.
+                    const isAdesao = totalMensalCommission === 0;
+                    const isEffectiveActive = isAdesao ? true : isActive;
+
+                    if (isEffectiveActive) {
+                        if (userSettings?.asaas_wallet_id) {
+                            targetWalletId = userSettings.asaas_wallet_id;
+                            status = 'split_sent';
+                        } else {
+                            targetWalletId = null;
+                            status = 'no_wallet_configured';
+                        }
                     } else {
                         targetWalletId = null;
-                        status = 'no_wallet_configured';
+                        status = 'held_in_gd_finance';
                     }
-                } else {
-                    targetWalletId = null;
-                    status = 'held_in_gd_finance';
+
+                    const finalWalletId = targetWalletId || gdFinanceWalletId;
+
+                    splitDetails.push({
+                        level: 1,
+                        user_id: targetUserId,
+                        amount: totalCommission,
+                        wallet_id: finalWalletId,
+                        status: finalWalletId ? status : 'no_wallet_configured'
+                    });
+                } else if (gdFinanceWalletId) {
+                    // Sem patrocinador definido: a comissão do nível 1 vai para a carteira da GD Finance
+                    splitDetails.push({
+                        level: 1,
+                        user_id: null,
+                        amount: totalCommission,
+                        wallet_id: gdFinanceWalletId,
+                        status: 'split_sent'
+                    });
                 }
-
-                const finalWalletId = targetWalletId || gdFinanceWalletId;
-
-                splitDetails.push({
-                    level: 1,
-                    user_id: targetUserId,
-                    amount: totalCommission,
-                    wallet_id: finalWalletId,
-                    status: finalWalletId ? status : 'no_wallet_configured'
-                });
             }
 
             // 4. Adicionar a comissão própria da GD Finance (Merchant) no split se configurada
@@ -436,7 +446,7 @@ serve(async (req) => {
             // Consolidar splits por walletId para evitar carteiras repetidas no payload
             const consolidatedSplitsMap: Record<string, number> = {};
             for (const detail of splitDetails) {
-                if (detail.wallet_id && detail.status !== 'no_wallet_configured') {
+                if (detail.wallet_id) {
                     consolidatedSplitsMap[detail.wallet_id] = (consolidatedSplitsMap[detail.wallet_id] || 0) + detail.amount;
                 }
             }
