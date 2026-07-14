@@ -30,6 +30,11 @@ const CheckoutPage: React.FC = () => {
     const [paymentMethod, setPaymentMethod] = useState<'credit' | 'pix'>('credit');
     const [isLoading, setIsLoading] = useState(false);
     const [pixData, setPixData] = useState<any>(null);
+
+    React.useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
     const [customerInfo, setCustomerInfo] = useState({
         name: '',
         email: '',
