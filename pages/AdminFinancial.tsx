@@ -95,6 +95,7 @@ const AdminFinancial: React.FC = () => {
                 .from('orders')
                 .select('id, created_at, customer_name, total_amount, status, split_details, referral_code')
                 .eq('organization_id', ORGANIZATION_ID)
+                .in('status', ['Pago', 'completed', 'Entregue'])
                 .order('created_at', { ascending: false });
 
             if (orderErr) throw orderErr;
@@ -161,6 +162,8 @@ const AdminFinancial: React.FC = () => {
 
             const userIds = balanceData?.map(b => b.user_id) || [];
             let affiliatesData: any[] = [];
+            let profilesData: any[] = [];
+            
             if (userIds.length > 0) {
                 const { data: affData, error: affError } = await supabase
                     .from('affiliates')
@@ -169,17 +172,27 @@ const AdminFinancial: React.FC = () => {
                 if (!affError && affData) {
                     affiliatesData = affData;
                 }
+
+                // Buscar perfis para obter a role
+                const { data: profData } = await supabase
+                    .from('user_profiles')
+                    .select('id, role')
+                    .in('id', userIds);
+                profilesData = profData || [];
             }
 
             const formattedPayouts = balanceData?.map((b: any) => {
                 const aff = affiliatesData.find(a => a.user_id === b.user_id);
+                const profile = profilesData.find(p => p.id === b.user_id);
                 return {
                     user_id: b.user_id,
                     full_name: aff?.full_name || 'Usuário',
                     pix_key: b.pix_key || 'Não cadastrada',
-                    available_balance: b.available_balance
+                    available_balance: b.available_balance,
+                    role: profile?.role || 'affiliate'
                 };
-            }) || [];
+            })
+            .filter((p: any) => p.role !== 'admin_master' && p.role !== 'admin_op' && p.role !== 'admin') || [];
 
             setPendingPayouts(formattedPayouts);
 
