@@ -35,22 +35,35 @@ const CheckoutPage: React.FC = () => {
         window.scrollTo(0, 0);
     }, []);
 
-    const [customerInfo, setCustomerInfo] = useState({
-        name: '',
-        email: '',
-        phone: '',
-        cpf: '',
-        address: '',
-        cep: '',
-        street: '',
-        number: '',
-        complement: '',
-        neighborhood: '',
-        city: '',
-        state: ''
+    const [customerInfo, setCustomerInfo] = useState(() => {
+        const saved = localStorage.getItem('checkout_customer_info');
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.error('Error parsing saved customer info:', e);
+            }
+        }
+        return {
+            name: '',
+            email: '',
+            phone: '',
+            cpf: '',
+            address: '',
+            cep: '',
+            street: '',
+            number: '',
+            complement: '',
+            neighborhood: '',
+            city: '',
+            state: ''
+        };
     });
 
-    const [isEditingProfile, setIsEditingProfile] = useState(true);
+    const [isEditingProfile, setIsEditingProfile] = useState(() => {
+        const saved = localStorage.getItem('checkout_is_editing_profile');
+        return saved ? saved === 'true' : true;
+    });
 
     const [creditCardInfo, setCreditCardInfo] = useState({
         holderName: '',
@@ -87,7 +100,19 @@ const CheckoutPage: React.FC = () => {
     };
 
     React.useEffect(() => {
+        localStorage.setItem('checkout_customer_info', JSON.stringify(customerInfo));
+    }, [customerInfo]);
+
+    React.useEffect(() => {
+        localStorage.setItem('checkout_is_editing_profile', String(isEditingProfile));
+    }, [isEditingProfile]);
+
+    React.useEffect(() => {
         if (user) {
+            // Só busca do banco se não tivermos informações salvas no localStorage
+            const hasLocalSaved = !!localStorage.getItem('checkout_customer_info');
+            if (hasLocalSaved) return;
+
             const fetchProfile = async () => {
                 try {
                     const { data, error } = await supabase
@@ -397,6 +422,8 @@ const CheckoutPage: React.FC = () => {
             }
 
             clearCart();
+            localStorage.removeItem('checkout_customer_info');
+            localStorage.removeItem('checkout_is_editing_profile');
             
             if (paymentMethod === 'credit') {
                 toast.success('Pagamento confirmado com sucesso!');
