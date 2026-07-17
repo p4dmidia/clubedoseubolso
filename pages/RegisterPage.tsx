@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
     CheckCircle2,
@@ -13,7 +13,9 @@ import {
     EyeOff,
     Calendar,
     Gift,
-    ArrowRight
+    ArrowRight,
+    Check,
+    Heart
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
@@ -44,8 +46,114 @@ const RegisterPage: React.FC = () => {
     const [sponsorCode, setSponsorCode] = useState<string | null>(null);
     const [sponsorName, setSponsorName] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
+    
+    // Estados para os planos
+    const [plans, setPlans] = useState<any[]>([]);
+    const [loadingPlans, setLoadingPlans] = useState(false);
 
-    React.useEffect(() => {
+    const defaultPlans = [
+        {
+            id: 'd3b07384-d113-4171-bc01-9a7c936df312',
+            name: 'Plano Individual Essencial',
+            price: 17.90,
+            type: 'Individual',
+            benefits: [
+                'Atendimento Clínico Geral 24h online ilimitado',
+                'Sem carência para atendimento de emergência',
+                'Receitas e atestados digitais nacionais',
+                'Acesso ao clube de benefícios e descontos'
+            ],
+            equivalentVal: 49.90,
+            adesao: 17.90,
+            slug: 'individual-essencial',
+            description: 'O plano básico essencial para quem busca atendimento clínico geral ágil e de alta qualidade na palma da mão.'
+        },
+        {
+            id: 'd3b07384-d113-4171-bc02-9a7c936df312',
+            name: 'Plano Individual Premium',
+            price: 34.90,
+            type: 'Individual',
+            benefits: [
+                'Atendimento Clínico Geral 24h ilimitado',
+                'Agendamento para 17 Especialidades Médicas',
+                'Consultas completas por chamada de vídeo',
+                'Acesso total ao Clube de Benefícios VIP'
+            ],
+            equivalentVal: 99.90,
+            adesao: 34.90,
+            slug: 'individual-premium',
+            description: 'Cobertura individual premium de saúde com consultas gerais e agendamentos de especialistas.'
+        },
+        {
+            id: 'd3b07384-d113-4171-bc03-9a7c936df312',
+            name: 'Plano Familiar Essencial',
+            price: 44.90,
+            type: 'Familiar',
+            benefits: [
+                '01 titular + 05 dependentes de livre escolha',
+                'Sem necessidade de comprovar parentesco',
+                'Atendimento Clínico Geral 24h ilimitado',
+                'Acesso geral ao Clube de Benefícios'
+            ],
+            equivalentVal: 149.90,
+            adesao: 44.90,
+            slug: 'familiar-essencial',
+            description: 'A tranquilidade de saber que toda a sua família está protegida com atendimento médico de emergência 24h.'
+        },
+        {
+            id: 'd3b07384-d113-4171-bc04-9a7c936df312',
+            name: 'Plano Familiar Premium',
+            price: 87.90,
+            type: 'Familiar',
+            benefits: [
+                '01 titular + 05 dependentes de livre escolha',
+                'Sem necessidade de comprovar parentesco',
+                'Atendimento Clínico Geral 24h + 17 Especialidades Médicas',
+                'Consultoria e Assessoria Financeira Premium'
+            ],
+            equivalentVal: 299.90,
+            adesao: 87.90,
+            slug: 'familiar-premium',
+            description: 'A proteção de saúde e financeira mais robusta e completa para você e as pessoas que você ama.'
+        }
+    ];
+
+    const getPlanBenefits = (name: string, type: string) => {
+        const lower = name.toLowerCase();
+        if (type === 'Familiar' || lower.includes('familiar')) {
+            if (lower.includes('premium')) {
+                return [
+                    '01 titular + 05 dependentes de livre escolha',
+                    'Sem necessidade de comprovar parentesco',
+                    'Atendimento Clínico Geral 24h + 17 Especialidades Médicas',
+                    'Consultoria e Assessoria Financeira Premium'
+                ];
+            }
+            return [
+                '01 titular + 05 dependentes de livre escolha',
+                'Sem necessidade de comprovar parentesco',
+                'Atendimento Clínico Geral 24h ilimitado',
+                'Acesso geral ao Clube de Benefícios'
+            ];
+        } else {
+            if (lower.includes('premium')) {
+                return [
+                    'Atendimento Clínico Geral 24h ilimitado',
+                    'Agendamento para 17 Especialidades Médicas',
+                    'Consultas completas por chamada de vídeo',
+                    'Acesso total ao Clube de Benefícios VIP'
+                ];
+            }
+            return [
+                'Atendimento Clínico Geral 24h online ilimitado',
+                'Sem carência para atendimento de emergência',
+                'Receitas e atestados digitais nacionais',
+                'Acesso ao clube de benefícios e descontos'
+            ];
+        }
+    };
+
+    useEffect(() => {
         // Tenta capturar o código do patrocinador do cookie
         const ref = Cookies.get('classea_ref');
         if (ref) {
@@ -54,6 +162,60 @@ const RegisterPage: React.FC = () => {
             fetchSponsorName(ref);
         }
     }, []);
+
+    useEffect(() => {
+        if (regType === 'client') {
+            const fetchPlans = async () => {
+                setLoadingPlans(true);
+                try {
+                    const { data: plansData } = await supabase
+                        .from('products')
+                        .select(`
+                            *,
+                            product_categories (name)
+                        `)
+                        .eq('is_active', true)
+                        .order('price', { ascending: true });
+
+                    if (plansData) {
+                        const plansOnly = plansData.filter((prod: any) => 
+                            prod.product_categories?.name === 'Planos' || 
+                            prod.variations?.plan_type !== undefined
+                        );
+                        setPlans(plansOnly);
+                    }
+                } catch (err) {
+                    console.error('Error loading plans in RegisterPage:', err);
+                } finally {
+                    setLoadingPlans(false);
+                }
+            };
+            fetchPlans();
+        }
+    }, [regType]);
+
+    const activePlansList = plans.length > 0
+        ? plans.map(p => {
+            const type = p.variations?.plan_type || (p.name.toLowerCase().includes('familiar') ? 'Familiar' : 'Individual');
+            const isPremium = p.name.toLowerCase().includes('premium');
+            let eqVal = 49.90;
+            if (type === 'Individual' && isPremium) eqVal = 99.90;
+            if (type === 'Familiar' && !isPremium) eqVal = 149.90;
+            if (type === 'Familiar' && isPremium) eqVal = 299.90;
+
+            return {
+                id: p.id,
+                name: p.name,
+                price: p.variations?.mensalidade || p.price || 0,
+                adesao: p.variations?.adesao || 0,
+                type: type,
+                slug: p.variations?.slug || p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+                description: p.description || '',
+                equivalentVal: eqVal,
+                benefits: getPlanBenefits(p.name, type)
+            };
+        })
+        : defaultPlans;
 
     const fetchSponsorName = async (code: string) => {
         try {
@@ -366,7 +528,7 @@ const RegisterPage: React.FC = () => {
             {/* Registration Form Section */}
             <section className="py-20 -mt-16 relative z-20 pb-32">
                 <div className="container mx-auto px-4">
-                    <div className="max-w-2xl mx-auto">
+                    <div className={`${regType === 'client' ? 'max-w-5xl' : 'max-w-2xl'} mx-auto transition-all duration-500`}>
                         {sponsorName && (
                             <div className="bg-[#2980B9]/10 border border-[#2980B9]/20 rounded-2xl p-4 mb-6 flex items-center justify-center gap-3 animate-bounce-subtle">
                                 <div className="w-8 h-8 bg-[#2980B9] rounded-full flex items-center justify-center text-[#0B1221]">
@@ -397,261 +559,333 @@ const RegisterPage: React.FC = () => {
                         )}
 
                         <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-slate-100 p-8 lg:p-12">
-                            <form onSubmit={handleSubmit} className="space-y-6">
-                                {/* Seletor de Tipo de Cadastro */}
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Escolha o Tipo de Perfil</label>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <button
-                                            type="button"
-                                            onClick={() => setRegType('affiliate')}
-                                            className={`p-4 rounded-2xl border-2 text-left transition-all ${
-                                                regType === 'affiliate'
-                                                    ? 'border-[#2980B9] bg-[#2980B9]/5'
-                                                    : 'border-slate-100 bg-slate-50/50 hover:border-slate-200'
-                                            }`}
-                                        >
-                                            <span className="block font-black text-sm text-[#0B1221]">Afiliado</span>
-                                            <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1">Quero indicar e ter ganhos</span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setRegType('client')}
-                                            className={`p-4 rounded-2xl border-2 text-left transition-all ${
-                                                regType === 'client'
-                                                    ? 'border-[#2980B9] bg-[#2980B9]/5'
-                                                    : 'border-slate-100 bg-slate-50/50 hover:border-slate-200'
-                                            }`}
-                                        >
-                                            <span className="block font-black text-sm text-[#0B1221]">Cliente</span>
-                                            <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1">Apenas compras e planos</span>
-                                        </button>
-                                    </div>
+                            {/* Seletor de Tipo de Cadastro */}
+                            <div className="space-y-3 mb-8">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Escolha o Tipo de Perfil</label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setRegType('affiliate')}
+                                        className={`p-4 rounded-2xl border-2 text-left transition-all ${
+                                            regType === 'affiliate'
+                                                ? 'border-[#2980B9] bg-[#2980B9]/5'
+                                                : 'border-slate-100 bg-slate-50/50 hover:border-slate-200'
+                                        }`}
+                                    >
+                                        <span className="block font-black text-sm text-[#0B1221]">Afiliado</span>
+                                        <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1">Quero indicar e ter ganhos</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setRegType('client')}
+                                        className={`p-4 rounded-2xl border-2 text-left transition-all ${
+                                            regType === 'client'
+                                                ? 'border-[#2980B9] bg-[#2980B9]/5'
+                                                : 'border-slate-100 bg-slate-50/50 hover:border-slate-200'
+                                        }`}
+                                    >
+                                        <span className="block font-black text-sm text-[#0B1221]">Cliente</span>
+                                        <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1">Apenas compras e planos</span>
+                                    </button>
                                 </div>
+                            </div>
 
-                                <div className="pt-4 border-t border-slate-50">
-                                    <h3 className="text-2xl font-black text-[#0B1221] mb-2">
-                                        {regType === 'client' ? 'Dados do Cliente' : 'Dados do Afiliado'}
-                                    </h3>
-                                    <p className="text-slate-400 text-sm font-medium">
-                                        {regType === 'client' 
-                                            ? 'Preencha seus dados para habilitar a contratação do seu plano.' 
-                                            : 'Cadastre-se gratuitamente para receber seu link de indicação do EVA.'}
-                                    </p>
+                            {regType === 'client' ? (
+                                <div className="space-y-8 animate-in fade-in duration-300">
+                                    <div className="pt-6 border-t border-slate-50 text-center md:text-left">
+                                        <h3 className="text-2xl font-black text-[#0B1221] mb-2">
+                                            Selecione um Plano de Saúde
+                                        </h3>
+                                        <p className="text-slate-400 text-sm font-medium leading-relaxed">
+                                            Para ter acesso aos benefícios do Clube do Seu Bolso, selecione um dos planos abaixo. O seu cadastro será concluído na finalização do pagamento.
+                                        </p>
+                                    </div>
                                     
-                                    <div className={`mt-4 p-5 rounded-2xl border text-xs font-bold leading-relaxed ${
-                                        regType === 'client'
-                                            ? 'bg-sky-50 border-sky-100 text-sky-800'
-                                            : 'bg-emerald-50 border-emerald-100 text-emerald-800'
-                                    }`}>
-                                        {regType === 'client' ? (
-                                            <div className="space-y-1">
-                                                <p className="uppercase text-[9px] tracking-widest text-[#2980B9] font-black">Informação do Plano</p>
-                                                <p>✓ Consultas médicas ilimitadas por telemedicina.</p>
-                                                <p>✓ Zero carência - comece a utilizar imediatamente após o pagamento.</p>
-                                                <p>✓ Redirecionamento automático para a fatura após o preenchimento.</p>
-                                            </div>
-                                        ) : (
+                                    {loadingPlans ? (
+                                        <div className="py-12 text-center">
+                                            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#2980B9] mx-auto mb-3"></div>
+                                            <p className="text-slate-400 font-bold text-xs uppercase">Carregando planos...</p>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            {activePlansList.map((plan, idx) => {
+                                                const isPremium = plan.name.toLowerCase().includes('premium');
+                                                return (
+                                                    <div 
+                                                        key={plan.id || idx}
+                                                        onClick={() => navigate(`/checkout?buy=${plan.id}`)}
+                                                        className={`bg-white rounded-3xl p-6 border-2 flex flex-col justify-between hover:scale-[1.01] cursor-pointer transition-all duration-300 relative ${
+                                                            isPremium 
+                                                                ? 'border-[#2980B9] shadow-md shadow-[#2980B9]/5 hover:shadow-lg' 
+                                                                : 'border-slate-100 hover:border-slate-200'
+                                                        }`}
+                                                    >
+                                                        {isPremium && (
+                                                            <span className="absolute -top-3 left-6 bg-[#2980B9] text-white text-[8px] font-black uppercase tracking-widest px-3 py-1 rounded-full">
+                                                                Recomendado
+                                                            </span>
+                                                        )}
+
+                                                        <div className="space-y-4">
+                                                            <div className="space-y-1">
+                                                                <span className="text-slate-400 text-[10px] font-black uppercase tracking-wider">{plan.type}</span>
+                                                                <h4 className="font-black text-base text-[#0B1221] leading-tight">{plan.name}</h4>
+                                                            </div>
+
+                                                            <p className="text-slate-600 text-[11px] font-medium leading-relaxed min-h-[44px]">
+                                                                {plan.description}
+                                                            </p>
+
+                                                            <div className="pt-2 border-t border-slate-50 flex flex-col gap-0.5">
+                                                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider line-through">
+                                                                    Equivalente: R$ {new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(plan.equivalentVal)}
+                                                                </span>
+                                                                <div className="flex items-baseline gap-1">
+                                                                    <span className="text-[#2980B9] text-sm font-extrabold">R$</span>
+                                                                    <span className="text-2xl font-black text-[#2980B9]">
+                                                                        {new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(plan.price)}
+                                                                    </span>
+                                                                    <span className="text-slate-600 text-xs font-bold">/mês</span>
+                                                                </div>
+                                                                <span className="text-[9px] font-extrabold text-emerald-600 uppercase tracking-widest">
+                                                                    Adesão: R$ {new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(plan.adesao)}
+                                                                </span>
+                                                            </div>
+
+                                                            <ul className="space-y-2 pt-2 text-[11px] text-slate-600 font-semibold border-t border-slate-50">
+                                                                {plan.benefits.slice(0, 3).map((benefit, i) => (
+                                                                    <li key={i} className="flex items-start gap-2">
+                                                                        <Check className="w-3.5 h-3.5 text-[#2980B9] shrink-0 mt-0.5" />
+                                                                        <span>{benefit}</span>
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        </div>
+
+                                                        <div className="mt-6">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    navigate(`/checkout?buy=${plan.id}`);
+                                                                }}
+                                                                className="w-full block text-center py-3.5 bg-[#27AE60] hover:bg-[#219653] text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-md shadow-[#27AE60]/10"
+                                                            >
+                                                                ASSINAR AGORA
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <form onSubmit={handleSubmit} className="space-y-6">
+                                    <div className="pt-4 border-t border-slate-50">
+                                        <h3 className="text-2xl font-black text-[#0B1221] mb-2">
+                                            Dados do Afiliado
+                                        </h3>
+                                        <p className="text-slate-400 text-sm font-medium">
+                                            Cadastre-se gratuitamente para receber seu link de indicação do EVA.
+                                        </p>
+                                        
+                                        <div className="mt-4 p-5 rounded-2xl border text-xs font-bold leading-relaxed bg-emerald-50 border-emerald-100 text-emerald-800">
                                             <div className="space-y-1">
                                                 <p className="uppercase text-[9px] tracking-widest text-emerald-600 font-black">Regra de Qualificação do Afiliado</p>
                                                 <p>✓ Cadastro 100% gratuito com acesso imediato ao Escritório Virtual.</p>
                                                 <p>✓ Para receber comissões e poder indicar: Cadastre sua Chave de Acesso Asaas nas configurações.</p>
                                                 <p>✓ Ganhos de rede de alta profundidade com unificação automática.</p>
                                             </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-6">
-                                    {/* Nome Completo */}
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Nome Completo</label>
-                                        <div className="relative">
-                                            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2980B9]" />
-                                            <input
-                                                type="text" name="nomeCompleto" required
-                                                value={formData.nomeCompleto} onChange={handleChange}
-                                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 font-bold text-[#05080F] outline-none focus:border-[#2980B9] transition-all"
-                                                placeholder="Ex: João Silva"
-                                            />
                                         </div>
                                     </div>
 
-                                    {/* CPF */}
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">CPF (Pessoa Física)</label>
-                                        <div className="relative">
-                                            <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2980B9]" />
-                                            <input
-                                                type="text" name="cpf" required
-                                                value={formData.cpf} onChange={handleCpfChange}
-                                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 font-bold text-[#05080F] outline-none focus:border-[#2980B9] transition-all"
-                                                placeholder="000.000.000-00"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* E-mail */}
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">E-mail</label>
-                                        <div className="relative">
-                                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2980B9]" />
-                                            <input
-                                                type="email" name="email" required
-                                                value={formData.email} onChange={handleChange}
-                                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 font-bold text-[#05080F] outline-none focus:border-[#2980B9] transition-all"
-                                                placeholder="exemplo@email.com"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* WhatsApp / Celular */}
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">WhatsApp / Celular</label>
-                                        <div className="relative">
-                                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2980B9]" />
-                                            <input
-                                                type="text" name="whatsapp" required
-                                                value={formData.whatsapp} onChange={handlePhoneChange}
-                                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 font-bold text-[#05080F] outline-none focus:border-[#2980B9] transition-all"
-                                                placeholder="(00) 00000-0000"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Data de Nascimento */}
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Data de Nascimento</label>
-                                        <div className="relative">
-                                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2980B9]" />
-                                            <input
-                                                type="date" name="dataNascimento" required
-                                                value={formData.dataNascimento} onChange={handleChange}
-                                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 font-bold text-[#05080F] outline-none focus:border-[#2980B9] transition-all"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Senhas */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-6">
+                                        {/* Nome Completo */}
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Senha</label>
+                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Nome Completo</label>
                                             <div className="relative">
-                                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2980B9]" />
+                                                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2980B9]" />
                                                 <input
-                                                    type={showPassword ? "text" : "password"} name="senha" required
-                                                    value={formData.senha} onChange={handleChange}
+                                                    type="text" name="nomeCompleto" required
+                                                    value={formData.nomeCompleto} onChange={handleChange}
                                                     className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 font-bold text-[#05080F] outline-none focus:border-[#2980B9] transition-all"
-                                                    placeholder="********"
+                                                    placeholder="Ex: João Silva"
                                                 />
-                                                <button 
+                                            </div>
+                                        </div>
+
+                                        {/* CPF */}
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">CPF (Pessoa Física)</label>
+                                            <div className="relative">
+                                                <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2980B9]" />
+                                                <input
+                                                    type="text" name="cpf" required
+                                                    value={formData.cpf} onChange={handleCpfChange}
+                                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 font-bold text-[#05080F] outline-none focus:border-[#2980B9] transition-all"
+                                                    placeholder="000.000.000-00"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* E-mail */}
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">E-mail</label>
+                                            <div className="relative">
+                                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2980B9]" />
+                                                <input
+                                                    type="email" name="email" required
+                                                    value={formData.email} onChange={handleChange}
+                                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 font-bold text-[#05080F] outline-none focus:border-[#2980B9] transition-all"
+                                                    placeholder="exemplo@email.com"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* WhatsApp / Celular */}
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">WhatsApp / Celular</label>
+                                            <div className="relative">
+                                                <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2980B9]" />
+                                                <input
+                                                    type="text" name="whatsapp" required
+                                                    value={formData.whatsapp} onChange={handlePhoneChange}
+                                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 font-bold text-[#05080F] outline-none focus:border-[#2980B9] transition-all"
+                                                    placeholder="(00) 00000-0000"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Data de Nascimento */}
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Data de Nascimento</label>
+                                            <div className="relative">
+                                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2980B9]" />
+                                                <input
+                                                    type="date" name="dataNascimento" required
+                                                    value={formData.dataNascimento} onChange={handleChange}
+                                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 font-bold text-[#05080F] outline-none focus:border-[#2980B9] transition-all"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Senhas */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Senha</label>
+                                                <div className="relative">
+                                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2980B9]" />
+                                                    <input
+                                                        type={showPassword ? "text" : "password"} name="senha" required
+                                                        value={formData.senha} onChange={handleChange}
+                                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 font-bold text-[#05080F] outline-none focus:border-[#2980B9] transition-all"
+                                                        placeholder="********"
+                                                    />
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => setShowPassword(!showPassword)}
+                                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#2980B9]"
+                                                    >
+                                                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Confirmar Senha</label>
+                                                <div className="relative">
+                                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2980B9]" />
+                                                    <input
+                                                        type={showPassword ? "text" : "password"} name="confirmarSenha" required
+                                                        value={formData.confirmarSenha} onChange={handleChange}
+                                                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 font-bold text-[#05080F] outline-none focus:border-[#2980B9] transition-all"
+                                                        placeholder="********"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Cupom de Indicação */}
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Cupom de Indicação (Opcional)</label>
+                                            <div className="relative">
+                                                <Gift className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2980B9]" />
+                                                <input
+                                                    type="text" name="sponsorCode"
+                                                    value={sponsorCode || ''} onChange={handleSponsorChange}
+                                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 font-bold text-[#05080F] outline-none focus:border-[#2980B9] transition-all uppercase"
+                                                    placeholder="CÓDIGO DE QUEM TE INDICOU"
+                                                />
+                                            </div>
+                                            {sponsorName && (
+                                                <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest pl-1 mt-1">
+                                                    Indicado por: {sponsorName}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Contract Acceptance */}
+                                    <div className="bg-slate-50 rounded-[2rem] p-6 md:p-8 space-y-6">
+                                        <div className="flex items-start gap-4">
+                                            <div className="p-3 bg-white rounded-xl shadow-sm">
+                                                <FileText className="w-6 h-6 text-[#2980B9]" />
+                                            </div>
+                                            <div className="flex-grow">
+                                                <h4 className="font-black text-sm text-[#0B1221]">
+                                                    Contrato de Afiliação
+                                                </h4>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-3">
+                                                    Leia as regras de bonificação e termos de uso
+                                                </p>
+                                                <button
                                                     type="button"
-                                                    onClick={() => setShowPassword(!showPassword)}
-                                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#2980B9]"
+                                                    onClick={handleDownloadContract}
+                                                    className="flex items-center gap-2 text-[#0B1221] text-[10px] font-black hover:text-[#2980B9] transition-colors bg-white px-4 py-2 rounded-lg border border-slate-100 shadow-sm uppercase tracking-widest"
                                                 >
-                                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                                    <Download className="w-3.5 h-3.5" /> BAIXAR PDF
                                                 </button>
                                             </div>
                                         </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Confirmar Senha</label>
-                                            <div className="relative">
-                                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2980B9]" />
-                                                <input
-                                                    type={showPassword ? "text" : "password"} name="confirmarSenha" required
-                                                    value={formData.confirmarSenha} onChange={handleChange}
-                                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 font-bold text-[#05080F] outline-none focus:border-[#2980B9] transition-all"
-                                                    placeholder="********"
-                                                />
+                                        <div
+                                            onClick={() => setFormData(p => ({ ...p, aceiteContrato: !p.aceiteContrato }))}
+                                            className="flex items-center gap-4 cursor-pointer group select-none"
+                                        >
+                                            <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${formData.aceiteContrato ? 'bg-[#2980B9] border-[#2980B9]' : 'bg-white border-slate-200 group-hover:border-slate-300'}`}>
+                                                {formData.aceiteContrato && <CheckCircle2 size={16} className="text-[#0B1221]" />}
                                             </div>
+                                            <span className="text-[10px] font-black text-[#0B1221] uppercase tracking-widest">
+                                                Li e aceito todas as regras do negócio
+                                            </span>
+                                        </div>
+                                        <div
+                                            onClick={() => setFormData(p => ({ ...p, aceiteLgpd: !p.aceiteLgpd }))}
+                                            className="flex items-center gap-4 cursor-pointer group select-none"
+                                        >
+                                            <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${formData.aceiteLgpd ? 'bg-[#2980B9] border-[#2980B9]' : 'bg-white border-slate-200 group-hover:border-slate-300'}`}>
+                                                {formData.aceiteLgpd && <CheckCircle2 size={16} className="text-[#0B1221]" />}
+                                            </div>
+                                            <span className="text-[10px] font-black text-[#0B1221] uppercase tracking-widest leading-relaxed">
+                                                Consinto com a Política de Privacidade e armazenamento de meus dados pessoais (LGPD).
+                                            </span>
                                         </div>
                                     </div>
 
-                                    {/* Cupom de Indicação */}
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Cupom de Indicação (Opcional)</label>
-                                        <div className="relative">
-                                            <Gift className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2980B9]" />
-                                            <input
-                                                type="text" name="sponsorCode"
-                                                value={sponsorCode || ''} onChange={handleSponsorChange}
-                                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 font-bold text-[#05080F] outline-none focus:border-[#2980B9] transition-all uppercase"
-                                                placeholder="CÓDIGO DE QUEM TE INDICOU"
-                                            />
+                                    {error && (
+                                        <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-2xl text-xs font-black uppercase tracking-widest text-center">
+                                            {error}
                                         </div>
-                                        {sponsorName && (
-                                            <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest pl-1 mt-1">
-                                                Indicado por: {sponsorName}
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
+                                    )}
 
-                                {/* Contract Acceptance */}
-                                <div className="bg-slate-50 rounded-[2rem] p-6 md:p-8 space-y-6">
-                                    <div className="flex items-start gap-4">
-                                        <div className="p-3 bg-white rounded-xl shadow-sm">
-                                            <FileText className="w-6 h-6 text-[#2980B9]" />
-                                        </div>
-                                        <div className="flex-grow">
-                                            <h4 className="font-black text-sm text-[#0B1221]">
-                                                {regType === 'client' ? 'Termos de Uso e Regulamento' : 'Contrato de Afiliação'}
-                                            </h4>
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-3">
-                                                {regType === 'client' 
-                                                    ? 'Leia as regras gerais de uso do clube' 
-                                                    : 'Leia as regras de bonificação e termos de uso'}
-                                            </p>
-                                            <button
-                                                type="button"
-                                                onClick={handleDownloadContract}
-                                                className="flex items-center gap-2 text-[#0B1221] text-[10px] font-black hover:text-[#2980B9] transition-colors bg-white px-4 py-2 rounded-lg border border-slate-100 shadow-sm uppercase tracking-widest"
-                                            >
-                                                <Download className="w-3.5 h-3.5" /> BAIXAR PDF
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div
-                                        onClick={() => setFormData(p => ({ ...p, aceiteContrato: !p.aceiteContrato }))}
-                                        className="flex items-center gap-4 cursor-pointer group select-none"
+                                    <button
+                                        type="submit"
+                                        disabled={loading}
+                                        className={`w-full py-5 bg-[#0B1221] text-white rounded-2xl font-black text-sm shadow-2xl shadow-[#0B1221]/20 hover:bg-[#1a2436] transition-all flex items-center justify-center gap-3 uppercase tracking-widest ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
-                                        <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${formData.aceiteContrato ? 'bg-[#2980B9] border-[#2980B9]' : 'bg-white border-slate-200 group-hover:border-slate-300'}`}>
-                                            {formData.aceiteContrato && <CheckCircle2 size={16} className="text-[#0B1221]" />}
-                                        </div>
-                                        <span className="text-[10px] font-black text-[#0B1221] uppercase tracking-widest">
-                                            {regType === 'client' 
-                                                ? 'Li e aceito o Regulamento e Termos do Clube' 
-                                                : 'Li e aceito todas as regras do negócio'}
-                                        </span>
-                                    </div>
-                                    <div
-                                        onClick={() => setFormData(p => ({ ...p, aceiteLgpd: !p.aceiteLgpd }))}
-                                        className="flex items-center gap-4 cursor-pointer group select-none"
-                                    >
-                                        <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${formData.aceiteLgpd ? 'bg-[#2980B9] border-[#2980B9]' : 'bg-white border-slate-200 group-hover:border-slate-300'}`}>
-                                            {formData.aceiteLgpd && <CheckCircle2 size={16} className="text-[#0B1221]" />}
-                                        </div>
-                                        <span className="text-[10px] font-black text-[#0B1221] uppercase tracking-widest leading-relaxed">
-                                            Consinto com a Política de Privacidade e armazenamento de meus dados pessoais (LGPD).
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {error && (
-                                    <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-2xl text-xs font-black uppercase tracking-widest text-center">
-                                        {error}
-                                    </div>
-                                )}
-
-                                <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className={`w-full py-5 bg-[#0B1221] text-white rounded-2xl font-black text-sm shadow-2xl shadow-[#0B1221]/20 hover:bg-[#1a2436] transition-all flex items-center justify-center gap-3 uppercase tracking-widest ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                >
-                                    {loading ? 'PROCESSANDO...' : 'CRIAR MINHA CONTA AGORA'}
-                                    <Send className="w-5 h-5 text-[#2980B9]" />
-                                </button>
-                            </form>
+                                        {loading ? 'PROCESSANDO...' : 'CRIAR MINHA CONTA AGORA'}
+                                        <Send className="w-5 h-5 text-[#2980B9]" />
+                                    </button>
+                                </form>
+                            )}
                         </div>
                         <p className="mt-8 text-center text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">
                             Clube do Seu Bolso © 2026 - Todos os direitos reservados

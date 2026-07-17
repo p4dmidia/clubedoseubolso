@@ -21,7 +21,8 @@ import {
     Pencil,
     Shield,
     Clock,
-    Award
+    Award,
+    Wallet
 } from 'lucide-react';
 import { ORGANIZATION_ID } from '../lib/config';
 import AdminLayout from '../components/AdminLayout';
