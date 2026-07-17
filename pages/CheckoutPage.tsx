@@ -35,9 +35,14 @@ const CheckoutPage: React.FC = () => {
         window.scrollTo(0, 0);
     }, []);
 
+    const [isFormDirty, setIsFormDirty] = useState(() => {
+        return localStorage.getItem('checkout_is_dirty') === 'true';
+    });
+
     const [customerInfo, setCustomerInfo] = useState(() => {
+        const isDirty = localStorage.getItem('checkout_is_dirty') === 'true';
         const saved = localStorage.getItem('checkout_customer_info');
-        if (saved) {
+        if (isDirty && saved) {
             try {
                 return JSON.parse(saved);
             } catch (e) {
@@ -61,9 +66,18 @@ const CheckoutPage: React.FC = () => {
     });
 
     const [isEditingProfile, setIsEditingProfile] = useState(() => {
+        const isDirty = localStorage.getItem('checkout_is_dirty') === 'true';
         const saved = localStorage.getItem('checkout_is_editing_profile');
-        return saved ? saved === 'true' : true;
+        if (isDirty && saved) {
+            return saved === 'true';
+        }
+        return true;
     });
+
+    const updateCustomerInfo = (updatedFields: Partial<typeof customerInfo>) => {
+        setCustomerInfo(prev => ({ ...prev, ...updatedFields }));
+        setIsFormDirty(true);
+    };
 
     const [creditCardInfo, setCreditCardInfo] = useState({
         holderName: '',
@@ -100,17 +114,17 @@ const CheckoutPage: React.FC = () => {
     };
 
     React.useEffect(() => {
-        localStorage.setItem('checkout_customer_info', JSON.stringify(customerInfo));
-    }, [customerInfo]);
-
-    React.useEffect(() => {
-        localStorage.setItem('checkout_is_editing_profile', String(isEditingProfile));
-    }, [isEditingProfile]);
+        if (isFormDirty) {
+            localStorage.setItem('checkout_customer_info', JSON.stringify(customerInfo));
+            localStorage.setItem('checkout_is_editing_profile', String(isEditingProfile));
+            localStorage.setItem('checkout_is_dirty', 'true');
+        }
+    }, [customerInfo, isEditingProfile, isFormDirty]);
 
     React.useEffect(() => {
         if (user) {
             // Só busca do banco se não tivermos informações salvas no localStorage
-            const hasLocalSaved = !!localStorage.getItem('checkout_customer_info');
+            const hasLocalSaved = localStorage.getItem('checkout_is_dirty') === 'true';
             if (hasLocalSaved) return;
 
             const fetchProfile = async () => {
@@ -424,6 +438,7 @@ const CheckoutPage: React.FC = () => {
             clearCart();
             localStorage.removeItem('checkout_customer_info');
             localStorage.removeItem('checkout_is_editing_profile');
+            localStorage.removeItem('checkout_is_dirty');
             
             if (paymentMethod === 'credit') {
                 toast.success('Pagamento confirmado com sucesso!');
@@ -566,7 +581,10 @@ const CheckoutPage: React.FC = () => {
                                 </h3>
                                 {user && !isEditingProfile && (
                                     <button
-                                        onClick={() => setIsEditingProfile(true)}
+                                        onClick={() => {
+                                            setIsEditingProfile(true);
+                                            setIsFormDirty(true);
+                                        }}
                                         className="text-[10px] font-black text-[#2980B9] uppercase tracking-widest bg-amber-50 px-4 py-2 rounded-xl hover:bg-amber-100 transition-all"
                                     >
                                         Alterar Dados
@@ -605,7 +623,7 @@ const CheckoutPage: React.FC = () => {
                                             className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"
                                             placeholder="Seu nome"
                                             value={customerInfo.name}
-                                            onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
+                                            onChange={(e) => updateCustomerInfo({ name: e.target.value })}
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -615,7 +633,7 @@ const CheckoutPage: React.FC = () => {
                                             className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"
                                             placeholder="seu@email.com"
                                             value={customerInfo.email}
-                                            onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
+                                            onChange={(e) => updateCustomerInfo({ email: e.target.value })}
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -625,7 +643,7 @@ const CheckoutPage: React.FC = () => {
                                             className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"
                                             placeholder="(00) 00000-0000"
                                             value={customerInfo.phone}
-                                            onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
+                                            onChange={(e) => updateCustomerInfo({ phone: e.target.value })}
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -635,7 +653,7 @@ const CheckoutPage: React.FC = () => {
                                             className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 text-sm font-bold outline-none focus:border-[#2980B9]"
                                             placeholder="000.000.000-00 ou 00.000.000/0000-00"
                                             value={customerInfo.cpf}
-                                            onChange={(e) => setCustomerInfo({ ...customerInfo, cpf: e.target.value })}
+                                            onChange={(e) => updateCustomerInfo({ cpf: e.target.value })}
                                         />
                                     </div>
                                 </div>
