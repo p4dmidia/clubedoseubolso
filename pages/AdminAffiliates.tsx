@@ -288,7 +288,6 @@ const AdminAffiliates: React.FC = () => {
                     email: editingAffiliate.email,
                     whatsapp: editingAffiliate.phone,
                     is_active: editingAffiliate.raw_status,
-                    is_verified: editingAffiliate.raw_verified,
                     cpf: editingAffiliate.cpf?.trim() || null,
                     cnpj: editingAffiliate.cnpj?.trim() || null,
                     updated_at: new Date().toISOString()
@@ -918,16 +917,6 @@ const AdminAffiliates: React.FC = () => {
                                             BLOQUEADO
                                         </button>
                                     </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Verificação</label>
-                                    <button
-                                        type="button"
-                                        onClick={() => setEditingAffiliate({ ...editingAffiliate, raw_verified: !editingAffiliate.raw_verified })}
-                                        className={`w-full py-3 rounded-xl text-[10px] font-black transition-all ${editingAffiliate.raw_verified ? 'bg-blue-500 text-white' : 'bg-amber-50 text-amber-500'}`}
-                                    >
-                                        {editingAffiliate.raw_verified ? 'VERIFICADO' : 'PENDENTE'}
-                                    </button>
                                 </div>
                                 <div className="space-y-2 md:col-span-2">
                                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Nova Senha (deixe em branco para manter)</label>

@@ -45,7 +45,7 @@ CREATE TABLE public.affiliates (
     referral_code text UNIQUE,
     sponsor_id uuid REFERENCES public.affiliates(id),
     is_active boolean DEFAULT true,
-    is_verified boolean DEFAULT false,
+    is_verified boolean DEFAULT true,
     last_access_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),

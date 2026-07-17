@@ -105,7 +105,7 @@ CREATE TABLE public.affiliates (
     referral_code text UNIQUE,
     sponsor_id uuid REFERENCES public.affiliates(id) ON DELETE SET NULL,
     is_active boolean DEFAULT true,
-    is_verified boolean DEFAULT false,
+    is_verified boolean DEFAULT true,
     last_access_at timestamp with time zone,
     position_slot integer,
     cnpj text UNIQUE,
