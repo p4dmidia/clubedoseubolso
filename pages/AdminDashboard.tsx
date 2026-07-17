@@ -128,13 +128,64 @@ const AdminDashboard: React.FC = () => {
             }
             setRevenueData(revenuePoints);
 
-            // 6. Mock Categories Data (Suggested Chart)
-            setCategoryData([
-                { name: 'Colchões', value: totalSalesValue * 0.45, color: '#2980B9' },
-                { name: 'Box', value: totalSalesValue * 0.25, color: '#05080F' },
-                { name: 'Cabeceiras', value: totalSalesValue * 0.20, color: '#4F46E5' },
-                { name: 'Outros', value: totalSalesValue * 0.10, color: '#94A3B8' },
-            ]);
+            // 6. Fetch Real Categories Data
+            let categoriesMap = new Map<string, number>();
+            if (paidOrders.length > 0) {
+                const paidOrderIds = paidOrders.map(o => o.id);
+                const { data: orderItemsData } = await supabase
+                    .from('order_items')
+                    .select('product_name, quantity, unit_price, product_id')
+                    .in('order_id', paidOrderIds);
+
+                if (orderItemsData && orderItemsData.length > 0) {
+                    const productIds = orderItemsData.map(item => item.product_id).filter(id => id);
+                    const { data: productsData } = await supabase
+                        .from('products')
+                        .select('id, category_id')
+                        .in('id', productIds);
+
+                    const { data: categoriesData } = await supabase
+                        .from('product_categories')
+                        .select('id, name');
+
+                    const prodCatMap = new Map<string, number>();
+                    productsData?.forEach(p => prodCatMap.set(p.id, p.category_id));
+
+                    const catNameMap = new Map<number, string>();
+                    categoriesData?.forEach(c => catNameMap.set(Number(c.id), c.name));
+
+                    orderItemsData.forEach(item => {
+                        const itemTotal = Number(item.unit_price) * Number(item.quantity);
+                        let catName = 'Outros';
+                        if (item.product_id) {
+                            const catId = prodCatMap.get(item.product_id);
+                            if (catId) {
+                                catName = catNameMap.get(Number(catId)) || 'Outros';
+                            }
+                        }
+                        
+                        if (item.product_name.toUpperCase().includes('ESCRITÓRIO') || item.product_name.toUpperCase().includes('EVA')) {
+                            catName = 'Escritório Virtual';
+                        }
+
+                        const currentVal = categoriesMap.get(catName) || 0;
+                        categoriesMap.set(catName, currentVal + itemTotal);
+                    });
+                }
+            }
+
+            if (categoriesMap.size === 0) {
+                categoriesMap.set('Planos', totalSalesValue > 0 ? totalSalesValue : 0);
+            }
+
+            const colors = ['#2980B9', '#27AE60', '#F1C40F', '#8E44AD', '#E67E22', '#95A5A6'];
+            const processedCatData = Array.from(categoriesMap.entries()).map(([name, value], idx) => ({
+                name,
+                value,
+                color: colors[idx % colors.length]
+            })).sort((a, b) => b.value - a.value);
+
+            setCategoryData(processedCatData);
 
             setStats([
                 { label: 'Vendas Totais', value: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalSalesValue), change: '+12.4%', isPositive: true, icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-50' },
