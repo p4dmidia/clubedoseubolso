@@ -31,8 +31,6 @@ serve(async (req) => {
             throw new Error("orderId não fornecido na requisição.");
         }
 
-        console.log(`[Telemedicine Sync] Iniciando sincronização para pedido: ${orderId}`);
-
         // 1. Buscar detalhes do pedido
         const { data: order, error: orderError } = await supabase
             .from("orders")
@@ -44,6 +42,19 @@ serve(async (req) => {
         if (!order) {
             throw new Error(`Pedido ${orderId} não encontrado no banco de dados.`);
         }
+
+        // Determinar se o plano deve estar ativo ou inativo
+        let isActive = true;
+        if (body.isActive !== undefined) {
+            isActive = !!body.isActive;
+        } else {
+            const statusLower = (order.status || "").toLowerCase();
+            if (statusLower === "cancelado" || statusLower === "cancelled") {
+                isActive = false;
+            }
+        }
+
+        console.log(`[Telemedicine Sync] Iniciando sincronização para pedido: ${orderId} (Ativo: ${isActive})`);
 
         // 2. Buscar itens do pedido
         const { data: items, error: itemsError } = await supabase
@@ -217,8 +228,8 @@ serve(async (req) => {
                 EmpresaId: companyId,
                 PlanId: matchedPlanId,
                 PlanoId: matchedPlanId,
-                IsActive: true,
-                Ativo: true,
+                IsActive: isActive,
+                Ativo: isActive,
                 ...(addressData.birth_date ? { 
                     BirthDate: formatBirthDate(addressData.birth_date),
                     DataNascimento: formatBirthDate(addressData.birth_date)
@@ -257,7 +268,7 @@ serve(async (req) => {
 
         // Se uma senha foi fornecida, criamos a conta de login do usuário na Mais Unidos
         let registerResponseData = null;
-        if (plainPassword) {
+        if (plainPassword && isActive) {
             const registerUrl = `${baseUrl}/customers/register`;
             
             // Auxiliar para formatar CPF com pontos e traço no cadastro

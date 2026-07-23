@@ -92,8 +92,8 @@ const AdminOrders: React.FC = () => {
 
             if (error) throw error;
 
-            // Disparar sincronização com telemedicina se o status for Pago
-            if (newStatus === 'Pago' || newStatus === 'completed') {
+            // Disparar sincronização com telemedicina se o status for Pago ou Cancelado
+            if (newStatus === 'Pago' || newStatus === 'completed' || newStatus === 'Cancelado' || newStatus === 'cancelled') {
                 supabase.functions.invoke('telemedicine-sync', {
                     body: { orderId }
                 }).then(({ data, error: syncError }) => {
@@ -107,7 +107,11 @@ const AdminOrders: React.FC = () => {
                 });
             }
 
-            toast.success(`Assinatura atualizada para ${newStatus === 'Pago' || newStatus === 'completed' ? 'Ativa' : newStatus}!`);
+            if (newStatus === 'Cancelado' || newStatus === 'cancelled') {
+                toast.success('Assinatura cancelada e plano revogado na telemedicina!');
+            } else {
+                toast.success(`Assinatura atualizada para ${newStatus === 'Pago' || newStatus === 'completed' ? 'Ativa' : newStatus}!`);
+            }
             fetchOrders();
         } catch (error) {
             console.error('Error updating order status:', error);
@@ -295,7 +299,11 @@ const AdminOrders: React.FC = () => {
                                                         )}
                                                         {(order.status === 'Pago' || order.status === 'completed') && (
                                                             <button 
-                                                                onClick={() => updateOrderStatus(order.id, 'Cancelado')}
+                                                                onClick={() => {
+                                                                    if (window.confirm(`Deseja realmente revogar o plano de ${order.customer_name || 'este cliente'}? Isso inativará o acesso dele na plataforma de telemedicina.`)) {
+                                                                        updateOrderStatus(order.id, 'Cancelado');
+                                                                    }
+                                                                }}
                                                                 className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-[9px] font-black uppercase hover:bg-red-100 transition-all"
                                                                 title="Revogar Acesso / Cancelar Plano"
                                                             >
