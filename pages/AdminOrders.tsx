@@ -15,7 +15,8 @@ import {
     CreditCard,
     ArrowUpRight,
     Clock,
-    DollarSign
+    DollarSign,
+    X
 } from 'lucide-react';
 import { ORGANIZATION_ID } from '../lib/config';
 import AdminLayout from '../components/AdminLayout';
@@ -43,6 +44,11 @@ const AdminOrders: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const ordersPerPage = 10;
 
+    // Estados para visualização de detalhes do pedido
+    const [viewingOrder, setViewingOrder] = useState<any | null>(null);
+    const [orderItems, setOrderItems] = useState<any[]>([]);
+    const [isLoadingItems, setIsLoadingItems] = useState(false);
+
     useEffect(() => {
         fetchOrders();
     }, []);
@@ -68,6 +74,25 @@ const AdminOrders: React.FC = () => {
             toast.error('Erro ao carregar assinaturas.');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleViewOrderDetails = async (order: any) => {
+        setViewingOrder(order);
+        setIsLoadingItems(true);
+        try {
+            const { data, error } = await supabase
+                .from('order_items')
+                .select('*')
+                .eq('order_id', order.id);
+
+            if (error) throw error;
+            setOrderItems(data || []);
+        } catch (error) {
+            console.error('Error fetching order items:', error);
+            toast.error('Erro ao carregar itens do pedido.');
+        } finally {
+            setIsLoadingItems(false);
         }
     };
 
@@ -315,7 +340,11 @@ const AdminOrders: React.FC = () => {
                                                 ) : (
                                                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">Visualização</span>
                                                 )}
-                                                <button className="flex items-center justify-center p-2 bg-slate-50 text-slate-400 rounded-lg hover:text-[#05080F] transition-all">
+                                                <button 
+                                                    onClick={() => handleViewOrderDetails(order)}
+                                                    className="flex items-center justify-center p-2 bg-slate-50 text-slate-400 rounded-lg hover:text-[#05080F] hover:bg-slate-200 transition-all"
+                                                    title="Ver Detalhes"
+                                                >
                                                     <Eye className="w-4 h-4" />
                                                 </button>
                                             </div>
@@ -372,6 +401,138 @@ const AdminOrders: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            {viewingOrder && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-[#05080F]/80 backdrop-blur-md" onClick={() => { setViewingOrder(null); setOrderItems([]); }}></div>
+                    <div className="bg-white w-full max-w-xl rounded-[3rem] shadow-2xl relative z-10 flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-300">
+                        
+                        {/* Botão de Fechar X */}
+                        <button 
+                            onClick={() => { setViewingOrder(null); setOrderItems([]); }} 
+                            className="absolute top-6 right-6 p-2 text-slate-400 hover:text-red-500 hover:bg-slate-100 rounded-full transition-colors z-20"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+
+                        {/* Cabeçalho */}
+                        <div className="p-8 pb-4 border-b border-slate-50 flex items-center gap-4 shrink-0">
+                            <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center border border-slate-200">
+                                <ShoppingBag className="w-6 h-6 text-[#2980B9]" />
+                            </div>
+                            <div>
+                                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-0.5 block">Assinatura / Pedido</span>
+                                <h3 className="text-xl font-black text-[#05080F]">#{viewingOrder.id.replace(/^#/, '').slice(0, 8)}</h3>
+                            </div>
+                        </div>
+
+                        {/* Conteúdo */}
+                        <div className="p-8 space-y-6 overflow-y-auto flex-grow bg-slate-50/30">
+                            {/* Dados do Cliente */}
+                            <div className="space-y-3">
+                                <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Informações do Cliente</h4>
+                                <div className="bg-white p-6 rounded-3xl border border-slate-100 space-y-3 shadow-sm">
+                                    <div className="grid grid-cols-2 gap-4 text-xs font-bold">
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome</p>
+                                            <p className="text-[#05080F]">{viewingOrder.customer_name || 'Não informado'}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">CPF</p>
+                                            <p className="text-[#05080F]">{viewingOrder.customer_cpf || 'Não informado'}</p>
+                                        </div>
+                                        <div className="space-y-1 col-span-2">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">E-mail</p>
+                                            <p className="text-[#05080F] break-all">{viewingOrder.customer_email || 'Não informado'}</p>
+                                        </div>
+                                        <div className="space-y-1 col-span-2">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">WhatsApp</p>
+                                            <p className="text-[#05080F]">{viewingOrder.customer_phone || 'Não informado'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Informações de Pagamento */}
+                            <div className="space-y-3">
+                                <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Detalhes do Pagamento</h4>
+                                <div className="bg-white p-6 rounded-3xl border border-slate-100 space-y-3 shadow-sm">
+                                    <div className="grid grid-cols-2 gap-4 text-xs font-bold">
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Método</p>
+                                            <div className="flex items-center gap-1.5 text-[#05080F] mt-1">
+                                                <CreditCard className="w-3.5 h-3.5 text-slate-400" />
+                                                {viewingOrder.payment_method || 'Pix'}
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</p>
+                                            <div className="flex items-center gap-1.5 text-[#05080F] mt-1">
+                                                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                                                {new Date(viewingOrder.created_at).toLocaleDateString('pt-BR')}
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status da Assinatura</p>
+                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[9px] font-black uppercase border tracking-wider mt-1.5 ${
+                                                viewingOrder.status === 'Pago' || viewingOrder.status === 'completed' || viewingOrder.status === 'Entregue'
+                                                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                                    : viewingOrder.status === 'Cancelado' || viewingOrder.status === 'cancelled'
+                                                    ? 'bg-red-50 text-red-600 border-red-100'
+                                                    : 'bg-amber-50 text-amber-600 border-amber-100'
+                                            }`}>
+                                                {viewingOrder.status === 'pending' || viewingOrder.status === 'Pendente' ? 'Pendente' :
+                                                 viewingOrder.status === 'completed' || viewingOrder.status === 'Pago' || viewingOrder.status === 'Entregue' ? 'Ativa' : 'Cancelada'}
+                                            </span>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor Total</p>
+                                            <p className="text-base font-black text-[#2980B9] mt-1">R$ {viewingOrder.total_amount?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Itens do Pedido */}
+                            <div className="space-y-3">
+                                <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Itens Adquiridos</h4>
+                                <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+                                    {isLoadingItems ? (
+                                        <div className="flex items-center justify-center py-6 gap-2 text-slate-400 text-xs font-bold">
+                                            <Loader2 className="w-4 h-4 animate-spin text-[#2980B9]" /> Carregando itens...
+                                        </div>
+                                    ) : orderItems.length > 0 ? (
+                                        <div className="divide-y divide-slate-50">
+                                            {orderItems.map((item, idx) => (
+                                                <div key={item.id || idx} className="py-3 flex justify-between items-center text-xs font-bold first:pt-0 last:pb-0">
+                                                    <div>
+                                                        <p className="text-[#05080F]">{item.product_name}</p>
+                                                        <p className="text-[10px] text-slate-400 mt-0.5">Qtd: {item.quantity}</p>
+                                                    </div>
+                                                    <p className="text-[#05080F]">R$ {(item.unit_price * item.quantity).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs font-bold text-slate-400 text-center py-4">Nenhum item encontrado.</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Rodapé */}
+                        <div className="p-8 border-t border-slate-50 shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => { setViewingOrder(null); setOrderItems([]); }}
+                                className="w-full py-4 bg-[#05080F] text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-[#2980B9] hover:text-[#05080F] transition-all shadow-xl shadow-[#05080F]/10"
+                            >
+                                FECHAR DETALHES
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </AdminLayout>
     );
 };

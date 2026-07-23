@@ -16,7 +16,6 @@ import {
     X,
     Loader2,
     Lock,
-    Network,
     Eye,
     Pencil,
     Shield,
@@ -30,7 +29,6 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
-import { AffiliateNetwork } from '../components/AffiliateNetwork';
 
 const AdminAffiliates: React.FC = () => {
     // States
@@ -43,8 +41,6 @@ const AdminAffiliates: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [affiliates, setAffiliates] = useState<any[]>([]);
     const [totalStats, setTotalStats] = useState({ total: 0, pending: 0, newThisMonth: 0 });
-    const [viewingNetworkId, setViewingNetworkId] = useState<string | null>(null);
-    const [viewingNetworkName, setViewingNetworkName] = useState<string>('');
     const [viewingAffiliate, setViewingAffiliate] = useState<any | null>(null);
     const [editingAffiliate, setEditingAffiliate] = useState<any | null>(null);
     const [deletingAffiliate, setDeletingAffiliate] = useState<any | null>(null);
@@ -633,16 +629,6 @@ const AdminAffiliates: React.FC = () => {
                                             <td className="py-8 px-10 text-right shrink-0">
                                                 <div className="flex items-center justify-end gap-2">
                                                     <button
-                                                        onClick={() => {
-                                                            setViewingNetworkId(aff.id);
-                                                            setViewingNetworkName(aff.name);
-                                                        }}
-                                                        className="p-2.5 text-slate-300 hover:text-[#05080F] hover:bg-white hover:shadow-sm rounded-xl transition-all"
-                                                        title="Ver Rede"
-                                                    >
-                                                        <Network className="w-5 h-5" />
-                                                    </button>
-                                                    <button
                                                         onClick={() => setViewingAffiliate(aff)}
                                                         className="p-2.5 text-slate-300 hover:text-[#05080F] hover:bg-white hover:shadow-sm rounded-xl transition-all"
                                                         title="Detalhes"
@@ -720,45 +706,30 @@ const AdminAffiliates: React.FC = () => {
                 </div>
             </div>
 
-            {viewingNetworkId && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-6 lg:p-12 mx-auto">
-                    <div className="absolute inset-0 bg-[#05080F]/80 backdrop-blur-md" onClick={() => setViewingNetworkId(null)}></div>
-                    <div className="bg-white w-full h-full md:h-auto md:max-w-6xl md:rounded-[3rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col">
-                        <div className="p-8 md:p-10 border-b border-slate-100 flex justify-between items-center">
-                            <div>
-                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-1">Rede de Indicações</p>
-                                <h2 className="text-2xl md:text-3xl font-black text-[#05080F]">{viewingNetworkName}</h2>
-                            </div>
-                            <button
-                                onClick={() => setViewingNetworkId(null)}
-                                className="p-4 bg-slate-50 text-slate-400 rounded-2xl hover:bg-red-50 hover:text-red-500 transition-all"
-                            >
-                                <X className="w-6 h-6" />
-                            </button>
-                        </div>
-                        <div className="flex-grow overflow-y-auto p-4 md:p-10 bg-slate-50/30">
-                            <AffiliateNetwork rootAffiliateId={viewingNetworkId} />
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {viewingAffiliate && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-[#05080F]/80 backdrop-blur-md" onClick={() => setViewingAffiliate(null)}></div>
-                    <div className="bg-white w-full max-w-lg rounded-[3rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300">
-                        <div className="p-10 text-center relative">
-                            <div className="w-24 h-24 bg-slate-100 rounded-[2.5rem] mx-auto flex items-center justify-center mb-6 border-4 border-white shadow-xl">
-                                <Users className="w-10 h-10 text-[#2980B9]" />
+                    <div className="bg-white w-full max-w-lg rounded-[3rem] shadow-2xl relative z-10 flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-300">
+                        <button 
+                            onClick={() => setViewingAffiliate(null)} 
+                            className="absolute top-6 right-6 p-2 text-slate-400 hover:text-red-500 hover:bg-slate-100 rounded-full transition-colors z-20"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                        
+                        <div className="p-8 pb-4 text-center relative shrink-0">
+                            <div className="w-20 h-20 bg-slate-100 rounded-[2rem] mx-auto flex items-center justify-center mb-4 border-4 border-white shadow-xl">
+                                <Users className="w-8 h-8 text-[#2980B9]" />
                             </div>
-                            <h3 className="text-2xl font-black text-[#05080F] mb-1">{viewingAffiliate.name}</h3>
+                            <h3 className="text-xl font-black text-[#05080F] mb-1">{viewingAffiliate.name}</h3>
                             <p className="text-sm font-bold text-slate-400">{viewingAffiliate.email}</p>
-                            <span className={`mt-4 inline-flex px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${getStatusColor(viewingAffiliate.status)}`}>
+                            <span className={`mt-3 inline-flex px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${getStatusColor(viewingAffiliate.status)}`}>
                                 {viewingAffiliate.status}
                             </span>
                         </div>
-                        <div className="bg-slate-50/50 p-10 space-y-6">
-                            <div className="grid grid-cols-2 gap-8">
+                        
+                        <div className="bg-slate-50/50 p-8 space-y-6 overflow-y-auto flex-grow">
+                            <div className="grid grid-cols-2 gap-6">
                                 <div className="space-y-1">
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">WhatsApp</p>
                                     <div className="flex items-center gap-2 text-sm font-bold text-[#05080F]">
@@ -813,7 +784,8 @@ const AdminAffiliates: React.FC = () => {
                                 </div>
                             </div>
                         </div>
-                        <div className="p-10 flex flex-col gap-3">
+                        
+                        <div className="p-8 pt-4 flex flex-col gap-3 shrink-0">
                             <button
                                 onClick={() => handleManualActivation(viewingAffiliate.user_id)}
                                 className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-emerald-500/10"

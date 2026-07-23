@@ -74,9 +74,10 @@ const ShopPage: React.FC = () => {
         try {
             const { data, error } = await supabase
                 .from('product_categories')
-                .select('id, name')
+                .select('id, name, parent_id')
                 .eq('organization_id', ORGANIZATION_ID)
                 .neq('name', 'Consórcio')
+                .or('id.eq.12,parent_id.eq.12')
                 .order('name');
 
             if (error) throw error;
@@ -89,6 +90,7 @@ const ShopPage: React.FC = () => {
     };
 
     const fetchProducts = async () => {
+        if (categories.length === 0) return;
         setIsLoading(true);
         try {
             const pageNum = parseInt(searchParams.get('page') || '1');

@@ -91,6 +91,7 @@ const AdminProducts: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [isLoading, setIsLoading] = useState(true);
     const [products, setProducts] = useState<Product[]>([]);
+    const [categories, setCategories] = useState<any[]>([]);
     const [isSaving, setIsSaving] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
@@ -105,6 +106,8 @@ const AdminProducts: React.FC = () => {
         commission_mensal: '',
         description: '',
         is_active: true,
+        category_id: '' as string | number,
+        subcategory_id: '' as string | number
     });
 
     const [selectedImages, setSelectedImages] = useState<File[]>([]);
@@ -114,8 +117,24 @@ const AdminProducts: React.FC = () => {
 
     const itemsPerPage = 8;
 
+    const fetchCategories = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('product_categories')
+                .select('id, name, parent_id')
+                .eq('organization_id', ORGANIZATION_ID)
+                .order('name');
+
+            if (error) throw error;
+            setCategories(data || []);
+        } catch (error) {
+            console.error('Error fetching categories:', error);
+        }
+    };
+
     useEffect(() => {
         fetchProducts();
+        fetchCategories();
     }, []);
 
     const seedDefaultPlans = async () => {
@@ -292,6 +311,7 @@ const AdminProducts: React.FC = () => {
 
             const plansOnly = (data || []).filter((prod: any) => 
                 prod.product_categories?.name === 'Planos' || 
+                prod.product_categories?.parent_id === 12 || // Subcategorias de Planos
                 prod.variations?.plan_type !== undefined
             );
 
@@ -309,6 +329,23 @@ const AdminProducts: React.FC = () => {
 
     const handleOpenEdit = (prod: Product) => {
         setEditingProduct(prod);
+
+        let catId = '';
+        let subcatId = '';
+        if (prod.category_id) {
+            const foundCat = categories.find(c => c.id === prod.category_id);
+            if (foundCat) {
+                if (foundCat.parent_id) {
+                    subcatId = foundCat.id.toString();
+                    catId = foundCat.parent_id.toString();
+                } else {
+                    catId = foundCat.id.toString();
+                }
+            } else {
+                catId = prod.category_id.toString();
+            }
+        }
+
         setFormData({
             name: prod.name,
             plan_type: prod.variations?.plan_type || 'Individual',
@@ -319,6 +356,8 @@ const AdminProducts: React.FC = () => {
             commission_mensal: prod.variations?.comissao_mensal?.toString() || '',
             description: prod.description || '',
             is_active: prod.is_active !== false,
+            category_id: catId,
+            subcategory_id: subcatId
         });
         const imgs = (prod.image_url || '').split(',').map(s => s.trim()).filter(Boolean);
         setExistingImages(imgs);
@@ -357,6 +396,8 @@ const AdminProducts: React.FC = () => {
             commission_mensal: '',
             description: '',
             is_active: true,
+            category_id: '',
+            subcategory_id: ''
         });
         setEditingProduct(null);
         setSelectedImages([]);
@@ -411,6 +452,27 @@ const AdminProducts: React.FC = () => {
                 if (newCat) planosCategoryId = newCat.id;
             }
 
+            let finalCategoryId: number | null = null;
+            if (formData.subcategory_id) {
+                finalCategoryId = parseInt(formData.subcategory_id as string);
+            } else if (formData.category_id) {
+                finalCategoryId = parseInt(formData.category_id as string);
+            } else {
+                finalCategoryId = planosCategoryId;
+            }
+
+            // Inferir automaticamente o tipo do plano com base na subcategoria ou nome do produto
+            let inferredPlanType: 'Individual' | 'Familiar' = 'Individual';
+            if (formData.subcategory_id) {
+                const subcat = categories.find(c => c.id === parseInt(formData.subcategory_id as string));
+                if (subcat && subcat.name.toLowerCase().includes('familiar')) {
+                    inferredPlanType = 'Familiar';
+                }
+            }
+            if (formData.name.toLowerCase().includes('familiar')) {
+                inferredPlanType = 'Familiar';
+            }
+
             const rawAdesao = parsePrice(formData.price_adesao);
             const rawMensalidade = parsePrice(formData.price_mensalidade);
             const rawPlatform = parsePrice(formData.cost_platform);
@@ -427,11 +489,11 @@ const AdminProducts: React.FC = () => {
 
             const productData = {
                 name: formData.name,
-                category_id: planosCategoryId,
+                category_id: finalCategoryId,
                 price: rawMensalidade,
                 stock_quantity: 999, // ilimitado para planos
                 description: formData.description,
-                image_url: imageUrl || (formData.plan_type === 'Familiar' ? 'https://placehold.co/600x600?text=Familiar' : 'https://placehold.co/600x600?text=Individual'),
+                image_url: imageUrl || (inferredPlanType === 'Familiar' ? 'https://placehold.co/600x600?text=Familiar' : 'https://placehold.co/600x600?text=Individual'),
                 is_active: formData.is_active,
                 weight: 0,
                 length: 0,
@@ -439,7 +501,7 @@ const AdminProducts: React.FC = () => {
                 height: 0,
                 origin_zip: '82820-160',
                 variations: {
-                    plan_type: formData.plan_type,
+                    plan_type: inferredPlanType,
                     adesao: rawAdesao,
                     mensalidade: rawMensalidade,
                     custo_plataforma: rawPlatform,
@@ -589,7 +651,7 @@ const AdminProducts: React.FC = () => {
                                 <thead className="bg-slate-50/50">
                                     <tr>
                                         <th className="text-left py-6 px-8 text-xs font-black text-slate-400 uppercase tracking-widest leading-none">Plano</th>
-                                        <th className="text-left py-6 px-4 text-xs font-black text-slate-400 uppercase tracking-widest leading-none">Tipo</th>
+                                        <th className="text-left py-6 px-4 text-xs font-black text-slate-400 uppercase tracking-widest leading-none">Categoria</th>
                                         <th className="text-left py-6 px-4 text-xs font-black text-slate-400 uppercase tracking-widest leading-none">Adesão</th>
                                         <th className="text-left py-6 px-4 text-xs font-black text-slate-400 uppercase tracking-widest leading-none">Mensalidade</th>
                                         <th className="text-left py-6 px-4 text-xs font-black text-slate-400 uppercase tracking-widest leading-none">Custo Plataforma</th>
@@ -637,8 +699,8 @@ const AdminProducts: React.FC = () => {
                                                     </div>
                                                 </td>
                                                 <td className="py-6 px-4">
-                                                    <span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase ${prod.variations?.plan_type === 'Familiar' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
-                                                        {prod.variations?.plan_type || 'Individual'}
+                                                    <span className="inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase bg-slate-100 text-slate-600">
+                                                        {prod.product_categories?.name || 'Sem Categoria'}
                                                     </span>
                                                 </td>
                                                 <td className="py-6 px-4 font-black text-[#05080F]">
@@ -729,8 +791,8 @@ const AdminProducts: React.FC = () => {
                                                         </span>
                                                     )}
                                                 </div>
-                                                <span className={`inline-flex px-2 py-0.5 mt-1 rounded-full text-[9px] font-black uppercase ${prod.variations?.plan_type === 'Familiar' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
-                                                    {prod.variations?.plan_type || 'Individual'}
+                                                <span className="inline-flex px-2 py-0.5 mt-1 rounded-full text-[9px] font-black uppercase bg-slate-100 text-slate-600">
+                                                    {prod.product_categories?.name || 'Sem Categoria'}
                                                 </span>
                                             </div>
                                         </div>
@@ -837,16 +899,34 @@ const AdminProducts: React.FC = () => {
                                             />
                                         </div>
 
+
+
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Tipo do Plano</label>
+                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Categoria</label>
                                             <select
-                                                required
-                                                value={formData.plan_type}
-                                                onChange={(e) => setFormData({ ...formData, plan_type: e.target.value })}
+                                                value={formData.category_id}
+                                                onChange={(e) => setFormData({ ...formData, category_id: e.target.value, subcategory_id: '' })}
                                                 className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-4 font-bold text-[#05080F] outline-none focus:border-[#2980B9] text-sm"
                                             >
-                                                <option value="Individual">Individual</option>
-                                                <option value="Familiar">Familiar</option>
+                                                <option value="">Sem Categoria (Default: Planos)</option>
+                                                {categories.filter(c => c.parent_id === null).map(c => (
+                                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Subcategoria</label>
+                                            <select
+                                                value={formData.subcategory_id}
+                                                disabled={!formData.category_id}
+                                                onChange={(e) => setFormData({ ...formData, subcategory_id: e.target.value })}
+                                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 px-4 font-bold text-[#05080F] outline-none focus:border-[#2980B9] text-sm disabled:opacity-50"
+                                            >
+                                                <option value="">Sem Subcategoria</option>
+                                                {formData.category_id && categories.filter(c => c.parent_id === parseInt(formData.category_id as string)).map(c => (
+                                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                                ))}
                                             </select>
                                         </div>
 
