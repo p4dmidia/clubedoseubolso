@@ -132,6 +132,21 @@ const AdminOrders: React.FC = () => {
                 });
             }
 
+            // Disparar cancelamento de cobrança no Asaas se o status for Cancelado
+            if (newStatus === 'Cancelado' || newStatus === 'cancelled') {
+                supabase.functions.invoke('cancel-payment', {
+                    body: { orderId }
+                }).then(({ data, error: cancelError }) => {
+                    if (cancelError) {
+                        console.error('Erro ao cancelar cobrança no Asaas:', cancelError);
+                    } else {
+                        console.log('Cancelamento no Asaas concluído:', data);
+                    }
+                }).catch(err => {
+                    console.error('Erro ao invocar cancelamento no Asaas:', err);
+                });
+            }
+
             if (newStatus === 'Cancelado' || newStatus === 'cancelled') {
                 toast.success('Assinatura cancelada e plano revogado na telemedicina!');
             } else {
