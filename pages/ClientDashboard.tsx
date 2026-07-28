@@ -36,6 +36,39 @@ const ClientDashboard: React.FC = () => {
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [loadingSubscriptions, setLoadingSubscriptions] = useState(true);
+  const [overdueInvoice, setOverdueInvoice] = useState<any>(null);
+  const [loadingInvoice, setLoadingInvoice] = useState(false);
+
+  useEffect(() => {
+    const checkOverdueInvoice = async () => {
+      if (profile?.telemedicine_status !== 'blocked') return;
+      try {
+        setLoadingInvoice(true);
+        const { data: sessionData } = await supabase.auth.getSession();
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/telemedicine-sync`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionData?.session?.access_token || ''}`
+          },
+          body: JSON.stringify({ action: 'get_overdue_invoice' })
+        });
+        
+        if (response.ok) {
+          const resData = await response.json();
+          if (resData.success && resData.hasOverdue) {
+            setOverdueInvoice(resData);
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao buscar fatura vencida:', err);
+      } finally {
+        setLoadingInvoice(false);
+      }
+    };
+
+    checkOverdueInvoice();
+  }, [profile]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -404,6 +437,7 @@ const ClientDashboard: React.FC = () => {
                     const statusLower = (sub.status || '').toLowerCase();
                     const isActive = statusLower === 'pago' || statusLower === 'paid' || statusLower === 'completed' || statusLower === 'aprovado';
                     const isPending = statusLower === 'pendente' || statusLower === 'pending' || statusLower === 'aguardando';
+                    const isBlocked = profile?.telemedicine_status === 'blocked';
 
                     return (
                       <div key={sub.id} className="bg-slate-50 border border-slate-100 rounded-3xl p-6 relative overflow-hidden group">
@@ -419,11 +453,12 @@ const ClientDashboard: React.FC = () => {
                             </h4>
                           </div>
                           <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                            isBlocked ? 'bg-rose-50 text-rose-600 border border-rose-100' :
                             isActive ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
                             isPending ? 'bg-amber-50 text-amber-600 border border-amber-100' :
                             'bg-red-50 text-red-600 border border-red-100'
                           }`}>
-                            {isActive ? 'Ativo' : isPending ? 'Pendente' : 'Cancelado'}
+                            {isBlocked ? 'Bloqueado' : isActive ? 'Ativo' : isPending ? 'Pendente' : 'Cancelado'}
                           </span>
                         </div>
 
@@ -444,7 +479,7 @@ const ClientDashboard: React.FC = () => {
                           </div>
                         </div>
 
-                        {isActive && (
+                        {isActive && !isBlocked && (
                           <div className="mt-6 flex flex-col gap-2">
                             <a
                               href="https://app.maisunidos.com.br/Conta/Entrar"
@@ -455,6 +490,61 @@ const ClientDashboard: React.FC = () => {
                               Acessar Telemedicina
                               <ExternalLink className="w-4 h-4 text-white" />
                             </a>
+                          </div>
+                        )}
+
+                        {isBlocked && (
+                          <div className="mt-6 pt-4 border-t border-rose-100 bg-rose-50/50 rounded-2xl p-4 border border-rose-100">
+                            <div className="flex gap-2 text-rose-700 mb-3">
+                              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                              <div>
+                                <h5 className="font-black text-xs uppercase tracking-wider">Acesso Suspenso</h5>
+                                <p className="text-[10px] font-medium mt-1 leading-relaxed text-rose-600">
+                                  Seu acesso ao sistema de telemedicina do Mais Unidos está temporariamente bloqueado por atraso no pagamento.
+                                </p>
+                              </div>
+                            </div>
+                            
+                            {loadingInvoice ? (
+                              <div className="py-2 text-center text-[10px] text-rose-500 font-bold uppercase animate-pulse">
+                                Carregando dados da fatura...
+                              </div>
+                            ) : overdueInvoice ? (
+                              <div className="space-y-3">
+                                <div className="text-[10px] text-slate-500 font-semibold flex justify-between bg-white/70 p-2 rounded-lg">
+                                  <span>Fatura Vencida: {formatDate(overdueInvoice.dueDate)}</span>
+                                  <span className="font-bold text-[#0B1221]">{formatCurrency(overdueInvoice.value)}</span>
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                  {overdueInvoice.invoiceUrl && (
+                                    <a
+                                      href={overdueInvoice.invoiceUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="w-full bg-rose-600 hover:bg-rose-700 text-white py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all text-center shadow-sm"
+                                    >
+                                      Pagar no Asaas
+                                      <ExternalLink className="w-3.5 h-3.5" />
+                                    </a>
+                                  )}
+                                  {overdueInvoice.pixCopyPaste && (
+                                    <button
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(overdueInvoice.pixCopyPaste);
+                                        toast.success('Chave PIX Copiada!');
+                                      }}
+                                      className="w-full bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all text-center"
+                                    >
+                                      Copiar PIX Copia e Cola
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-[10px] text-rose-500 font-medium italic text-center">
+                                Fatura não localizada. Por favor, regularize junto ao financeiro ou realize uma nova compra.
+                              </p>
+                            )}
                           </div>
                         )}
                       </div>

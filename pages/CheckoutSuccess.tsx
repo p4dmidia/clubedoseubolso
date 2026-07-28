@@ -371,7 +371,7 @@ const CheckoutSuccess: React.FC = () => {
               setCurrentUser(signInData.user);
             }
           } else if (signUpError.message?.toLowerCase().includes('database error saving new user')) {
-            throw new Error('Este CPF já está cadastrado em outra conta de usuário. Por favor, utilize um CPF diferente ou faça login com a conta existente.');
+            throw new Error('E-mail ou CPF já cadastrado!');
           } else {
             throw signUpError;
           }

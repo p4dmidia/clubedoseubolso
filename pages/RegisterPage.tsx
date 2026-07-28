@@ -381,7 +381,15 @@ const RegisterPage: React.FC = () => {
                 }
             });
 
-            if (signUpError) throw signUpError;
+            if (signUpError) {
+                if (signUpError.message?.toLowerCase().includes('already registered') || signUpError.message?.toLowerCase().includes('already exists') || (signUpError as any).code === 'user_already_exists') {
+                    throw new Error('E-mail ou CPF já cadastrado!');
+                } else if (signUpError.message?.toLowerCase().includes('database error saving new user')) {
+                    throw new Error('E-mail ou CPF já cadastrado!');
+                } else {
+                    throw signUpError;
+                }
+            }
 
             if (data?.user) {
                 const newUser = data.user;

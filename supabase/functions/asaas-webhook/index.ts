@@ -146,6 +146,47 @@ serve(async (req) => {
             } else {
                 console.warn(`[Asaas Webhook] Pedido ${safeOrderId} não encontrado no banco de dados.`);
             }
+        } else if (event === "PAYMENT_OVERDUE") {
+            if (!orderId) {
+                console.warn(`[Asaas Webhook] Pagamento ${paymentId} atrasado, mas sem externalReference (orderId).`);
+                return new Response("No orderId associated", { status: 200 });
+            }
+
+            const safeOrderId = String(orderId);
+            const dueDate = payment.dueDate;
+
+            console.log(`[Asaas Webhook] Registrando atraso para Pedido: ${safeOrderId}, Vencimento: ${dueDate}`);
+
+            // Atualizar o pedido no banco
+            const { error: orderError } = await supabase
+                .from("orders")
+                .update({
+                    payment_status: 'overdue',
+                    payment_due_date: dueDate ? `${dueDate}T23:59:59Z` : new Date().toISOString(),
+                    last_overdue_at: new Date().toISOString()
+                })
+                .or(`id.eq.${safeOrderId},id.eq.#${safeOrderId.replace(/^#/, '')}`);
+
+            if (orderError) {
+                console.error(`[Asaas Webhook] Erro ao atualizar atraso no pedido ${safeOrderId}:`, orderError);
+                throw orderError;
+            }
+
+        } else if (event === "PAYMENT_DELETED") {
+            if (orderId) {
+                const safeOrderId = String(orderId);
+                console.log(`[Asaas Webhook] Registrando cancelamento de cobrança para Pedido: ${safeOrderId}`);
+
+                // Atualizar o pedido para 'Cancelado'
+                await supabase
+                    .from("orders")
+                    .update({
+                        status: "Cancelado",
+                        payment_status: 'deleted',
+                        updated_at: new Date().toISOString()
+                    })
+                    .or(`id.eq.${safeOrderId},id.eq.#${safeOrderId.replace(/^#/, '')}`);
+            }
         } else {
             console.log(`[Asaas Webhook] Evento ${event} ignorado.`);
         }
