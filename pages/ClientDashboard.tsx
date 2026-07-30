@@ -299,6 +299,28 @@ const ClientDashboard: React.FC = () => {
           </div>
         )}
 
+        {/* Banner Geral para Planos Inativos/Cancelados */}
+        {(profile?.telemedicine_status === 'inactive' || profile?.telemedicine_status === 'cancelled') && (
+          <div className="mb-8 bg-blue-50 border border-blue-100 rounded-3xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex gap-3 text-blue-700">
+              <Info className="w-5 h-5 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-black text-sm uppercase tracking-wider">Sem Plano Ativo</h4>
+                <p className="text-xs font-medium mt-1 leading-relaxed text-blue-600">
+                  Sua assinatura de telemedicina está inativa no momento. Contrate um plano na nossa loja para ativar seu acesso instantaneamente e usufruir de todos os benefícios.
+                </p>
+              </div>
+            </div>
+            
+            <button
+              onClick={() => navigate('/shop')}
+              className="bg-[#0B1221] hover:bg-[#2980B9] text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-sm shrink-0 text-center"
+            >
+              Escolher Plano
+            </button>
+          </div>
+        )}
+
         {/* Tab Sub-Navigation */}
         <div className="flex flex-wrap gap-2 bg-slate-100 p-1.5 rounded-2xl mb-8 border border-slate-200">
           <button
