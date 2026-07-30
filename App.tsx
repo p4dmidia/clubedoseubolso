@@ -41,22 +41,33 @@ import PrivacyPage from './pages/PrivacyPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import ReferralHandler from './components/ReferralHandler';
 
-// Componente para garantir rolagem ao topo nas mudanças de rota
+// Componente para garantir rolagem ao topo nas mudanças de rota ou rolagem suave para âncoras (hash)
 const ScrollToTop: React.FC = () => {
-  const { pathname, search } = useLocation();
+  const { pathname, search, hash } = useLocation();
 
   React.useEffect(() => {
-    // Atraso de 50ms para garantir que a renderização assíncrona do DOM da nova rota tenha concluído
-    const timer = setTimeout(() => {
-      window.scrollTo(0, 0);
-      document.documentElement.scrollTop = 0;
-      if (document.body) {
-        document.body.scrollTop = 0;
-      }
-    }, 50);
-
-    return () => clearTimeout(timer);
-  }, [pathname, search]);
+    if (hash) {
+      // Atraso seguro para esperar o React carregar a home e os IDs existirem no DOM
+      const timer = setTimeout(() => {
+        const id = hash.replace('#', '');
+        const element = document.getElementById(id);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    } else {
+      // Atraso de 50ms para garantir que a renderização assíncrona do DOM da nova rota tenha concluído
+      const timer = setTimeout(() => {
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        if (document.body) {
+          document.body.scrollTop = 0;
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [pathname, search, hash]);
 
   return null;
 };
