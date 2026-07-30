@@ -78,7 +78,7 @@ serve(async (req) => {
     const anonKey = Deno.env.get("CLUBE_ANON_KEY") ?? "";
     const isAnonAuthorized = authHeader === `Bearer ${anonKey}` || authHeader.replace("Bearer ", "") === anonKey;
 
-    // Se for uma requisição GET para depuração de logs ou info de diagnóstico
+    // Se for uma requisição GET para depuração de logs
     const urlObj = new URL(req.url);
     const debugAction = urlObj.searchParams.get("debug_action");
 
