@@ -114,7 +114,7 @@ const AdminAffiliates: React.FC = () => {
             if (userIds.length > 0) {
                 const { data, error: profilesError } = await supabase
                     .from('user_profiles')
-                    .select('id, registration_type, role, cnpj')
+                    .select('id, registration_type, role, cnpj, telemedicine_status')
                     .in('id', userIds);
 
                 if (profilesError) {
@@ -122,7 +122,7 @@ const AdminAffiliates: React.FC = () => {
                     if (profilesError.message?.includes('cnpj') || profilesError.code === 'PGRST204') {
                         const { data: retryData, error: retryError } = await supabase
                             .from('user_profiles')
-                            .select('id, registration_type, role')
+                            .select('id, registration_type, role, telemedicine_status')
                             .in('id', userIds);
                         if (retryError) throw retryError;
                         profilesData = retryData || [];
@@ -143,6 +143,7 @@ const AdminAffiliates: React.FC = () => {
 
             const formattedAffs = affData.map(aff => {
                 const settings = settingsMap.get(aff.user_id);
+                const profile = profilesMap.get(aff.user_id);
                 const createdDate = new Date(aff.created_at);
                 const activeUntilDate = settings?.active_until ? new Date(settings.active_until) : null;
                 const hasRecentReferrals = (recentReferralsCountMap.get(aff.user_id) || 0) > 0;
@@ -155,6 +156,7 @@ const AdminAffiliates: React.FC = () => {
                     phone: aff.whatsapp || 'Não informado',
                     plan: aff.position_slot ? `Slot ${aff.position_slot}` : 'Membro',
                     status: aff.is_active ? (aff.is_verified ? 'Ativo' : 'Pendente') : 'Bloqueado',
+                    telemedicineStatus: profile?.telemedicine_status || 'inactive',
                     referrals: 0,
                     earnings: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
                         .format(settings?.total_earnings || 0),
@@ -606,10 +608,28 @@ const AdminAffiliates: React.FC = () => {
                                                 </div>
                                             </td>
                                             <td className="py-8 px-6">
-                                                <span className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-wider border ${getStatusColor(aff.status)}`}>
-                                                    <div className={`w-1.5 h-1.5 rounded-full ${aff.status === 'Ativo' ? 'bg-emerald-500' : aff.status === 'Pendente' ? 'bg-amber-500' : 'bg-red-500'}`}></div>
-                                                    {aff.status}
-                                                </span>
+                                                <div className="flex flex-col gap-1.5">
+                                                    {/* Status da Conta */}
+                                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[8px] md:text-[9px] font-black uppercase tracking-wider border ${getStatusColor(aff.status)} w-fit`}>
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${aff.status === 'Ativo' ? 'bg-emerald-500' : aff.status === 'Pendente' ? 'bg-amber-500' : 'bg-red-500'}`}></div>
+                                                        Conta: {aff.status}
+                                                    </span>
+                                                    {/* Status da Telemedicina */}
+                                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[8px] md:text-[9px] font-black uppercase tracking-wider border w-fit ${
+                                                        aff.telemedicineStatus === 'active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                                        aff.telemedicineStatus === 'blocked' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                                                        'bg-slate-50 text-slate-500 border-slate-100'
+                                                    }`}>
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${
+                                                            aff.telemedicineStatus === 'active' ? 'bg-emerald-500' :
+                                                            aff.telemedicineStatus === 'blocked' ? 'bg-rose-500' :
+                                                            'bg-slate-400'
+                                                        }`}></div>
+                                                        Plano: {aff.telemedicineStatus === 'active' ? 'Ativo' :
+                                                                aff.telemedicineStatus === 'blocked' ? 'Atrasado' :
+                                                                'Inativo'}
+                                                    </span>
+                                                </div>
                                             </td>
                                             <td className="py-8 px-6 text-center">
                                                 <span className="font-black text-[#05080F] text-xs md:text-sm bg-slate-50 px-4 py-2 rounded-xl">{aff.earnings}</span>
@@ -723,9 +743,20 @@ const AdminAffiliates: React.FC = () => {
                             </div>
                             <h3 className="text-xl font-black text-[#05080F] mb-1">{viewingAffiliate.name}</h3>
                             <p className="text-sm font-bold text-slate-400">{viewingAffiliate.email}</p>
-                            <span className={`mt-3 inline-flex px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${getStatusColor(viewingAffiliate.status)}`}>
-                                {viewingAffiliate.status}
-                            </span>
+                            <div className="flex justify-center gap-2 mt-3">
+                                <span className={`inline-flex px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border ${getStatusColor(viewingAffiliate.status)}`}>
+                                    Conta: {viewingAffiliate.status}
+                                </span>
+                                <span className={`inline-flex px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                                    viewingAffiliate.telemedicineStatus === 'active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                    viewingAffiliate.telemedicineStatus === 'blocked' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                                    'bg-slate-50 text-slate-500 border-slate-100'
+                                }`}>
+                                    Plano: {viewingAffiliate.telemedicineStatus === 'active' ? 'Ativo' :
+                                            viewingAffiliate.telemedicineStatus === 'blocked' ? 'Atrasado' :
+                                            'Inativo'}
+                                </span>
+                            </div>
                         </div>
                         
                         <div className="bg-slate-50/50 p-8 space-y-6 overflow-y-auto flex-grow">
