@@ -43,11 +43,20 @@ import ReferralHandler from './components/ReferralHandler';
 
 // Componente para garantir rolagem ao topo nas mudanças de rota
 const ScrollToTop: React.FC = () => {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
 
   React.useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
+    // Atraso de 50ms para garantir que a renderização assíncrona do DOM da nova rota tenha concluído
+    const timer = setTimeout(() => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      if (document.body) {
+        document.body.scrollTop = 0;
+      }
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [pathname, search]);
 
   return null;
 };
