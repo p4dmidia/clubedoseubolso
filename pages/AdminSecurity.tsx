@@ -80,6 +80,7 @@ const AdminSecurity: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalLogsCount, setTotalLogsCount] = useState(0);
     const [isLogsLoading, setIsLogsLoading] = useState(false);
+    const [statusFilter, setStatusFilter] = useState<'all' | 'failure' | 'success'>('all');
     const logsPerPage = 10;
 
     // MFA States
@@ -319,7 +320,8 @@ const AdminSecurity: React.FC = () => {
         page = currentPage,
         search = searchTerm,
         start = startDate,
-        end = endDate
+        end = endDate,
+        status = statusFilter
     ) => {
         setIsLogsLoading(true);
         try {
@@ -330,6 +332,10 @@ const AdminSecurity: React.FC = () => {
             if (search.trim()) {
                 const term = search.trim();
                 query = query.or(`user_email.ilike.*${term}*,ip_address.ilike.*${term}*,location.ilike.*${term}*,device_info.ilike.*${term}*`);
+            }
+
+            if (status !== 'all') {
+                query = query.eq('status', status);
             }
 
             if (start) {
@@ -393,11 +399,11 @@ const AdminSecurity: React.FC = () => {
 
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
-            fetchLogs(currentPage, searchTerm, startDate, endDate);
+            fetchLogs(currentPage, searchTerm, startDate, endDate, statusFilter);
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [currentPage, searchTerm, startDate, endDate]);
+    }, [currentPage, searchTerm, startDate, endDate, statusFilter]);
 
     const handleInvalidateSessions = async () => {
         if (!confirm('Deseja realmente invalidar todas as sessões? Isso forçará todos os usuários (incluindo você) a logarem novamente.')) return;
@@ -507,7 +513,24 @@ const AdminSecurity: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className={`rounded-[2rem] p-6 md:p-8 text-white shadow-xl relative overflow-hidden group transition-all sm:col-span-2 lg:col-span-1 ${stats.criticalAlerts > 0 ? 'bg-red-500 shadow-red-500/10' : 'bg-[#05080F] shadow-slate-800/10'}`}>
+                    <div 
+                        onClick={() => {
+                            if (stats.criticalAlerts > 0) {
+                                const targetFilter = statusFilter === 'failure' ? 'all' : 'failure';
+                                setStatusFilter(targetFilter);
+                                setCurrentPage(1);
+                                toast.success(targetFilter === 'failure' ? 'Filtrando logs por falhas de login!' : 'Mostrando todos os logs de acesso.', {
+                                    style: {
+                                        background: '#0B1221',
+                                        color: '#fff',
+                                        borderRadius: '1rem',
+                                        border: '1px solid rgba(231, 76, 60, 0.2)'
+                                    }
+                                });
+                            }
+                        }}
+                        className={`rounded-[2rem] p-6 md:p-8 text-white shadow-xl relative overflow-hidden group transition-all sm:col-span-2 lg:col-span-1 select-none ${stats.criticalAlerts > 0 ? 'cursor-pointer hover:scale-[1.02]' : ''} ${statusFilter === 'failure' ? 'bg-red-600 ring-4 ring-red-200 shadow-red-600/20' : (stats.criticalAlerts > 0 ? 'bg-red-500 shadow-red-500/10' : 'bg-[#05080F] shadow-slate-800/10')}`}
+                    >
                         <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform hidden sm:block">
                             <ShieldAlert className="w-24 h-24" />
                         </div>
@@ -522,7 +545,9 @@ const AdminSecurity: React.FC = () => {
                         </div>
                         <div className="flex items-end gap-2">
                             <span className="text-3xl md:text-4xl font-black">{stats.criticalAlerts.toString().padStart(2, '0')}</span>
-                            <span className="text-white/80 font-bold text-xs md:text-sm mb-1 leading-none">{stats.criticalAlerts > 0 ? 'Requer Ação' : 'Nenhuma ameaça'}</span>
+                            <span className="text-white/80 font-bold text-xs md:text-sm mb-1 leading-none">
+                                {statusFilter === 'failure' ? 'Filtrando Falhas' : (stats.criticalAlerts > 0 ? 'Requer Ação' : 'Nenhuma ameaça')}
+                            </span>
                         </div>
                     </div>
                 </div>
