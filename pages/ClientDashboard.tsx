@@ -249,6 +249,56 @@ const ClientDashboard: React.FC = () => {
           </p>
         </header>
 
+        {/* Banner Geral de Inadimplência */}
+        {profile?.telemedicine_status === 'blocked' && (
+          <div className="mb-8 bg-rose-50 border border-rose-100 rounded-3xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex gap-3 text-rose-700">
+              <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-black text-sm uppercase tracking-wider">Assinatura Suspensa</h4>
+                <p className="text-xs font-medium mt-1 leading-relaxed text-rose-600">
+                  Detectamos uma pendência financeira em sua assinatura de telemedicina. Regularize seu débito abaixo para reativar seu acesso instantaneamente.
+                </p>
+              </div>
+            </div>
+            
+            {loadingInvoice ? (
+              <span className="text-[10px] text-rose-500 font-bold uppercase animate-pulse shrink-0">
+                Buscando fatura...
+              </span>
+            ) : overdueInvoice ? (
+              <div className="flex flex-wrap gap-2 shrink-0">
+                {overdueInvoice.invoiceUrl && (
+                  <a
+                    href={overdueInvoice.invoiceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-sm"
+                  >
+                    Pagar Fatura
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                )}
+                {overdueInvoice.pixCopyPaste && (
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(overdueInvoice.pixCopyPaste);
+                      toast.success('Chave PIX Copiada!');
+                    }}
+                    className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-all"
+                  >
+                    Copiar PIX
+                  </button>
+                )}
+              </div>
+            ) : (
+              <span className="text-xs text-rose-500 font-bold italic shrink-0">
+                Fatura não localizada. Contate o suporte.
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Tab Sub-Navigation */}
         <div className="flex flex-wrap gap-2 bg-slate-100 p-1.5 rounded-2xl mb-8 border border-slate-200">
           <button
