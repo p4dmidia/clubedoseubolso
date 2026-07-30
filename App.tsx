@@ -41,6 +41,17 @@ import PrivacyPage from './pages/PrivacyPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import ReferralHandler from './components/ReferralHandler';
 
+// Componente para garantir rolagem ao topo nas mudanças de rota
+const ScrollToTop: React.FC = () => {
+  const { pathname } = useLocation();
+
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+};
+
 const AppContent: React.FC = () => {
   const location = useLocation();
   const isDashboard = location.pathname.startsWith('/afiliado') || location.pathname.startsWith('/admin') || location.pathname.startsWith('/cliente') || location.pathname === '/home-test';
@@ -109,6 +120,7 @@ import { Toaster } from 'react-hot-toast';
 const App: React.FC = () => {
   return (
     <Router>
+      <ScrollToTop />
       <CartProvider>
         <AuthProvider>
           <Toaster position="top-right" reverseOrder={false} />
