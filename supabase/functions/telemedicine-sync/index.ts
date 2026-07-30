@@ -95,14 +95,58 @@ async function syncTelemedicineUser(supabase: any, orderId: string, isActive: bo
         sex: ""
     };
 
-    if (order.user_id) {
-        const { data: profile } = await supabase
+    let resolvedUserId = order.user_id;
+
+    if (!resolvedUserId) {
+        console.log(`[Telemedicine Sync] Pedido ${orderId} sem user_id. Buscando perfil por e-mail ou CPF...`);
+        const emailFilter = order.customer_email ? `email.ilike.${order.customer_email}` : "";
+        
+        // Remove caracteres não numéricos para o filtro de CPF
+        const cleanCpf = order.customer_cpf ? order.customer_cpf.replace(/\D/g, '') : "";
+        const cpfFilter = cleanCpf ? `cpf.eq.${cleanCpf}` : "";
+        
+        const queryFilters = [];
+        if (emailFilter) queryFilters.push(emailFilter);
+        if (cpfFilter) queryFilters.push(cpfFilter);
+
+        if (queryFilters.length > 0) {
+            const { data: foundProfile, error: searchError } = await supabase
+                .from("user_profiles")
+                .select("id")
+                .or(queryFilters.join(","))
+                .maybeSingle();
+
+            if (searchError) {
+                console.error(`[Telemedicine Sync] Erro ao buscar perfil para o pedido ${orderId}:`, searchError.message);
+            } else if (foundProfile) {
+                resolvedUserId = foundProfile.id;
+                console.log(`[Telemedicine Sync] Usuário localizado com ID: ${resolvedUserId}. Associando ao pedido.`);
+                
+                // Associar o user_id localizado ao pedido na tabela orders para corrigir o banco de dados
+                const { error: updateError } = await supabase
+                    .from("orders")
+                    .update({ user_id: resolvedUserId })
+                    .eq("id", orderId);
+                    
+                if (updateError) {
+                    console.error(`[Telemedicine Sync] Erro ao associar user_id ${resolvedUserId} ao pedido ${orderId}:`, updateError.message);
+                }
+            } else {
+                console.warn(`[Telemedicine Sync] Nenhum perfil encontrado para e-mail ${order.customer_email} ou CPF ${cleanCpf}.`);
+            }
+        }
+    }
+
+    if (resolvedUserId) {
+        const { data: profile, error: profileError } = await supabase
             .from("user_profiles")
             .select("cep, address, street, number, complement, neighborhood, city, state, birth_date, sex")
-            .eq("id", order.user_id)
+            .eq("id", resolvedUserId)
             .maybeSingle();
 
-        if (profile) {
+        if (profileError) {
+            console.error(`[Telemedicine Sync] Erro ao carregar perfil ${resolvedUserId}:`, profileError.message);
+        } else if (profile) {
             addressData = {
                 cep: profile.cep || "",
                 street: profile.street || profile.address || "",

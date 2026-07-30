@@ -1,12 +1,15 @@
--- MIGRATION: Fix Referral Network V3 (STRICT Multi-Tenant)
--- Este script garante que o padrinho deve pertencer à MESMA organização que o novo usuário.
+-- 1. Corrigir usuários afetados retroativamente
+UPDATE public.user_profiles 
+SET login = LOWER(REGEXP_REPLACE(SPLIT_PART(email, '@', 1), '[^a-zA-Z0-9]', '', 'g')) || SUBSTRING(id::text, 1, 4) 
+WHERE login IS NULL;
 
+-- 2. Atualizar a função da trigger no banco
 CREATE OR REPLACE FUNCTION public.handle_new_affiliate_user()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO ''
- AS $function$
+AS $function$
  DECLARE
    v_full_name text;
    v_sponsor_id uuid;

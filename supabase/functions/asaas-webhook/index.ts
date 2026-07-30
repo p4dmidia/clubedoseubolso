@@ -72,11 +72,76 @@ serve(async (req) => {
         return new Response('ok', { headers: corsHeaders })
     }
 
-    const asaasToken = req.headers.get("asaas-access-token");
-    const configuredToken = Deno.env.get("ASAAS_WEBHOOK_SECRET");
+    const asaasToken = req.headers.get("asaas-access-token") ?? "";
+    const configuredToken = Deno.env.get("ASAAS_WEBHOOK_SECRET") ?? "";
+    const authHeader = req.headers.get("authorization") ?? "";
+    const anonKey = Deno.env.get("CLUBE_ANON_KEY") ?? "";
+    const isAnonAuthorized = authHeader === `Bearer ${anonKey}` || authHeader.replace("Bearer ", "") === anonKey;
 
+    // Se for uma requisição GET para depuração de logs ou info de diagnóstico
+    const urlObj = new URL(req.url);
+    const debugAction = urlObj.searchParams.get("debug_action");
+
+    if (debugAction === "get_recent_logs") {
+        if ((!configuredToken || asaasToken !== configuredToken) && !isAnonAuthorized) {
+            return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+        }
+        
+        try {
+            const { data: logs, error } = await supabase
+                .from("debug_logs")
+                .select("*")
+                .order("created_at", { ascending: false })
+                .limit(50);
+                
+            if (error) throw error;
+            
+            return new Response(JSON.stringify(logs), {
+                status: 200,
+                headers: { ...corsHeaders, "Content-Type": "application/json" }
+            });
+        } catch (err) {
+            return new Response(JSON.stringify({ error: err.message }), {
+                status: 500,
+                headers: { ...corsHeaders, "Content-Type": "application/json" }
+            });
+        }
+    }
+
+    // 1. Log de Entrada (Para auditar se o webhook está batendo e se os tokens coincidem)
+    try {
+        const maskedReceived = asaasToken ? `${asaasToken.substring(0, 3)}...${asaasToken.substring(asaasToken.length - 3)}` : "ausente";
+        const maskedConfigured = configuredToken ? `${configuredToken.substring(0, 3)}...${configuredToken.substring(configuredToken.length - 3)}` : "ausente";
+        
+        await supabase.from("debug_logs").insert({
+            operation: "asaas_webhook_incoming",
+            message: `Chamada recebida do webhook do Asaas. Token recebido: '${maskedReceived}', Token configurado: '${maskedConfigured}'`,
+            metadata: {
+                has_token_header: !!asaasToken,
+                has_configured_secret: !!configuredToken,
+                equal: asaasToken === configuredToken
+            }
+        });
+    } catch (err) {
+        console.error("[Asaas Webhook] Erro ao gravar log de entrada no DB:", err.message);
+    }
+
+    // 2. Validação do Token
     if (!configuredToken || asaasToken !== configuredToken) {
         console.warn(`[Asaas Webhook] Acesso não autorizado. Header token recebido: ${asaasToken}`);
+        
+        try {
+            await supabase.from("debug_logs").insert({
+                operation: "asaas_webhook_unauthorized",
+                message: `Bloqueado: Token recebido não bate com o configurado.`,
+                metadata: {
+                    received_token_masked: asaasToken ? `${asaasToken.substring(0, 3)}...${asaasToken.substring(asaasToken.length - 3)}` : "ausente"
+                }
+            });
+        } catch (err) {
+            console.error("[Asaas Webhook] Erro ao gravar log de não autorizado no DB:", err.message);
+        }
+        
         return new Response("Unauthorized", { status: 401 });
     }
 
@@ -88,7 +153,18 @@ serve(async (req) => {
 
         if (!event || !payment) {
             console.warn('[Asaas Webhook] Evento ou dados de pagamento ausentes.');
-            return new Response("Invalid payload", { status: 200 }); // Retorna 200 para evitar que o Asaas reenvie infinitamente
+            
+            try {
+                await supabase.from("debug_logs").insert({
+                    operation: "asaas_webhook_invalid_payload",
+                    message: "Payload recebido do Asaas é inválido (evento ou dados de pagamento ausentes).",
+                    metadata: { body }
+                });
+            } catch (err) {
+                console.error("[Asaas Webhook] Erro ao gravar log de payload inválido:", err.message);
+            }
+            
+            return new Response("Invalid payload", { status: 200 }); // Retorna 200 para evitar reenvio infinito pelo Asaas
         }
 
         const orderId = payment.externalReference;
@@ -97,16 +173,27 @@ serve(async (req) => {
 
         console.log(`[Asaas Webhook] Evento: ${event}, Pedido: ${orderId}, Status Asaas: ${status}, Pagamento ID: ${paymentId}`);
 
+        // Registrar recebimento do evento no DB
+        try {
+            await supabase.from("debug_logs").insert({
+                operation: "asaas_webhook_event_received",
+                message: `Iniciando processamento do evento '${event}' para o pedido '${orderId}' (Asaas ID: '${paymentId}', Status: '${status}')`,
+                metadata: { event, orderId, paymentId, status }
+            });
+        } catch (err) {
+            console.error("[Asaas Webhook] Erro ao gravar log de evento recebido:", err.message);
+        }
+
         if (event === "PAYMENT_CONFIRMED" || event === "PAYMENT_RECEIVED") {
-            if (!orderId) {
-                console.warn(`[Asaas Webhook] Pagamento ${paymentId} confirmado, mas sem externalReference (orderId).`);
-                return new Response("No orderId associated", { status: 200 });
+            if (!orderId && !paymentId) {
+                console.warn(`[Asaas Webhook] Pagamento confirmado, mas sem referências associadas.`);
+                return new Response("No orderId or paymentId associated", { status: 200 });
             }
 
-            // Tratamento seguro do ID do pedido
-            const safeOrderId = String(orderId);
+            const safeOrderId = orderId ? String(orderId) : "";
 
             // Atualizar status do pedido para 'Pago'
+            // O filtro .or() agora busca por id do pedido OR id do pedido sem hash OR payment_id do Asaas
             const { data: order, error: orderError } = await supabase
                 .from("orders")
                 .update({
@@ -115,47 +202,79 @@ serve(async (req) => {
                     payment_id: paymentId,
                     updated_at: new Date().toISOString()
                 })
-                .or(`id.eq.${safeOrderId},id.eq.#${safeOrderId.replace(/^#/, '')}`)
+                .or(`id.eq.${safeOrderId},id.eq.#${safeOrderId.replace(/^#/, '')},payment_id.eq.${paymentId}`)
                 .select()
                 .maybeSingle();
 
             if (orderError) {
                 console.error(`[Asaas Webhook] Erro ao atualizar pedido ${safeOrderId}:`, orderError);
+                
+                try {
+                    await supabase.from("debug_logs").insert({
+                        operation: "asaas_webhook_update_db_error",
+                        message: `Erro ao atualizar pedido '${safeOrderId}' (Asaas ID: '${paymentId}'): ${orderError.message}`,
+                        metadata: { orderError, safeOrderId, paymentId }
+                    });
+                } catch (logErr) {
+                    console.error("[Asaas Webhook] Erro ao gravar log de erro de banco no DB:", logErr.message);
+                }
+                
                 throw orderError;
             }
 
             if (order) {
-                console.log(`[Asaas Webhook] ✅ Pedido ${safeOrderId} atualizado para 'Pago'. Processando comissões...`);
+                console.log(`[Asaas Webhook] ✅ Pedido ${order.id} atualizado para 'Pago'. Processando comissões...`);
+                
+                try {
+                    await supabase.from("debug_logs").insert({
+                        operation: "asaas_webhook_order_paid_success",
+                        message: `Pedido '${order.id}' atualizado com sucesso para 'Pago' via Webhook Asaas.`,
+                        metadata: { order_id: order.id, payment_id: paymentId }
+                    });
+                } catch (logErr) {
+                    console.error("[Asaas Webhook] Erro ao gravar log de sucesso no DB:", logErr.message);
+                }
+
                 // Processar Upgrade e Comissões
                 await processAffiliateAndCommissions(order, supabase);
 
                 // Sincronizar com telemedicina (Mais Unidos)
                 try {
-                    console.log(`[Asaas Webhook] Disparando sincronização de telemedicina para pedido ${safeOrderId}...`);
+                    console.log(`[Asaas Webhook] Disparando sincronização de telemedicina para pedido ${order.id}...`);
                     const { data: syncRes, error: syncErr } = await supabase.functions.invoke('telemedicine-sync', {
-                        body: { orderId: safeOrderId }
+                        body: { orderId: order.id }
                     });
                     if (syncErr) {
-                        console.error(`[Asaas Webhook] Erro no invoke da telemedicina para pedido ${safeOrderId}:`, syncErr);
+                        console.error(`[Asaas Webhook] Erro no invoke da telemedicina para pedido ${order.id}:`, syncErr);
                     } else {
-                        console.log(`[Asaas Webhook] Sincronização concluída com sucesso para pedido ${safeOrderId}:`, syncRes);
+                        console.log(`[Asaas Webhook] Sincronização concluída com sucesso para pedido ${order.id}:`, syncRes);
                     }
                 } catch (err) {
-                    console.error(`[Asaas Webhook] Erro ao disparar sincronização da telemedicina para pedido ${safeOrderId}:`, err.message);
+                    console.error(`[Asaas Webhook] Erro ao disparar sincronização da telemedicina para pedido ${order.id}:`, err.message);
                 }
             } else {
-                console.warn(`[Asaas Webhook] Pedido ${safeOrderId} não encontrado no banco de dados.`);
+                console.warn(`[Asaas Webhook] Pedido ${safeOrderId} (Asaas ID: ${paymentId}) não encontrado no banco de dados.`);
+                
+                try {
+                    await supabase.from("debug_logs").insert({
+                        operation: "asaas_webhook_order_not_found",
+                        message: `Pedido '${safeOrderId}' (Asaas ID: '${paymentId}') não foi encontrado no banco de dados para atualização.`,
+                        metadata: { safeOrderId, paymentId }
+                    });
+                } catch (logErr) {
+                    console.error("[Asaas Webhook] Erro ao gravar log de pedido não encontrado no DB:", logErr.message);
+                }
             }
         } else if (event === "PAYMENT_OVERDUE") {
-            if (!orderId) {
-                console.warn(`[Asaas Webhook] Pagamento ${paymentId} atrasado, mas sem externalReference (orderId).`);
-                return new Response("No orderId associated", { status: 200 });
+            if (!orderId && !paymentId) {
+                console.warn(`[Asaas Webhook] Pagamento atrasado, mas sem referências.`);
+                return new Response("No orderId or paymentId associated", { status: 200 });
             }
 
-            const safeOrderId = String(orderId);
+            const safeOrderId = orderId ? String(orderId) : "";
             const dueDate = payment.dueDate;
 
-            console.log(`[Asaas Webhook] Registrando atraso para Pedido: ${safeOrderId}, Vencimento: ${dueDate}`);
+            console.log(`[Asaas Webhook] Registrando atraso para Pedido: ${safeOrderId} (Asaas ID: ${paymentId}), Vencimento: ${dueDate}`);
 
             // Atualizar o pedido no banco
             const { error: orderError } = await supabase
@@ -165,17 +284,27 @@ serve(async (req) => {
                     payment_due_date: dueDate ? `${dueDate}T23:59:59Z` : new Date().toISOString(),
                     last_overdue_at: new Date().toISOString()
                 })
-                .or(`id.eq.${safeOrderId},id.eq.#${safeOrderId.replace(/^#/, '')}`);
+                .or(`id.eq.${safeOrderId},id.eq.#${safeOrderId.replace(/^#/, '')},payment_id.eq.${paymentId}`);
 
             if (orderError) {
                 console.error(`[Asaas Webhook] Erro ao atualizar atraso no pedido ${safeOrderId}:`, orderError);
                 throw orderError;
             }
 
+            try {
+                await supabase.from("debug_logs").insert({
+                    operation: "asaas_webhook_order_overdue",
+                    message: `Pedido em atraso registrado via Webhook Asaas. ID: '${safeOrderId}' (Asaas ID: '${paymentId}').`,
+                    metadata: { safeOrderId, paymentId, dueDate }
+                });
+            } catch (logErr) {
+                console.error("[Asaas Webhook] Erro ao gravar log de atraso no DB:", logErr.message);
+            }
+
         } else if (event === "PAYMENT_DELETED") {
-            if (orderId) {
-                const safeOrderId = String(orderId);
-                console.log(`[Asaas Webhook] Registrando cancelamento de cobrança para Pedido: ${safeOrderId}`);
+            if (orderId || paymentId) {
+                const safeOrderId = orderId ? String(orderId) : "";
+                console.log(`[Asaas Webhook] Registrando cancelamento de cobrança para Pedido: ${safeOrderId} (Asaas ID: ${paymentId})`);
 
                 // Atualizar o pedido para 'Cancelado'
                 await supabase
@@ -185,7 +314,17 @@ serve(async (req) => {
                         payment_status: 'deleted',
                         updated_at: new Date().toISOString()
                     })
-                    .or(`id.eq.${safeOrderId},id.eq.#${safeOrderId.replace(/^#/, '')}`);
+                    .or(`id.eq.${safeOrderId},id.eq.#${safeOrderId.replace(/^#/, '')},payment_id.eq.${paymentId}`);
+
+                try {
+                    await supabase.from("debug_logs").insert({
+                        operation: "asaas_webhook_order_cancelled",
+                        message: `Pedido cancelado/deletado via Webhook Asaas. ID: '${safeOrderId}' (Asaas ID: '${paymentId}').`,
+                        metadata: { safeOrderId, paymentId }
+                    });
+                } catch (logErr) {
+                    console.error("[Asaas Webhook] Erro ao gravar log de cancelamento no DB:", logErr.message);
+                }
             }
         } else {
             console.log(`[Asaas Webhook] Evento ${event} ignorado.`);
@@ -194,6 +333,17 @@ serve(async (req) => {
         return new Response("Webhook processed successfully", { status: 200 });
     } catch (error) {
         console.error("[Asaas Webhook Error]:", error.message);
+        
+        try {
+            await supabase.from("debug_logs").insert({
+                operation: "asaas_webhook_process_error",
+                message: `Erro geral no processamento do Asaas Webhook: ${error.message}`,
+                metadata: { error: error.message, stack: error.stack }
+            });
+        } catch (logErr) {
+            console.error("[Asaas Webhook] Erro ao gravar log de erro geral no DB:", logErr.message);
+        }
+        
         return new Response(error.message, { status: 400 });
     }
 });

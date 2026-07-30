@@ -404,6 +404,7 @@ const CheckoutSuccess: React.FC = () => {
           const { error: profileError } = await supabase
             .from('user_profiles')
             .update({
+              login: finalLogin,
               cep: formInfo.cep,
               address: formInfo.street,
               street: formInfo.street,
