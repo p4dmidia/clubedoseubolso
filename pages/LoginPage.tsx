@@ -25,20 +25,19 @@ const LoginPage: React.FC = () => {
         let loginIdentifier = formData.email.trim();
 
         try {
-            // Se não for um e-mail (não tem @), tenta buscar o e-mail pelo login/username
+            // Se não for um e-mail (não tem @), tenta buscar o e-mail pelo login/username usando RPC de segurança
             if (!loginIdentifier.includes('@')) {
-                const { data: profileData, error: lookupError } = await supabase
-                    .from('user_profiles')
-                    .select('email')
-                    .ilike('login', loginIdentifier)
-                    .eq('organization_id', ORGANIZATION_ID)
-                    .maybeSingle();
+                const { data: userEmail, error: lookupError } = await supabase
+                    .rpc('get_email_by_login', {
+                        p_login: loginIdentifier,
+                        p_org_id: ORGANIZATION_ID
+                    });
 
-                if (lookupError || !profileData || !profileData.email) {
+                if (lookupError || !userEmail) {
                     throw new Error('Usuário não encontrado. Verifique seu login ou e-mail.');
                 }
 
-                loginIdentifier = profileData.email.trim();
+                loginIdentifier = userEmail.trim();
             }
 
             const { data, error: signInError } = await supabase.auth.signInWithPassword({
