@@ -315,6 +315,8 @@ const CheckoutSuccess: React.FC = () => {
         }
       }
 
+      let generatedLogin = '';
+
       if (!activeUserId) {
         // Obter IP para LGPD
         let userIp = '0.0.0.0';
@@ -329,7 +331,7 @@ const CheckoutSuccess: React.FC = () => {
         // 1. Criar conta (signUp)
         const cleanLogin = order.customer_email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
         const randomSuffix = Math.random().toString(36).substring(2, 6);
-        const finalLogin = `${cleanLogin}${randomSuffix}`;
+        generatedLogin = `${cleanLogin}${randomSuffix}`;
 
         console.log('Signing up user on checkout success page...');
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
@@ -339,7 +341,7 @@ const CheckoutSuccess: React.FC = () => {
             data: {
               nome: order.customer_name,
               sobrenome: '',
-              login: finalLogin,
+              login: generatedLogin,
               registration_type: 'individual',
               role: 'client',
               sponsor_code: order.referral_code || null,
@@ -401,21 +403,26 @@ const CheckoutSuccess: React.FC = () => {
       let profileUpdated = false;
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
+          const updatePayload: any = {
+            cep: formInfo.cep,
+            address: formInfo.street,
+            street: formInfo.street,
+            number: formInfo.number,
+            complement: formInfo.complement,
+            neighborhood: formInfo.neighborhood,
+            city: formInfo.city,
+            state: formInfo.state,
+            birth_date: formInfo.birthDate,
+            sex: formInfo.sex
+          };
+
+          if (generatedLogin) {
+            updatePayload.login = generatedLogin;
+          }
+
           const { error: profileError } = await supabase
             .from('user_profiles')
-            .update({
-              login: finalLogin,
-              cep: formInfo.cep,
-              address: formInfo.street,
-              street: formInfo.street,
-              number: formInfo.number,
-              complement: formInfo.complement,
-              neighborhood: formInfo.neighborhood,
-              city: formInfo.city,
-              state: formInfo.state,
-              birth_date: formInfo.birthDate,
-              sex: formInfo.sex
-            })
+            .update(updatePayload)
             .eq('id', activeUserId);
 
           if (!profileError) {
