@@ -35,12 +35,13 @@ const AdminAffiliates: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('Todos');
     const [filterPlan, setFilterPlan] = useState('Todos');
+    const [filterRole, setFilterRole] = useState('Todos');
     const [isFiltersOpen, setIsFiltersOpen] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [affiliates, setAffiliates] = useState<any[]>([]);
-    const [totalStats, setTotalStats] = useState({ total: 0, pending: 0, newThisMonth: 0 });
+    const [totalStats, setTotalStats] = useState({ totalUsers: 0, totalAffiliates: 0, pending: 0, newThisMonth: 0 });
     const [viewingAffiliate, setViewingAffiliate] = useState<any | null>(null);
     const [editingAffiliate, setEditingAffiliate] = useState<any | null>(null);
     const [deletingAffiliate, setDeletingAffiliate] = useState<any | null>(null);
@@ -181,11 +182,12 @@ const AdminAffiliates: React.FC = () => {
             const now = new Date();
             const startOfMonthValue = new Date(now.getFullYear(), now.getMonth(), 1);
 
-            const newCount = affData.filter(d => d.created_at && new Date(d.created_at) >= startOfMonthValue).length;
-            const pendingCount = affData.filter(d => d.is_active && !d.is_verified).length;
+            const newCount = formattedAffs.filter(d => d.created_at && new Date(d.created_at) >= startOfMonthValue).length;
+            const pendingCount = formattedAffs.filter(d => d.raw_status && !d.raw_verified).length;
 
             setTotalStats({
-                total: affData.length,
+                totalUsers: formattedAffs.length,
+                totalAffiliates: formattedAffs.filter(d => d.role === 'affiliate').length,
                 pending: pendingCount,
                 newThisMonth: newCount
             });
@@ -408,8 +410,8 @@ const AdminAffiliates: React.FC = () => {
         const matchesSearch = aff.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             aff.email.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = filterStatus === 'Todos' || aff.status === filterStatus;
-        const matchesPlan = filterPlan === 'Todos' || aff.plan.includes(filterPlan);
-        return matchesSearch && matchesStatus && matchesPlan;
+        const matchesRole = filterRole === 'Todos' || aff.role === filterRole;
+        return matchesSearch && matchesStatus && matchesRole;
     });
 
     const indexOfLastItem = currentPage * itemsPerPage;
@@ -456,16 +458,24 @@ const AdminAffiliates: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div className="bg-[#05080F] rounded-[2.5rem] p-8 text-white relative overflow-hidden group">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-[#2980B9]/10 blur-3xl rounded-full group-hover:bg-[#2980B9]/20 transition-all duration-500"></div>
                         <div className="relative z-10">
                             <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center mb-6 backdrop-blur-md">
                                 <Users className="w-6 h-6 text-[#2980B9]" />
                             </div>
-                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest leading-none mb-2">Total de Afiliados</p>
-                            <h3 className="text-3xl font-black text-[#2980B9]">{totalStats.total.toString().padStart(2, '0')}</h3>
+                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest leading-none mb-2">Total de Usuários</p>
+                            <h3 className="text-3xl font-black text-[#2980B9]">{totalStats.totalUsers.toString().padStart(2, '0')}</h3>
                         </div>
+                    </div>
+
+                    <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm relative overflow-hidden group">
+                        <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-blue-100 transition-colors">
+                            <Users className="w-6 h-6 text-[#2980B9]" />
+                        </div>
+                        <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest leading-none mb-2">Total de Afiliados</p>
+                        <h3 className="text-3xl font-black text-[#05080F]">{totalStats.totalAffiliates.toString().padStart(2, '0')}</h3>
                     </div>
 
                     <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm relative overflow-hidden group">
@@ -476,7 +486,7 @@ const AdminAffiliates: React.FC = () => {
                         <h3 className="text-3xl font-black text-[#05080F]">{totalStats.pending.toString().padStart(2, '0')}</h3>
                     </div>
 
-                    <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm relative overflow-hidden group sm:col-span-2 lg:col-span-1">
+                    <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm relative overflow-hidden group">
                         <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-emerald-100 transition-colors">
                             <UserPlus className="w-6 h-6 text-emerald-500" />
                         </div>
@@ -485,87 +495,61 @@ const AdminAffiliates: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="bg-white p-4 md:p-6 rounded-[2rem] md:rounded-[3rem] border border-slate-100 shadow-sm flex flex-col lg:flex-row gap-4 items-center justify-between relative z-20">
-                    <div className="relative w-full lg:w-96">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <input
-                            type="text"
-                            placeholder="Buscar por nome ou email..."
-                            className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 text-sm font-medium outline-none focus:border-[#2980B9] transition-all"
-                            value={searchTerm}
-                            onChange={(e) => {
-                                setSearchTerm(e.target.value);
-                                setCurrentPage(1);
-                            }}
-                        />
-                    </div>
-
-                    <div className="flex flex-wrap gap-3 w-full lg:w-auto">
-                        <button
-                            onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-                            className={`flex-grow lg:flex-none flex items-center justify-center gap-2 px-6 py-3.5 border rounded-2xl font-bold transition-all text-sm ${isFiltersOpen ? 'bg-[#2980B9]/10 border-[#2980B9] text-[#05080F]' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-                        >
-                            <Filter className="w-4 h-4 text-[#2980B9]" />
-                            Filtros Avançados
-                        </button>
-                    </div>
-
-                    {isFiltersOpen && (
-                        <div className="absolute top-full left-0 right-0 mt-4 bg-white border border-slate-100 p-8 rounded-[3rem] shadow-2xl animate-in zoom-in-95 duration-200 z-30">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Status do Cadastro</label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {['Todos', 'Ativo', 'Pendente', 'Bloqueado'].map(status => (
-                                            <button
-                                                key={status}
-                                                onClick={() => {
-                                                    setFilterStatus(status);
-                                                    setCurrentPage(1);
-                                                }}
-                                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterStatus === status ? 'bg-[#2980B9] text-[#05080F]' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
-                                            >
-                                                {status}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Plano / Slot</label>
-                                    <select
-                                        className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3.5 text-sm font-bold text-[#05080F] outline-none focus:border-[#2980B9]"
-                                        value={filterPlan}
-                                        onChange={(e) => {
-                                            setFilterPlan(e.target.value);
-                                            setCurrentPage(1);
-                                        }}
-                                    >
-                                        <option>Todos</option>
-                                        <option>Membro</option>
-                                        <option>Slot 1</option>
-                                        <option>Slot 2</option>
-                                        <option>Slot 3</option>
-                                    </select>
-                                </div>
-
-                                <div className="flex items-end">
-                                    <button
-                                        onClick={() => {
-                                            setFilterStatus('Todos');
-                                            setFilterPlan('Todos');
-                                            setSearchTerm('');
-                                            setIsFiltersOpen(false);
-                                            setCurrentPage(1);
-                                        }}
-                                        className="w-full bg-[#05080F] text-white rounded-xl py-4 text-xs font-black uppercase tracking-widest hover:bg-[#2980B9] hover:text-[#05080F] transition-all"
-                                    >
-                                        Limpar e Fechar
-                                    </button>
-                                </div>
+                <div className="bg-white p-6 rounded-[2rem] md:rounded-[3rem] border border-slate-100 shadow-sm relative z-20">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-end">
+                        {/* Busca */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Buscar por Nome / E-mail</label>
+                            <div className="relative w-full">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Buscar..."
+                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-3.5 pl-12 pr-4 text-sm font-medium outline-none focus:border-[#2980B9] transition-all"
+                                    value={searchTerm}
+                                    onChange={(e) => {
+                                        setSearchTerm(e.target.value);
+                                        setCurrentPage(1);
+                                    }}
+                                />
                             </div>
                         </div>
-                    )}
+
+                        {/* Status */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Status da Conta</label>
+                            <select
+                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-3.5 text-sm font-bold text-[#05080F] outline-none focus:border-[#2980B9] transition-all"
+                                value={filterStatus}
+                                onChange={(e) => {
+                                    setFilterStatus(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                            >
+                                <option value="Todos">Todos</option>
+                                <option value="Ativo">Ativo</option>
+                                <option value="Pendente">Pendente</option>
+                                <option value="Bloqueado">Bloqueado</option>
+                            </select>
+                        </div>
+
+                        {/* Tipo de Perfil */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Tipo de Perfil</label>
+                            <select
+                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-3.5 text-sm font-bold text-[#05080F] outline-none focus:border-[#2980B9] transition-all"
+                                value={filterRole}
+                                onChange={(e) => {
+                                    setFilterRole(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                            >
+                                <option value="Todos">Todos</option>
+                                <option value="affiliate">Somente Afiliados</option>
+                                <option value="client">Somente Clientes</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="bg-white rounded-[3rem] border border-slate-100 shadow-sm overflow-hidden">
@@ -576,7 +560,7 @@ const AdminAffiliates: React.FC = () => {
                                     <th className="text-left py-8 px-10 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-none">Afiliado</th>
                                     <th className="text-left py-8 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-none">Status</th>
                                     <th className="text-left py-8 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-none text-center">Ganhos Acumulados</th>
-                                    <th className="text-left py-8 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-none">Plano</th>
+                                    <th className="text-left py-8 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-none">Perfil</th>
                                     <th className="text-left py-8 px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-none">Membro Desde</th>
                                     <th className="text-right py-8 px-10 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] leading-none">Ações</th>
                                 </tr>
@@ -635,10 +619,19 @@ const AdminAffiliates: React.FC = () => {
                                                 <span className="font-black text-[#05080F] text-xs md:text-sm bg-slate-50 px-4 py-2 rounded-xl">{aff.earnings}</span>
                                             </td>
                                             <td className="py-8 px-6">
-                                                <div className="flex items-center gap-2">
-                                                    <Shield className={`w-4 h-4 ${aff.plan.includes('Slot') ? 'text-[#2980B9]' : 'text-slate-300'}`} />
-                                                    <span className="text-[10px] md:text-xs font-black text-slate-600">{aff.plan}</span>
-                                                </div>
+                                                {aff.role === 'affiliate' ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-600 border border-emerald-100 w-fit">
+                                                        Afiliado
+                                                    </span>
+                                                ) : aff.role === 'client' ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-50 text-blue-600 border border-blue-100 w-fit">
+                                                        Cliente
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-slate-50 text-slate-500 border border-slate-100 w-fit">
+                                                        {aff.role}
+                                                    </span>
+                                                )}
                                             </td>
                                             <td className="py-8 px-6">
                                                 <div className="flex items-center gap-2">

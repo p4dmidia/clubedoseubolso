@@ -161,7 +161,7 @@ async function syncTelemedicineUser(supabase: any, orderId: string, isActive: bo
         }
     }
 
-    if (!addressData.cep || !addressData.street) {
+    if (isActive && (!addressData.cep || !addressData.street)) {
         console.log(`[Telemedicine Sync] Pedido ${orderId} aguardando preenchimento do endereço pelo cliente.`);
         return { success: true, pending_registration: true, message: "Aguardando preenchimento de endereço e conclusão do cadastro pelo cliente." };
     }

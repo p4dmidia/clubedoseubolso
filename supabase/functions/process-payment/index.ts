@@ -315,7 +315,14 @@ serve(async (req) => {
                     const variations = prod?.variations || {};
                     const platformCostVal = parseFloat(variations.custo_plataforma || 0);
 
-                    if (categoryName === 'Planos' || prod?.name?.toLowerCase().includes('telemedicina')) {
+                    const isPlan = (categoryName || '').toLowerCase().includes('plano') || 
+                                   (categoryName || '').toLowerCase().includes('assinatura') || 
+                                   (prod?.name || '').toLowerCase().includes('plano') || 
+                                   (prod?.name || '').toLowerCase().includes('telemedicina') ||
+                                   variations.comissao_adesao !== undefined ||
+                                   variations.comissao_mensal !== undefined;
+
+                    if (isPlan) {
                         // Verificar se é renovação (recorrência)
                         const { data: pastOrders } = await supabase
                             .from('orders')
@@ -350,7 +357,14 @@ serve(async (req) => {
                                         pCatName = pCat?.name || '';
                                     }
 
-                                    if (pCatName === 'Planos' || pProd?.name?.toLowerCase().includes('telemedicina') || pi.product_name?.toLowerCase().includes('telemedicina')) {
+                                    const isPastPlan = (pCatName || '').toLowerCase().includes('plano') || 
+                                                       (pCatName || '').toLowerCase().includes('assinatura') || 
+                                                       (pProd?.name || '').toLowerCase().includes('plano') || 
+                                                       (pProd?.name || '').toLowerCase().includes('telemedicina') ||
+                                                       (pi.product_name || '').toLowerCase().includes('telemedicina') ||
+                                                       (pi.product_name || '').toLowerCase().includes('plano');
+
+                                     if (isPastPlan) {
                                         isRenewal = true;
                                         break;
                                     }

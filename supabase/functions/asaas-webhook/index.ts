@@ -21,50 +21,7 @@ async function processAffiliateAndCommissions(order: any, supabaseClient: any) {
        console.log(`[Webhook] Usuário ${order.customer_email} promovido a Afiliado com sucesso.`);
     }
 
-    // 2. Fluxo de Comissão e Antifraude
-    if (order.referral_code) {
-        const { data: affiliate } = await supabaseClient.from('user_profiles')
-             .select('id, cpf, email, subscription_status')
-             .eq('login', order.referral_code)
-             .single();
 
-        if (affiliate) {
-             // A. Anti-Fraude: Auto-indicação
-             if (affiliate.cpf === order.customer_cpf || affiliate.email === order.customer_email) {
-                 console.warn(`[Antifraude] Auto-indicação detectada para pedido ${order.id}.`);
-                 await supabaseClient.from('anti_fraud_logs').insert({
-                     order_id: order.id,
-                     customer_email: order.customer_email,
-                     customer_cpf: order.customer_cpf,
-                     affiliate_id: affiliate.id,
-                     reason: 'self_referral_abuse',
-                     action_taken: 'commission_blocked'
-                 });
-                 return;
-             }
-
-             // B. Inadimplência
-             let commissionTargetId = affiliate.id;
-             if (affiliate.subscription_status === 'inadimplente') {
-                 console.warn(`[Regras] Afiliado inadimplente. Desviando comissão para o Master.`);
-                 const { data: master } = await supabaseClient.from('user_profiles')
-                     .select('id').eq('role', 'admin_master').limit(1).single();
-                 if (master) commissionTargetId = master.id;
-             }
-
-             // C. Gerar comissão em carência
-             const commissionAmount = Number(order.total_amount) * 0.10; // Exemplo de 10%
-             await supabaseClient.from('commissions').insert({
-                 user_id: commissionTargetId,
-                 order_id: order.id,
-                 amount: commissionAmount,
-                 level: 1,
-                 commission_type: 'venda_direta',
-                 status: 'pending' // Fica pending aguardando cron de carência
-             });
-             console.log(`[Webhook] Comissão pending registrada para ${commissionTargetId}.`);
-        }
-    }
 }
 
 serve(async (req) => {
@@ -307,20 +264,42 @@ serve(async (req) => {
                 console.log(`[Asaas Webhook] Registrando cancelamento de cobrança para Pedido: ${safeOrderId} (Asaas ID: ${paymentId})`);
 
                 // Atualizar o pedido para 'Cancelado'
-                await supabase
+                const { data: updatedOrder, error: updateError } = await supabase
                     .from("orders")
                     .update({
                         status: "Cancelado",
                         payment_status: 'deleted',
                         updated_at: new Date().toISOString()
                     })
-                    .or(`id.eq.${safeOrderId},id.eq.#${safeOrderId.replace(/^#/, '')},payment_id.eq.${paymentId}`);
+                    .or(`id.eq.${safeOrderId},id.eq.#${safeOrderId.replace(/^#/, '')},payment_id.eq.${paymentId}`)
+                    .select('id')
+                    .maybeSingle();
+
+                if (updateError) {
+                    console.error(`[Asaas Webhook] Erro ao atualizar pedido para Cancelado:`, updateError);
+                }
+
+                if (updatedOrder) {
+                    try {
+                        console.log(`[Asaas Webhook] Disparando desativação de telemedicina para pedido ${updatedOrder.id}...`);
+                        const { data: syncRes, error: syncErr } = await supabase.functions.invoke('telemedicine-sync', {
+                            body: { orderId: updatedOrder.id }
+                        });
+                        if (syncErr) {
+                            console.error(`[Asaas Webhook] Erro no invoke da telemedicina para cancelamento do pedido ${updatedOrder.id}:`, syncErr);
+                        } else {
+                            console.log(`[Asaas Webhook] Desativação concluída com sucesso para pedido ${updatedOrder.id}:`, syncRes);
+                        }
+                    } catch (err) {
+                        console.error(`[Asaas Webhook] Erro ao disparar sincronização da telemedicina para cancelamento do pedido ${updatedOrder.id}:`, err.message);
+                    }
+                }
 
                 try {
                     await supabase.from("debug_logs").insert({
                         operation: "asaas_webhook_order_cancelled",
                         message: `Pedido cancelado/deletado via Webhook Asaas. ID: '${safeOrderId}' (Asaas ID: '${paymentId}').`,
-                        metadata: { safeOrderId, paymentId }
+                        metadata: { safeOrderId, paymentId, resolved_order_id: updatedOrder?.id }
                     });
                 } catch (logErr) {
                     console.error("[Asaas Webhook] Erro ao gravar log de cancelamento no DB:", logErr.message);
@@ -329,6 +308,24 @@ serve(async (req) => {
         } else {
             console.log(`[Asaas Webhook] Evento ${event} ignorado.`);
         }
+
+        // Disparar varredura de inadimplência em segundo plano de forma assíncrona
+        (async () => {
+            try {
+                console.log("[Asaas Webhook] Disparando rotina de inadimplência (process_overdue) em segundo plano...");
+                const response = await fetch(`${supabaseUrl}/functions/v1/telemedicine-sync`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${supabaseServiceKey}`
+                    },
+                    body: JSON.stringify({ action: "process_overdue" })
+                });
+                console.log("[Asaas Webhook] Resposta process_overdue:", response.status);
+            } catch (err) {
+                console.error("[Asaas Webhook] Erro ao disparar process_overdue:", err.message);
+            }
+        })();
 
         return new Response("Webhook processed successfully", { status: 200 });
     } catch (error) {
