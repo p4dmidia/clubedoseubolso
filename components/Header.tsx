@@ -54,12 +54,20 @@ const Header: React.FC = () => {
             Área do Membro
           </Link>
 
-          {/* Visitor CTA (Primary) */}
+          {/* Seja Afiliado (Secondary outline) */}
           <Link 
             to="/register?type=affiliate" 
-            className="hidden lg:inline-block bg-[#27AE60] text-white font-bold px-5 py-2.5 rounded-lg hover:bg-[#1e8449] transition-all shadow-md text-sm"
+            className="hidden lg:inline-block border border-[#2980B9] text-[#2980B9] font-bold px-4 py-2.5 rounded-lg hover:bg-[#2980B9]/5 transition-all text-sm"
           >
             Quero ser Afiliado
+          </Link>
+
+          {/* Seja Cliente (Primary) */}
+          <Link 
+            to="/register?type=client" 
+            className="hidden lg:inline-block bg-[#27AE60] text-white font-bold px-5 py-2.5 rounded-lg hover:bg-[#1e8449] transition-all shadow-md text-sm"
+          >
+            Seja Cliente
           </Link>
 
           {/* Menu Mobile Button */}
@@ -103,20 +111,30 @@ const Header: React.FC = () => {
           >
             FAQ
           </a>
-          <Link 
-            to="/login" 
-            onClick={() => setIsMenuOpen(false)} 
-            className="block border border-slate-350 text-slate-700 font-bold text-center px-4 py-2.5 rounded-lg hover:bg-slate-50 transition-all"
-          >
-            Área do Membro
-          </Link>
-          <Link 
-            to="/register?type=affiliate" 
-            onClick={() => setIsMenuOpen(false)} 
-            className="block bg-[#27AE60] text-white font-bold text-center px-4 py-2.5 rounded-lg hover:bg-[#1e8449] transition-all"
-          >
-            Quero ser Afiliado
-          </Link>
+          
+          <div className="pt-2 space-y-2">
+            <Link 
+              to="/login" 
+              onClick={() => setIsMenuOpen(false)} 
+              className="block border border-slate-300 text-slate-700 font-bold text-center px-4 py-2.5 rounded-lg hover:bg-slate-50 transition-all"
+            >
+              Área do Membro
+            </Link>
+            <Link 
+              to="/register?type=affiliate" 
+              onClick={() => setIsMenuOpen(false)} 
+              className="block border border-[#2980B9] text-[#2980B9] font-bold text-center px-4 py-2.5 rounded-lg hover:bg-[#2980B9]/5 transition-all"
+            >
+              Quero ser Afiliado
+            </Link>
+            <Link 
+              to="/register?type=client" 
+              onClick={() => setIsMenuOpen(false)} 
+              className="block bg-[#27AE60] text-white font-bold text-center px-4 py-2.5 rounded-lg hover:bg-[#1e8449] transition-all"
+            >
+              Seja Cliente
+            </Link>
+          </div>
         </div>
       )}
       <CartDrawer />

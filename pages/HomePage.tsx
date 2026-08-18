@@ -48,7 +48,8 @@ const HomePage: React.FC = () => {
         name: '',
         whatsapp: '',
         email: '',
-        cityState: ''
+        cityState: '',
+        type: 'client'
     });
 
     useEffect(() => {
@@ -118,7 +119,7 @@ const HomePage: React.FC = () => {
         
         // Pass lead parameters to Register page
         const queryParams = new URLSearchParams({
-            type: 'affiliate',
+            type: leadForm.type,
             name: leadForm.name,
             email: leadForm.email,
             whatsapp: leadForm.whatsapp,
@@ -129,44 +130,40 @@ const HomePage: React.FC = () => {
             navigate(`/register?${queryParams}`);
         }, 1500);
     };
-
-    // FAQ list - New copywriting
+    // FAQ list - New copywriting
     const faqs = [
         {
-            q: "Preciso contratar um plano para me tornar afiliado?",
-            a: "Não. O Clube do Seu Bolso também oferece a possibilidade de entrada como afiliado, permitindo que a pessoa conheça a proposta e atue com indicações conforme o modelo da plataforma."
+            q: "Quais serviços de saúde estão inclusos nos planos de telemedicina?",
+            a: "Todos os planos contam com atendimento online ilimitado 24 horas por dia com Clínico Geral. Nos planos Premium (Individual e Familiar), há também agendamento para 22 especialidades médicas (Pediatria, Psicologia, Ginecologia, Cardiologia, Dermatologia, Endocrinologia, Nutrição, etc.) para consultas completas por chamada de vídeo."
         },
         {
-            q: "Existe custo para atuar como afiliado?",
-            a: "A inscrição é totalmente gratuita e sem taxas mensais de manutenção. No entanto, para começar a indicar e receber suas comissões, é obrigatório cadastrar-se na plataforma Asaas e preencher a sua Chave de Acesso no painel do afiliado."
+            q: "Como funcionam as receitas médicas, atestados e pedidos de exame?",
+            a: "Após a consulta online, os documentos médicos assinados digitalmente (com assinatura certificada pelo ICP-Brasil) são enviados diretamente para o seu celular via WhatsApp ou SMS. Eles têm validade em qualquer farmácia, clínica ou laboratório em todo o território nacional."
         },
         {
-            q: "Como funciona o ganho por indicação?",
-            a: "O afiliado pode receber comissões recorrentes a partir de indicações elegíveis, de acordo com a estrutura e as regras comerciais da plataforma."
+            q: "Há carência ou limite de idade para contratação?",
+            a: "Não há limite de idade nem período de carência. O atendimento com Clínico Geral 24h online fica inteiramente liberado para uso logo após a compensação do pagamento da sua assinatura."
         },
         {
-            q: "É necessário vender produtos físicos?",
-            a: "Não. O modelo é baseado na divulgação de soluções e serviços com aplicação prática no dia a dia das pessoas, sem a necessidade de gerenciar estoques."
+            q: "Quem eu posso colocar como dependente no Plano Familiar?",
+            a: "Você pode adicionar até 5 dependentes de sua livre escolha. Não é necessária comprovação de parentesco ou união estável. Você tem total liberdade para proteger quem mais importa."
         },
         {
-            q: "O Clube do Seu Bolso serve apenas para quem quer indicar?",
-            a: "Não. A proposta do clube também está conectada a benefícios reais nas áreas de saúde (telemedicina), economia (energia por assinatura) e recuperação financeira."
+            q: "O Clube oferece outros serviços além da telemedicina?",
+            a: "Sim. Como membro do Clube do Seu Bolso, você também pode contratar de forma independente nossa solução de economia na conta de energia (redução de até 18% via compensação solar) e nosso suporte especializado de reabilitação e recuperação de crédito."
         },
         {
-            q: "Por que essa proposta tem boa aceitação?",
-            a: "Porque reúne soluções relacionadas a necessidades permanentes da population: cuidar da saúde, aliviar o orçamento doméstico e buscar novas fontes de renda extra."
-        },
-        {
-            q: "Posso começar de forma simples?",
-            a: "Sim. O cadastro de afiliado é gratuito e sem taxas mensais de manutenção, permitindo que você inicie de forma simples, segura e receba direto em sua conta Asaas."
+            q: "Posso indicar o Clube do Seu Bolso e receber comissões?",
+            a: "Sim! Se você gostar dos benefícios e decidir indicá-los para amigos e familiares, poderá se cadastrar no nosso programa de indicações (afiliados). A inscrição é 100% gratuita e paga comissões recorrentes direto na sua conta do Asaas."
         }
     ];
 
     const medicalSpecialties = [
-        "Clínico geral (24h)", "Cardiologia", "Cirurgia geral", "Cancerologia", 
-        "Dermatologia", "Endocrinologia", "Fisioterapia", "Gastroenterologia", 
-        "Geriatria", "Ginecologia", "Neurologia", "Nutrição", 
-        "Ortopedia", "Pediatria", "Psicologia", "Psiquiatria", "Oncologia"
+        "Cardiologia", "Cancerologia", "Cirurgia do Aparelho Digestivo", "Cirurgia Geral", 
+        "Cirurgia Oncológica", "Dermatologia", "Endocrinologista", "Fisioterapia", 
+        "Gastroenterologia", "Gastroenterologia Oncológica", "Geriatria", "Ginecologista", 
+        "Hematologista", "Neurologista", "Nutricionista", "Ortopedia", 
+        "Oncologista", "Pediatra", "Proctologia", "Pneumologia", "Psiquiatria", "Psicologia"
     ];
 
     // Default plans definitions with value anchoring & details from copy
@@ -194,7 +191,7 @@ const HomePage: React.FC = () => {
             type: 'Individual',
             benefits: [
                 'Atendimento Clínico Geral 24h ilimitado',
-                'Agendamento para 17 Especialidades Médicas',
+                'Agendamento para 22 Especialidades Médicas',
                 'Consultas completas por chamada de vídeo',
                 'Acesso total ao Clube de Benefícios VIP'
             ],
@@ -227,7 +224,7 @@ const HomePage: React.FC = () => {
             benefits: [
                 '01 titular + 05 dependentes de livre escolha',
                 'Sem necessidade de comprovar parentesco',
-                'Atendimento Clínico Geral 24h + 17 Especialidades Médicas',
+                'Atendimento Clínico Geral 24h + 22 Especialidades Médicas',
                 'Consultoria e Assessoria Financeira Premium'
             ],
             equivalentVal: 299.90,
@@ -244,7 +241,7 @@ const HomePage: React.FC = () => {
                 return [
                     '01 titular + 05 dependentes de livre escolha',
                     'Sem necessidade de comprovar parentesco',
-                    'Atendimento Clínico Geral 24h + 17 Especialidades Médicas',
+                    'Atendimento Clínico Geral 24h + 22 Especialidades Médicas',
                     'Consultoria e Assessoria Financeira Premium'
                 ];
             }
@@ -258,7 +255,7 @@ const HomePage: React.FC = () => {
             if (lower.includes('premium')) {
                 return [
                     'Atendimento Clínico Geral 24h ilimitado',
-                    'Agendamento para 17 Especialidades Médicas',
+                    'Agendamento para 22 Especialidades Médicas',
                     'Consultas completas por chamada de vídeo',
                     'Acesso total ao Clube de Benefícios VIP'
                 ];
@@ -309,44 +306,44 @@ const HomePage: React.FC = () => {
                     <div className="space-y-6 lg:col-span-7">
                         <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#2980B9]/10 text-[#2980B9] rounded-full text-xs font-bold uppercase tracking-wider">
                             <Sparkles className="w-3.5 h-3.5" />
-                            <span>Utilidade Real & Renda Extra</span>
+                            <span>Saúde Digital Imediata para Sua Família</span>
                         </div>
                         
                         <h1 className="text-4xl md:text-5xl lg:text-[48px] font-black text-[#0B1221] leading-[1.15] tracking-tight">
-                            Transforme economia do dia a dia em <span className="text-[#2980B9]">proteção para sua família</span> e oportunidade de renda.
+                            Sua família protegida com <span className="text-[#2980B9]">médicos online 24h</span> e especialistas por vídeo.
                         </h1>
                         
                         <p className="text-slate-600 text-sm md:text-base font-medium leading-relaxed max-w-xl">
-                            O Clube do Seu Bolso reúne telemedicina ambulatorial básica (consultas com clínico geral 24 horas, e ainda consultas agendadas com outras especialidades médicas), economia na conta de energia e soluções de recuperação de crédito em uma única plataforma. 
+                            Consulte com clínico geral imediatamente a qualquer hora do dia ou da noite, ou agende consultas com 22 especialidades médicas sem sair de casa. Atendimento sem carência e receitas digitais válidas em todo o Brasil.
                             <span className="block mt-2 font-semibold text-slate-700">
-                                E mais: você também pode se tornar afiliado, fazer indicações e receber comissões recorrentes por um modelo baseado em serviços que fazem sentido para a vida real das pessoas.
+                                E como membro do clube, você também pode acessar e contratar de forma independente nossas soluções adicionais de economia na conta de energia e regularização de crédito.
                             </span>
                         </p>
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-bold text-slate-700 pt-2">
                             <div className="flex items-center gap-2">
                                 <span className="w-5 h-5 rounded-full bg-[#2980B9]/10 text-[#2980B9] flex items-center justify-center text-[10px]">✓</span>
-                                <span>Saúde básica acessível</span>
+                                <span>Clínico Geral 24h ilimitado</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="w-5 h-5 rounded-full bg-[#27AE60]/10 text-[#27AE60] flex items-center justify-center text-[10px]">✓</span>
-                                <span>Economia em despesas essenciais</span>
+                                <span>Sem carência para urgências</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="w-5 h-5 rounded-full bg-[#2980B9]/10 text-[#2980B9] flex items-center justify-center text-[10px]">✓</span>
-                                <span>Oportunidade real de renda</span>
+                                <span>Soluções de Energia e Crédito</span>
                             </div>
                         </div>
                         
                         <div className="flex flex-wrap gap-4 pt-4">
-                            <Link 
-                                to="/register?type=affiliate" 
+                            <a 
+                                href="#planos" 
                                 className="bg-[#27AE60] hover:bg-[#219653] text-white font-black text-xs px-8 py-4 rounded-xl shadow-lg shadow-[#27AE60]/20 hover:shadow-xl hover:shadow-[#27AE60]/30 transition-all transform hover:-translate-y-0.5 text-center uppercase tracking-wider"
                             >
-                                QUERO SER AFILIADO AGORA
-                            </Link>
+                                CONTRATAR TELEMEDICINA
+                            </a>
                             <a 
-                                href="#servicos" 
+                                href="#como-funciona" 
                                 className="border-2 border-[#2980B9] text-[#2980B9] hover:bg-[#2980B9]/5 font-black text-xs px-8 py-4 rounded-xl transition-all transform hover:-translate-y-0.5 text-center uppercase tracking-wider"
                             >
                                 ENTENDER COMO FUNCIONA
@@ -354,7 +351,7 @@ const HomePage: React.FC = () => {
                         </div>
 
                         <p className="text-slate-500 text-xs italic font-medium pt-1">
-                            Uma plataforma pensada para fortalecer os três pilares da vida real: saúde, família e trabalho.
+                            Uma plataforma pensada para fortalecer os três pilares da vida real: saúde, família e renda.
                         </p>
                     </div>
 
@@ -387,6 +384,61 @@ const HomePage: React.FC = () => {
                     </div>
                 </div>
             </header>
+
+            {/* NOVO BLOCO — SELETOR DE PLANO (SAÚDE) */}
+            <section className="py-16 bg-white border-b border-slate-100">
+                <div className="max-w-[1000px] mx-auto px-6">
+                    <div className="text-center mb-10">
+                        <span className="text-xs font-black text-[#2980B9] uppercase tracking-[0.25em] block">Escolha a cobertura ideal</span>
+                        <h2 className="text-2xl md:text-3xl font-black text-[#0B1221] mt-2">Como você deseja proteger sua saúde?</h2>
+                        <p className="text-slate-500 text-sm mt-1 font-medium">Selecione a modalidade perfeita para o seu perfil e o de quem você ama</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {/* Card Individual */}
+                        <div className="bg-slate-50 border border-slate-100 rounded-3xl p-8 space-y-6 hover:shadow-md transition-all flex flex-col justify-between">
+                            <div className="space-y-4">
+                                <div className="w-12 h-12 rounded-2xl bg-[#2980B9]/10 text-[#2980B9] flex items-center justify-center">
+                                    <User className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-black text-[#0B1221]">Cobertura Individual</h3>
+                                <p className="text-slate-600 text-sm font-medium leading-relaxed">
+                                    Ideal para você que busca praticidade. Consultas de clínico geral online 24h e agendamento rápido com médicos especialistas. Proteção na palma da sua mão a qualquer hora.
+                                </p>
+                            </div>
+                            <div className="pt-4">
+                                <a 
+                                    href="#planos" 
+                                    className="w-full block text-center py-4 bg-[#2980B9] hover:bg-[#1f618d] text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-[#2980B9]/10"
+                                >
+                                    VER PLANOS INDIVIDUAIS
+                                </a>
+                            </div>
+                        </div>
+
+                        {/* Card Familiar */}
+                        <div className="bg-slate-50 border border-slate-100 rounded-3xl p-8 space-y-6 hover:shadow-md transition-all flex flex-col justify-between">
+                            <div className="space-y-4">
+                                <div className="w-12 h-12 rounded-2xl bg-[#27AE60]/10 text-[#27AE60] flex items-center justify-center">
+                                    <Heart className="w-6 h-6" />
+                                </div>
+                                <h3 className="text-xl font-black text-[#0B1221]">Cobertura Familiar</h3>
+                                <p className="text-slate-600 text-sm font-medium leading-relaxed">
+                                    A tranquilidade de saber que quem você ama está protegido. Adicione o titular + até 5 dependentes de livre escolha, sem burocracia ou necessidade de comprovar parentesco.
+                                </p>
+                            </div>
+                            <div className="pt-4">
+                                <a 
+                                    href="#planos" 
+                                    className="w-full block text-center py-4 bg-[#27AE60] hover:bg-[#219653] text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-[#27AE60]/10"
+                                >
+                                    VER PLANOS FAMILIARES
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
             {/* BLOCO 2 — POSICIONAMENTO DA MARCA */}
             <section className="py-20 bg-slate-50 border-y border-slate-100">
@@ -450,12 +502,12 @@ const HomePage: React.FC = () => {
                             </p>
                         </div>
 
-                        {/* Pilar 3 — Trabalho */}
+                        {/* Pilar 3 — Renda */}
                         <div className="bg-slate-50 border border-slate-100 rounded-3xl p-8 space-y-4 hover:-translate-y-1 transition-all duration-300 group cursor-pointer shadow-sm">
                             <div className="w-12 h-12 rounded-2xl bg-[#2980B9]/10 text-[#2980B9] flex items-center justify-center group-hover:scale-110 transition-transform">
-                                <Activity className="w-6 h-6" />
+                                <DollarSign className="w-6 h-6" />
                             </div>
-                            <h3 className="text-xl font-black text-[#0B1221]">Trabalho</h3>
+                            <h3 className="text-xl font-black text-[#0B1221]">Renda</h3>
                             <p className="text-slate-600 text-sm font-medium leading-relaxed">
                                 Uma oportunidade de renda extra para quem deseja indicar uma solução útil e construir ganhos recorrentes com mais consistência.
                             </p>
@@ -470,15 +522,15 @@ const HomePage: React.FC = () => {
                 </div>
             </section>
 
-            {/* BLOCO 4 — SERVIÇOS E BENEFÍCIOS */}
+            {/* BLOCO 4 — TELEMEDICINA COMPLETA */}
             <section className="py-24 bg-[#F8FAFC] scroll-mt-24" id="servicos">
                 <div className="max-w-[1200px] mx-auto px-6 space-y-20">
                     <div className="text-center max-w-3xl mx-auto space-y-4">
                         <span className="text-[#2980B9] text-xs font-black uppercase tracking-[0.25em] block">
-                            Nossos Serviços
+                            Saúde Conectada
                         </span>
                         <h2 className="text-3xl md:text-4xl font-black text-[#0B1221]">
-                            Soluções que fazem sentido para o dia a dia
+                            Atendimento Médico Online Sem Fila e Sem Complicação
                         </h2>
                     </div>
 
@@ -489,20 +541,20 @@ const HomePage: React.FC = () => {
                             <div className="lg:col-span-7 space-y-6">
                                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#2980B9]/10 text-[#2980B9] rounded-full text-xs font-bold uppercase tracking-wider">
                                     <Heart className="w-3.5 h-3.5" />
-                                    <span>Serviço 1</span>
+                                    <span>Atendimento Médico Digital</span>
                                 </div>
                                 <h3 className="text-2xl md:text-3xl font-black text-[#0B1221]">
-                                    Telemedicina ambulatorial básica
+                                    Consultas com Clínico Geral 24h e Especialistas
                                 </h3>
                                 <p className="text-slate-600 text-sm md:text-base font-medium leading-relaxed">
-                                    Atendimento por telemedicina para ampliar o acesso ao cuidado básico com mais praticidade, rapidez e suporte para você e sua família.
+                                    Tenha à sua disposição uma equipe médica completa pronta para atender você e sua família em minutos. Esqueça as salas de espera lotadas de pronto-socorro. Faça consultas completas por chamada de vídeo, receba receitas, atestados e pedidos de exame direto no celular.
                                 </p>
                                 <div className="pt-2">
                                     <Link 
                                         to="/service/telemedicina" 
                                         className="inline-flex items-center gap-2 text-[#2980B9] hover:text-[#1f618d] font-black text-xs uppercase tracking-widest transition-all group"
                                     >
-                                        <span>Acessar Serviço de Telemedicina</span>
+                                        <span>Saber Mais Sobre a Telemedicina</span>
                                         <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
                                     </Link>
                                 </div>
@@ -538,10 +590,12 @@ const HomePage: React.FC = () => {
 
                         {/* Bottom Section: Plan Cards Grid in 4 columns */}
                         <div className="space-y-6 pt-8 scroll-mt-24" id="planos">
-                            <div className="text-center">
-                                <h4 className="text-xs text-slate-400 font-black uppercase tracking-widest">
-                                    Escolha o plano ideal para suas necessidades
-                                </h4>
+                            <div className="text-center space-y-2">
+                                <span className="text-[10px] text-[#2980B9] font-black uppercase tracking-widest">Planos Disponíveis</span>
+                                <h3 className="text-2xl md:text-3xl font-black text-[#0B1221]">
+                                    Escolha o plano ideal para sua saúde e seu bolso
+                                </h3>
+                                <p className="text-slate-500 text-sm font-medium">Contratação 100% digital, imediata e sem burocracia</p>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -622,126 +676,118 @@ const HomePage: React.FC = () => {
                             </div>
                         </div>
                     </div>
+                </div>
+            </section>
 
-                    {/* Serviço 2 — Economia na conta de energia */}
-                    <div className="bg-white rounded-[2.5rem] border border-slate-100 p-8 md:p-12 shadow-md">
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-                            <div className="lg:col-span-6 space-y-6">
-                                <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#27AE60]/10 text-[#27AE60] rounded-full text-xs font-bold uppercase tracking-wider">
-                                    <Zap className="w-3.5 h-3.5" />
-                                    <span>Serviço 2</span>
-                                </div>
-                                <h3 className="text-2xl md:text-3xl font-black text-[#0B1221]">
-                                    Economia na conta de energia
-                                </h3>
-                                <p className="text-slate-600 text-sm md:text-base font-medium leading-relaxed">
-                                    Uma alternativa inteligente para reduzir um dos custos que mais pesam no orçamento mensal da família brasileira.
-                                    <span className="block mt-2">
-                                        Substitua sua conta de luz convencional por uma gestão inteligente, onde a economia é real, visível e discriminada mensalmente em sua fatura.
-                                    </span>
-                                    <span className="block mt-2">
-                                        Através da compensação de créditos de energia limpa, garantimos uma **redução de 18%** (excluídos os impostos e taxas) nos custos de energia, permitindo que o capital economizado seja reinvestido no que realmente importa para o seu negócio ou família.
-                                    </span>
-                                </p>
-
-                                <div className="pt-2">
-                                    <Link 
-                                        to="/service/energia-assinatura" 
-                                        className="inline-flex items-center gap-2 text-[#27AE60] hover:text-[#1e8449] font-black text-xs uppercase tracking-widest transition-all group"
-                                    >
-                                        <span>Acessar Serviço de Economia de Energia</span>
-                                        <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
-                                    </Link>
-                                </div>
-                            </div>
-
-                            <div className="lg:col-span-6">
-                                <div className="bg-slate-50 border border-slate-100 rounded-[2rem] p-6 md:p-8 space-y-6 shadow-inner">
-                                    <h4 className="font-black text-[#0B1221] text-sm uppercase tracking-wider border-b border-slate-100 pb-2">
-                                        1.1 Benefícios Imediatos
-                                    </h4>
-                                    
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-1">
-                                            <h5 className="font-extrabold text-xs text-[#0B1221]">Sem Fidelidade</h5>
-                                            <p className="text-slate-500 text-[11px] font-medium leading-relaxed">Liberdade total com apenas 60 dias de aviso prévio para cancelamento.</p>
-                                        </div>
-                                        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-1">
-                                            <h5 className="font-extrabold text-xs text-[#0B1221]">Energia 100% Limpa</h5>
-                                            <p className="text-slate-500 text-[11px] font-medium leading-relaxed">Sustentabilidade certificada proveniente de fontes renováveis.</p>
-                                        </div>
-                                        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-1">
-                                            <h5 className="font-extrabold text-xs text-[#27AE60]">Redução de Custos</h5>
-                                            <p className="text-slate-500 text-[11px] font-medium leading-relaxed">Impacto positivo imediato e recorrente no seu fluxo de caixa.</p>
-                                        </div>
-                                        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-1">
-                                            <h5 className="font-extrabold text-xs text-[#0B1221]">Zero Investimento</h5>
-                                            <p className="text-slate-500 text-[11px] font-medium leading-relaxed">Sem obras, sem instalação de placas e sem taxas de manutenção.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Serviço 3 — Recuperação de crédito */}
-                    <div className="bg-white rounded-[2.5rem] border border-slate-100 p-8 md:p-12 shadow-md">
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-                            <div className="lg:col-span-5 order-2 lg:order-1">
-                                <div className="relative">
-                                    <div className="absolute inset-0 bg-[#2980B9]/5 rounded-[2rem] transform -rotate-3 scale-95 -z-10"></div>
-                                    <img 
-                                        src="/assets/restauracao_credito.jpg" 
-                                        alt="Recuperação de Crédito" 
-                                        className="rounded-[2rem] shadow-md w-full h-[250px] object-cover"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="lg:col-span-7 order-1 lg:order-2 space-y-6">
-                                <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#2980B9]/10 text-[#2980B9] rounded-full text-xs font-bold uppercase tracking-wider">
-                                    <Wallet className="w-3.5 h-3.5" />
-                                    <span>Serviço 3</span>
-                                </div>
-                                <h3 className="text-2xl md:text-3xl font-black text-[#0B1221]">
-                                    Soluções de recuperação de crédito
-                                </h3>
-                                <p className="text-slate-600 text-sm md:text-base font-medium leading-relaxed">
-                                    Serviços voltados à reorganização da vida financeira e ao fortalecimento do acesso ao crédito com mais estratégia e orientação personalizada. 
-                                    Consiga reabilitar o seu CPF ou CNPJ de forma limpa e estruturada.
-                                </p>
-
-                                <div className="pt-2">
-                                    <Link 
-                                        to="/service/estrategias-credito" 
-                                        className="inline-flex items-center gap-2 text-[#2980B9] hover:text-[#1f618d] font-black text-xs uppercase tracking-widest transition-all group"
-                                    >
-                                        <span>Acessar Serviço de Recuperação de Crédito</span>
-                                        <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
-                                    </Link>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="text-center max-w-2xl mx-auto">
-                        <p className="text-[#0B1221] font-black text-base md:text-lg bg-emerald-50 text-emerald-950 px-6 py-5 rounded-3xl border border-emerald-100 shadow-sm leading-relaxed">
-                            "Você não indica algo supérfluo. Você apresenta soluções que as pessoas realmente podem usar."
+            {/* BLOCO 5 — OUTROS SERVIÇOS DO CLUBE */}
+            <section className="py-20 bg-slate-50 border-y border-slate-100">
+                <div className="max-w-[1200px] mx-auto px-6">
+                    <div className="text-center max-w-3xl mx-auto mb-12 space-y-4">
+                        <span className="text-[#2980B9] text-xs font-black uppercase tracking-[0.25em] block">
+                            Muito Mais Vantagens
+                        </span>
+                        <h2 className="text-2xl md:text-3xl font-black text-[#0B1221]">
+                            Outros Serviços Disponíveis no Clube
+                        </h2>
+                        <p className="text-slate-500 text-sm font-medium leading-relaxed max-w-xl mx-auto">
+                            Além dos planos de telemedicina, como membro do clube você também pode contratar e acessar outras soluções independentes para ajudar o seu bolso.
                         </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-[950px] mx-auto">
+                        {/* Benefício Extra 1 - Energia */}
+                        <div className="bg-white border border-slate-100 rounded-3xl p-6 space-y-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                            <div className="space-y-4">
+                                <img 
+                                    src="/assets/economia_energia.jpg" 
+                                    alt="Economia de Energia" 
+                                    className="w-full h-48 object-cover rounded-2xl" 
+                                />
+                                <h3 className="text-lg font-black text-[#0B1221]">Economia de até 18% na Conta de Luz</h3>
+                                <p className="text-slate-600 text-sm font-medium leading-relaxed">
+                                    Reduza o custo de energia da sua casa ou empresa sem investir um único centavo. Por meio de compensação de créditos de energia limpa injetados diretamente na distribuidora local, você economiza mensalmente sem precisar de obras, instalações ou fidelidade.
+                                </p>
+                            </div>
+                            <div className="pt-2 border-t border-slate-50">
+                                <Link 
+                                    to="/service/energia-assinatura" 
+                                    className="text-xs font-bold text-[#27AE60] hover:text-[#1e8449] uppercase tracking-wider flex items-center gap-1.5 transition-colors group"
+                                >
+                                    <span>Ver detalhes do benefício</span>
+                                    <ArrowRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
+                                </Link>
+                            </div>
+                        </div>
+
+                        {/* Benefício Extra 2 - Crédito */}
+                        <div className="bg-white border border-slate-100 rounded-3xl p-6 space-y-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                            <div className="space-y-4">
+                                <img 
+                                    src="/assets/restauracao_credito.jpg" 
+                                    alt="Recuperação de Crédito" 
+                                    className="w-full h-48 object-cover rounded-2xl" 
+                                />
+                                <h3 className="text-lg font-black text-[#0B1221]">Reabilitação e Recuperação de Crédito</h3>
+                                <p className="text-slate-600 text-sm font-medium leading-relaxed">
+                                    Organize sua vida financeira e recupere seu acesso ao crédito. Obtenha suporte qualificado e orientação personalizada de forma limpa e estruturada para restaurar o seu CPF ou CNPJ de forma prática e segura perante as instituições de proteção.
+                                </p>
+                            </div>
+                            <div className="pt-2 border-t border-slate-50">
+                                <Link 
+                                    to="/service/estrategias-credito" 
+                                    className="text-xs font-bold text-[#2980B9] hover:text-[#1f618d] uppercase tracking-wider flex items-center gap-1.5 transition-colors group"
+                                >
+                                    <span>Ver detalhes do benefício</span>
+                                    <ArrowRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
+                                </Link>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
 
-            {/* BLOCO 5 — COMO FUNCIONA */}
-            <section className="py-24 bg-white" id="como-funciona">
-                <div className="max-w-[1200px] mx-auto px-6">
-                    <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
+            {/* BLOCO 6 — PROGRAMA INDIQUE E GANHE (AFILIAÇÃO) */}
+            <section className="py-20 bg-slate-50 border-y border-slate-100">
+                <div className="max-w-[1000px] mx-auto px-6">
+                    <div className="bg-white border border-slate-100 rounded-[2.5rem] p-8 md:p-12 shadow-md grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                        <div className="lg:col-span-7 space-y-6">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#2980B9]/10 text-[#2980B9] rounded-full text-xs font-bold uppercase tracking-wider">
+                                <DollarSign className="w-3.5 h-3.5" />
+                                <span>Indique e Ganhe</span>
+                            </div>
+                            <h3 className="text-2xl md:text-3xl font-black text-[#0B1221]">
+                                Indique o clube e crie uma renda extra recorrente
+                            </h3>
+                            <p className="text-slate-600 text-sm md:text-base font-medium leading-relaxed">
+                                Gostou dos nossos planos e benefícios? Você pode recomendá-los para sua rede de contatos. Ao se cadastrar gratuitamente como nosso parceiro afiliado, você recebe comissões recorrentes a cada assinatura ativa indicada por você. É simples, gratuito e você gerencia tudo pelo seu painel.
+                            </p>
+                        </div>
+
+                        <div className="lg:col-span-5 flex flex-col items-center justify-center p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                            <Link 
+                                to="/register?type=affiliate" 
+                                className="w-full text-center py-4 bg-[#2980B9] hover:bg-[#1f618d] text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-md shadow-[#2980B9]/10"
+                            >
+                                COMEÇAR A INDICAR GRÁTIS
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* BLOCO 7 — COMO FUNCIONA A AFILIAÇÃO */}
+            <section className="py-24 bg-white scroll-mt-24" id="como-funciona">
+                <div className="max-w-[1200px] mx-auto px-6 space-y-16">
+                    <div className="text-center max-w-2xl mx-auto space-y-4">
                         <span className="text-[#2980B9] text-xs font-black uppercase tracking-[0.25em] block">
-                            Passo a Passo
+                            Passo a Passo do Parceiro
                         </span>
                         <h2 className="text-3xl md:text-4xl font-black text-[#0B1221]">
-                            Como funciona o Clube do Seu Bolso
+                            Como funciona o Programa de Afiliação
                         </h2>
+                        <p className="text-slate-500 text-sm font-medium">
+                            Entenda o fluxo simples para começar a indicar e construir sua comissão recorrente
+                        </p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative">
@@ -753,9 +799,9 @@ const HomePage: React.FC = () => {
                             <div className="w-16 h-16 rounded-full bg-[#0B1221] text-white flex items-center justify-center font-black text-lg mx-auto shadow-md relative z-10 border-4 border-white">
                                 01
                             </div>
-                            <h3 className="font-extrabold text-[#0B1221] text-base">Cadastre-se e Ative sua Conta Asaas</h3>
+                            <h3 className="font-extrabold text-[#0B1221] text-base">Cadastre-se e Configure</h3>
                             <p className="text-slate-500 text-xs font-medium leading-relaxed max-w-xs mx-auto">
-                                Crie sua conta, cadastre-se no Asaas e insira a sua Chave de Acesso no painel. Esse passo é obrigatório para começar a indicar.
+                                Crie sua conta de afiliado grátis, configure sua conta Asaas e insira sua Chave de Acesso no painel.
                             </p>
                         </div>
 
@@ -764,9 +810,9 @@ const HomePage: React.FC = () => {
                             <div className="w-16 h-16 rounded-full bg-[#2980B9] text-white flex items-center justify-center font-black text-lg mx-auto shadow-md relative z-10 border-4 border-white">
                                 02
                             </div>
-                            <h3 className="font-extrabold text-[#0B1221] text-base">Conheça os serviços</h3>
+                            <h3 className="font-extrabold text-[#0B1221] text-base">Acesse os Serviços</h3>
                             <p className="text-slate-500 text-xs font-medium leading-relaxed max-w-xs mx-auto">
-                                Entenda os benefícios disponíveis e como eles podem ajudar pessoas e famílias na prática.
+                                Entenda os planos de telemedicina do clube para poder indicá-los com propriedade.
                             </p>
                         </div>
 
@@ -775,9 +821,9 @@ const HomePage: React.FC = () => {
                             <div className="w-16 h-16 rounded-full bg-[#0B1221] text-white flex items-center justify-center font-black text-lg mx-auto shadow-md relative z-10 border-4 border-white">
                                 03
                             </div>
-                            <h3 className="font-extrabold text-[#0B1221] text-base">Compartilhe com sua rede</h3>
+                            <h3 className="font-extrabold text-[#0B1221] text-base">Divulgue seu Link</h3>
                             <p className="text-slate-500 text-xs font-medium leading-relaxed max-w-xs mx-auto">
-                                Indique uma solução útil para outras pessoas que também desejam economizar, cuidar melhor da família e melhorar sua vida financeira.
+                                Divulgue seu link exclusivo de indicação com amigos, parentes ou contatos que precisam de saúde de qualidade.
                             </p>
                         </div>
 
@@ -786,39 +832,35 @@ const HomePage: React.FC = () => {
                             <div className="w-16 h-16 rounded-full bg-[#27AE60] text-white flex items-center justify-center font-black text-lg mx-auto shadow-md relative z-10 border-4 border-white">
                                 04
                             </div>
-                            <h3 className="font-extrabold text-[#0B1221] text-base">Receba comissões recorrentes</h3>
+                            <h3 className="font-extrabold text-[#0B1221] text-base">Receba Comissões</h3>
                             <p className="text-slate-500 text-xs font-medium leading-relaxed max-w-xs mx-auto">
-                                Ao realizar indicações elegíveis, você pode receber comissões de forma recorrente, conforme as regras do programa.
+                                Ganhe comissões automáticas recorrentes enquanto suas indicações mantiverem seus planos ativos.
                             </p>
                         </div>
                     </div>
-                </div>
-            </section>
 
-            {/* BLOCO 6 — AFILIAÇÃO COM ENTRADA ACESSÍVEL */}
-            <section className="py-20 bg-slate-50 border-y border-slate-100">
-                <div className="max-w-[1000px] mx-auto px-6">
-                    <div className="bg-white border border-slate-100 rounded-[2.5rem] p-8 md:p-12 shadow-md grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                        <div className="lg:col-span-7 space-y-6">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#27AE60]/10 text-[#27AE60] rounded-full text-xs font-bold uppercase tracking-wider">
-                                <DollarSign className="w-3.5 h-3.5" />
-                                <span>Afiliação Simples</span>
-                            </div>
-                            <h3 className="text-2xl md:text-3xl font-black text-[#0B1221]">
-                                Comece como afiliado de forma gratuita
-                            </h3>
-                            <p className="text-slate-600 text-sm md:text-base font-medium leading-relaxed">
-                                No Clube do Seu Bolso, você pode iniciar como afiliado com inscrição 100% gratuita. Para receber suas comissões por indicações diretas e de sua rede de forma automática, basta cadastrar-se na plataforma Asaas e preencher a sua Chave de Acesso dentro do seu painel de configurações.
-                            </p>
+                    {/* Card de Regra de Ativação Mensal */}
+                    <div className="max-w-[700px] mx-auto bg-amber-50 border border-amber-100 rounded-3xl p-6 md:p-8 flex gap-6 items-start shadow-sm">
+                        <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-500 flex items-center justify-center shrink-0 mt-0.5">
+                            <ShieldAlert className="w-6 h-6" />
                         </div>
+                        <div className="space-y-3 text-left">
+                            <h4 className="font-black text-[#0B1221] text-sm uppercase tracking-wider">Regra de Ativação Mensal</h4>
+                            
+                            <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl text-emerald-950 text-xs font-bold leading-relaxed mb-3">
+                                💡 <strong>Ativação Automática (Recomendado):</strong> Se você for assinante de qualquer plano de telemedicina do Clube do Seu Bolso e mantiver sua mensalidade em dia, você fica <strong>ativo automaticamente</strong> e totalmente isento das regras abaixo.
+                            </div>
 
-                        <div className="lg:col-span-5 flex flex-col items-center justify-center p-6 bg-slate-50 rounded-3xl border border-slate-100">
-                            <Link 
-                                to="/register?type=affiliate" 
-                                className="w-full text-center py-4 bg-[#27AE60] hover:bg-[#219653] text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-md shadow-[#27AE60]/10"
-                            >
-                                QUERO COMEÇAR COMO AFILIADO
-                            </Link>
+                            <p className="text-slate-700 text-xs md:text-sm font-medium leading-relaxed">
+                                Caso você <strong>não seja assinante</strong> do clube, para manter seu link de indicação ativo e ter direito ao recebimento de comissões, você deve se ativar por um dos seguintes caminhos:
+                            </p>
+                            <ul className="list-disc pl-4 space-y-1.5 text-slate-700 text-xs md:text-sm font-bold">
+                                <li>Indicar pelo menos <strong>1 novo assinante (cliente)</strong> a cada 30 dias; ou</li>
+                                <li>Pagar a taxa de ativação de <strong>R$ 17,00</strong> (descontada diretamente do seu saldo acumulado de comissões).</li>
+                            </ul>
+                            <p className="text-slate-500 text-[10px] md:text-xs leading-relaxed font-semibold">
+                                * Nota: Se inativo, as comissões geradas no período ficarão como <strong>Saldo Bloqueado</strong>. Você poderá solicitar o resgate assim que se reativar, autorizando o desconto da taxa de R$ 17,00.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -1018,18 +1060,18 @@ const HomePage: React.FC = () => {
                 
                 <div className="max-w-[900px] mx-auto px-6 text-center space-y-6 relative z-10">
                     <h3 className="text-2xl md:text-3xl font-black">
-                        Você pode divulgar algo que realmente ajuda as pessoas
+                        Leve proteção e economia real para o dia a dia da sua família
                     </h3>
                     <p className="text-slate-300 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
-                        O grande diferencial do Clube do Seu Bolso é que o afiliado não precisa convencer alguém a comprar algo desnecessário. Ele apresenta soluções que fazem sentido para o orçamento, para a saúde e para a organização da vida financeira.
+                        O Clube do Seu Bolso oferece telemedicina 24h sem carência, consultas com especialistas, redução garantida de até 18% na conta de energia e apoio completo para reorganizar sua vida financeira. Escolha o plano ideal e comece a usufruir hoje mesmo.
                     </p>
                     <div className="pt-2">
-                        <Link 
-                            to="/register?type=affiliate" 
-                            className="inline-block bg-[#27AE60] hover:bg-[#219653] text-white font-black text-xs px-8 py-4 rounded-xl shadow-lg transition-all transform hover:-translate-y-0.5 uppercase tracking-wider"
+                        <a 
+                            href="#planos" 
+                            className="inline-block bg-[#27AE60] hover:bg-[#219653] text-white font-black text-xs px-8 py-4 rounded-xl shadow-lg transition-all transform hover:-translate-y-0.5 uppercase tracking-wider animate-bounce"
                         >
-                            QUERO FAZER PARTE DISSO
-                        </Link>
+                            VER NOSSOS PLANOS
+                        </a>
                     </div>
                 </div>
             </section>
@@ -1071,10 +1113,10 @@ const HomePage: React.FC = () => {
             <section className="py-20 bg-slate-50 border-t border-slate-100 text-center">
                 <div className="max-w-[800px] mx-auto px-6 space-y-6">
                     <h2 className="text-3xl md:text-4xl font-black text-[#0B1221] leading-tight">
-                        Entre para um clube que une utilidade real, proteção familiar e oportunidade de renda.
+                        Entre para um clube de benefícios completo para você, sua família ou seu negócio.
                     </h2>
                     <p className="text-slate-600 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
-                        Seja parte de uma plataforma pensada para ajudar pessoas a economizar, cuidar melhor da família e construir uma nova possibilidade de ganho com indicações.
+                        Participe como cliente para usufruir de telemedicina e descontos exclusivos nas suas contas básicas, ou como afiliado para divulgar essas soluções e construir sua renda recorrente.
                     </p>
                     
                     <div className="pt-4 flex flex-wrap justify-center gap-4">
@@ -1082,12 +1124,12 @@ const HomePage: React.FC = () => {
                             href="#cadastro-lead" 
                             className="bg-[#27AE60] hover:bg-[#219653] text-white font-black text-xs px-8 py-4 rounded-xl shadow-lg transition-all transform hover:-translate-y-0.5 uppercase tracking-wider"
                         >
-                            QUERO FAZER PARTE AGORA
+                            QUERO ME CADASTRAR AGORA
                         </a>
                     </div>
                     
                     <p className="text-slate-400 text-xs font-bold uppercase tracking-wider italic pt-2">
-                        Clube do Seu Bolso: saúde, família e trabalho em uma proposta com potencial nacional.
+                        Clube do Seu Bolso: saúde, economia e renda em uma proposta com utilidade real para todos.
                     </p>
                 </div>
             </section>
@@ -1101,11 +1143,46 @@ const HomePage: React.FC = () => {
                                 Comece sua jornada no Clube do Seu Bolso
                             </h3>
                             <p className="text-slate-500 text-sm font-medium leading-relaxed">
-                                Cadastre-se para conhecer a plataforma e dar o primeiro passo em uma oportunidade baseada em soluções reais para o dia a dia.
+                                Cadastre-se para iniciar a contratação do seu plano de telemedicina ou para criar sua conta de indicação.
                             </p>
                         </div>
 
                         <form onSubmit={handleLeadSubmit} className="space-y-4">
+                            {/* Perfil de interesse */}
+                            <div className="space-y-2 pb-2">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Tenho interesse em:</label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <label className={`flex items-center gap-3 p-4 rounded-2xl border-2 cursor-pointer transition-all ${leadForm.type === 'client' ? 'border-[#27AE60] bg-emerald-50/40 text-emerald-950 font-bold shadow-sm' : 'border-slate-200 bg-white hover:border-slate-350 text-slate-650'}`}>
+                                        <input 
+                                            type="radio" 
+                                            name="leadType" 
+                                            value="client"
+                                            checked={leadForm.type === 'client'}
+                                            onChange={() => setLeadForm(prev => ({ ...prev, type: 'client' }))}
+                                            className="accent-[#27AE60] w-4 h-4" 
+                                        />
+                                        <div className="flex flex-col text-left">
+                                            <span className="text-xs uppercase font-extrabold tracking-wider">Ser Cliente</span>
+                                            <span className="text-[9px] font-semibold text-slate-500 leading-tight">Contratar Telemedicina</span>
+                                        </div>
+                                    </label>
+                                    <label className={`flex items-center gap-3 p-4 rounded-2xl border-2 cursor-pointer transition-all ${leadForm.type === 'affiliate' ? 'border-[#2980B9] bg-sky-50/40 text-sky-950 font-bold shadow-sm' : 'border-slate-200 bg-white hover:border-slate-350 text-slate-650'}`}>
+                                        <input 
+                                            type="radio" 
+                                            name="leadType" 
+                                            value="affiliate"
+                                            checked={leadForm.type === 'affiliate'}
+                                            onChange={() => setLeadForm(prev => ({ ...prev, type: 'affiliate' }))}
+                                            className="accent-[#2980B9] w-4 h-4" 
+                                        />
+                                        <div className="flex flex-col text-left">
+                                            <span className="text-xs uppercase font-extrabold tracking-wider">Ser Afiliado</span>
+                                            <span className="text-[9px] font-semibold text-slate-500 leading-tight">Indicar e Obter Renda</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
                             {/* Nome */}
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Nome Completo</label>
@@ -1180,7 +1257,7 @@ const HomePage: React.FC = () => {
 
                         <div className="text-center pt-2">
                             <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">
-                                Ao se cadastrar, você poderá conhecer melhor a proposta da plataforma e entender como funciona o modelo de afiliação.
+                                Ao se cadastrar, você será redirecionado para a nossa página de registro seguro para finalizar a contratação do seu plano ou a ativação da sua conta de afiliado.
                             </p>
                         </div>
                     </div>
