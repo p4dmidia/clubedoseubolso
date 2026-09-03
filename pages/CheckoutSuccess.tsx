@@ -39,6 +39,7 @@ const CheckoutSuccess: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordFields, setShowPasswordFields] = useState(true);
   const [hasInitializedPasswordFields, setHasInitializedPasswordFields] = useState(false);
+  const hasTrackedPurchase = React.useRef(false);
 
   const [formInfo, setFormInfo] = useState({
     cep: '',
@@ -83,6 +84,24 @@ const CheckoutSuccess: React.FC = () => {
       setHasInitializedPasswordFields(true);
     }
   }, [order, currentUser, hasInitializedPasswordFields]);
+
+  useEffect(() => {
+    if (order && !hasTrackedPurchase.current) {
+      const isPaid = order.status === 'Pago' || order.payment_status === 'paid';
+      if (isPaid) {
+        const fbq = (window as any).fbq;
+        if (typeof fbq === 'function') {
+          fbq('track', 'Purchase', {
+            value: order.total_amount || order.amount,
+            currency: 'BRL',
+            content_type: 'product',
+            content_ids: [order.id]
+          }, { eventID: order.id });
+          hasTrackedPurchase.current = true;
+        }
+      }
+    }
+  }, [order]);
 
   useEffect(() => {
     if (!effectiveOrderId) {

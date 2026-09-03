@@ -48,6 +48,21 @@ const ProductDetails: React.FC = () => {
         fetchProduct();
     }, [id]);
 
+    useEffect(() => {
+        if (product) {
+            const fbq = (window as any).fbq;
+            if (typeof fbq === 'function') {
+                fbq('track', 'ViewContent', {
+                    content_name: product.name,
+                    content_ids: [product.id],
+                    content_type: 'product',
+                    value: product.price,
+                    currency: 'BRL'
+                });
+            }
+        }
+    }, [product]);
+
     const fetchProduct = async () => {
         setIsLoading(true);
         try {

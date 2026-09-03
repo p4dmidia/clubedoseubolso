@@ -80,6 +80,18 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             return [...prev, { ...product, quantity: requestedQuantity, stock_quantity: stockAvailable, selectedVariations }];
         });
+
+        // Meta Pixel Tracking - AddToCart
+        const fbq = (window as any).fbq;
+        if (typeof fbq === 'function') {
+            fbq('track', 'AddToCart', {
+                content_ids: [product.id],
+                content_name: product.name,
+                content_type: 'product',
+                value: product.price,
+                currency: 'BRL'
+            });
+        }
     };
 
 

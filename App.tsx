@@ -72,6 +72,20 @@ const ScrollToTop: React.FC = () => {
   return null;
 };
 
+// Componente para rastrear visualizações de página (PageView) no Facebook Pixel em SPAs
+const PixelTracker: React.FC = () => {
+  const location = useLocation();
+
+  React.useEffect(() => {
+    const fbq = (window as any).fbq;
+    if (typeof fbq === 'function') {
+      fbq('track', 'PageView');
+    }
+  }, [location.pathname, location.search]);
+
+  return null;
+};
+
 const AppContent: React.FC = () => {
   const location = useLocation();
   const isDashboard = location.pathname.startsWith('/afiliado') || location.pathname.startsWith('/admin') || location.pathname.startsWith('/cliente') || location.pathname === '/home-test';
@@ -141,6 +155,7 @@ const App: React.FC = () => {
   return (
     <Router>
       <ScrollToTop />
+      <PixelTracker />
       <CartProvider>
         <AuthProvider>
           <Toaster position="top-right" reverseOrder={false} />

@@ -31,9 +31,25 @@ const CheckoutPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [pixData, setPixData] = useState<any>(null);
 
+    const hasTrackedCheckout = React.useRef(false);
     React.useEffect(() => {
         window.scrollTo(0, 0);
-    }, []);
+        
+        // Meta Pixel Tracking - InitiateCheckout
+        if (!hasTrackedCheckout.current && cart.length > 0) {
+            const fbq = (window as any).fbq;
+            if (typeof fbq === 'function') {
+                fbq('track', 'InitiateCheckout', {
+                    content_ids: cart.map(item => item.id),
+                    content_type: 'product',
+                    value: cartTotal,
+                    currency: 'BRL',
+                    num_items: cart.reduce((acc, item) => acc + item.quantity, 0)
+                });
+                hasTrackedCheckout.current = true;
+            }
+        }
+    }, [cart, cartTotal]);
 
     const [isFormDirty, setIsFormDirty] = useState(() => {
         return localStorage.getItem('checkout_is_dirty') === 'true';
