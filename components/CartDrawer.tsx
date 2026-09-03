@@ -53,6 +53,16 @@ const CartDrawer: React.FC = () => {
     };
 
     const handleGoToCheckout = () => {
+        const fbq = (window as any).fbq;
+        if (typeof fbq === 'function') {
+            fbq('track', 'InitiateCheckout', {
+                content_ids: cart.map(item => item.id),
+                content_type: 'product',
+                value: cartTotal,
+                currency: 'BRL',
+                num_items: cart.reduce((acc, item) => acc + item.quantity, 0)
+            });
+        }
         setIsCartOpen(false);
         navigate('/checkout');
     };

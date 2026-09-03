@@ -144,6 +144,17 @@ const ServiceLandingPage: React.FC = () => {
     const [plans, setPlans] = useState<any[]>([]);
 
     const handlePurchase = (planId: string) => {
+        const fbq = (window as any).fbq;
+        if (typeof fbq === 'function') {
+            const selectedPlan = plans.find(p => p.id === planId);
+            fbq('track', 'AddToCart', {
+                content_name: selectedPlan?.name,
+                content_ids: [planId],
+                content_type: 'product',
+                value: selectedPlan?.price,
+                currency: 'BRL'
+            });
+        }
         navigate(`/checkout?buy=${planId}`);
     };
 

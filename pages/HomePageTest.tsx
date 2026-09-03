@@ -379,6 +379,18 @@ const HomePageTest: React.FC = () => {
                             </div>
                              <Link 
                                  to="/checkout?buy=d3b07384-d113-4171-bc03-9a7c936df312"
+                                 onClick={() => {
+                                     const fbq = (window as any).fbq;
+                                     if (typeof fbq === 'function') {
+                                         fbq('track', 'AddToCart', {
+                                             content_name: 'Plano Telemedicina Familiar',
+                                             content_ids: ['d3b07384-d113-4171-bc03-9a7c936df312'],
+                                             content_type: 'product',
+                                             value: 49.90,
+                                             currency: 'BRL'
+                                         });
+                                     }
+                                 }}
                                  className="block w-full bg-verde text-white font-bold text-center py-4 rounded-xl hover:bg-verde-dark transition-all shadow-md"
                              >
                                  QUERO ASSINAR

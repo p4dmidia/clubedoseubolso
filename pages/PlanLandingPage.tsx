@@ -281,6 +281,16 @@ const PlanLandingPage: React.FC = () => {
     };
 
     const handleCTA = () => {
+        const fbq = (window as any).fbq;
+        if (typeof fbq === 'function') {
+            fbq('track', 'AddToCart', {
+                content_name: plan.name,
+                content_ids: [plan.checkoutId],
+                content_type: 'product',
+                value: plan.price,
+                currency: 'BRL'
+            });
+        }
         navigate(`/checkout?buy=${plan.checkoutId}`);
     };
 

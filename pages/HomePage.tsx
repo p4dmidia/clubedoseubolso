@@ -338,6 +338,12 @@ const HomePage: React.FC = () => {
                         <div className="flex flex-wrap gap-4 pt-4">
                             <a 
                                 href="#planos" 
+                                onClick={() => {
+                                    const fbq = (window as any).fbq;
+                                    if (typeof fbq === 'function') {
+                                        fbq('track', 'Lead');
+                                    }
+                                }}
                                 className="bg-[#27AE60] hover:bg-[#219653] text-white font-black text-xs px-8 py-4 rounded-xl shadow-lg shadow-[#27AE60]/20 hover:shadow-xl hover:shadow-[#27AE60]/30 transition-all transform hover:-translate-y-0.5 text-center uppercase tracking-wider"
                             >
                                 CONTRATAR TELEMEDICINA
@@ -605,7 +611,19 @@ const HomePage: React.FC = () => {
                                     return (
                                         <div 
                                             key={plan.id || idx}
-                                            onClick={() => navigate(`/checkout?buy=${plan.id}`)}
+                                            onClick={() => {
+                                                const fbq = (window as any).fbq;
+                                                if (typeof fbq === 'function') {
+                                                    fbq('track', 'AddToCart', {
+                                                        content_name: plan.name,
+                                                        content_ids: [plan.id],
+                                                        content_type: 'product',
+                                                        value: plan.price,
+                                                        currency: 'BRL'
+                                                    });
+                                                }
+                                                navigate(`/checkout?buy=${plan.id}`);
+                                            }}
                                             className={`bg-white rounded-3xl p-6 border-2 flex flex-col justify-between hover:scale-[1.02] cursor-pointer transition-all duration-300 relative ${
                                                 isPremium 
                                                     ? 'border-[#2980B9] shadow-md shadow-[#2980B9]/5 hover:shadow-lg' 
@@ -657,7 +675,19 @@ const HomePage: React.FC = () => {
                                             <div className="mt-6">
                                                 <Link 
                                                     to={`/checkout?buy=${plan.id}`}
-                                                    onClick={(e) => e.stopPropagation()}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        const fbq = (window as any).fbq;
+                                                        if (typeof fbq === 'function') {
+                                                            fbq('track', 'AddToCart', {
+                                                                content_name: plan.name,
+                                                                content_ids: [plan.id],
+                                                                content_type: 'product',
+                                                                value: plan.price,
+                                                                currency: 'BRL'
+                                                            });
+                                                        }
+                                                    }}
                                                     className="w-full block text-center py-3 bg-[#27AE60] hover:bg-[#219653] text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-md shadow-[#27AE60]/10"
                                                 >
                                                     ASSINAR AGORA
