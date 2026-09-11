@@ -22,6 +22,45 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/AuthContext';
 import toast from 'react-hot-toast';
 
+const planCommissions = [
+    {
+        name: 'Plano Familiar Premium',
+        category: 'ASSINATURA FAMILIAR',
+        categoryColor: 'bg-blue-50 text-[#2980B9] border border-blue-100',
+        adesao: 'R$ 87,90',
+        mensalidade: 'R$ 87,90',
+        comissaoAdesao: 'R$ 35,00',
+        comissaoMensal: 'R$ 17,58'
+    },
+    {
+        name: 'Plano Familiar Essencial',
+        category: 'ASSINATURA FAMILIAR',
+        categoryColor: 'bg-blue-50 text-[#2980B9] border border-blue-100',
+        adesao: 'R$ 44,90',
+        mensalidade: 'R$ 44,90',
+        comissaoAdesao: 'R$ 23,00',
+        comissaoMensal: 'R$ 10,00'
+    },
+    {
+        name: 'Plano Individual Premium',
+        category: 'ASSINATURA INDIVIDUAL',
+        categoryColor: 'bg-indigo-50 text-indigo-700 border border-indigo-100',
+        adesao: 'R$ 34,90',
+        mensalidade: 'R$ 34,90',
+        comissaoAdesao: 'R$ 10,00',
+        comissaoMensal: 'R$ 7,00'
+    },
+    {
+        name: 'Plano Individual Essencial',
+        category: 'ASSINATURA INDIVIDUAL',
+        categoryColor: 'bg-indigo-50 text-indigo-700 border border-indigo-100',
+        adesao: 'R$ 17,90',
+        mensalidade: 'R$ 17,90',
+        comissaoAdesao: 'R$ 6,00',
+        comissaoMensal: 'R$ 5,00'
+    }
+];
+
 const AffiliateDashboard: React.FC = () => {
     const { user, profile } = useAuth();
     const navigate = useNavigate();
@@ -389,6 +428,95 @@ const AffiliateDashboard: React.FC = () => {
                         </div>
                     </div>
                 ))}
+            </div>
+
+            {/* Tabela de Comissões por Plano */}
+            <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden mb-10">
+                <div className="p-8 sm:p-10 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-50/50 to-white">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-sm">
+                            <TrendingUp className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h3 className="text-xl sm:text-2xl font-black text-[#0B1221]">Tabela de Comissões por Plano</h3>
+                            <p className="text-slate-500 font-medium text-xs sm:text-sm mt-0.5">Seus ganhos por cada cliente indicado: na adesão imediata e na mensalidade recorrente</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800">
+                            <CheckCircle className="w-3.5 h-3.5" /> Ganhos Recorrentes
+                        </span>
+                    </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[720px]">
+                        <thead>
+                            <tr className="border-b border-slate-100 bg-slate-50/70 text-[11px] font-black uppercase tracking-wider text-slate-400">
+                                <th className="py-5 px-8">Plano</th>
+                                <th className="py-5 px-6 text-center">Categoria</th>
+                                <th className="py-5 px-6 text-center">Adesão</th>
+                                <th className="py-5 px-6 text-center">Mensalidade</th>
+                                <th className="py-5 px-6 text-center text-emerald-600 font-black">Comissão Adesão</th>
+                                <th className="py-5 px-6 text-center text-emerald-600 font-black">Comissão Mensal</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {planCommissions.map((plan, idx) => (
+                                <tr key={idx} className="hover:bg-slate-50/80 transition-colors group">
+                                    {/* Nome do Plano + Ícone */}
+                                    <td className="py-5 px-8">
+                                        <div className="flex items-center gap-3.5">
+                                            <div className="w-10 h-10 rounded-xl bg-[#0B1221] flex items-center justify-center p-2 shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                                                <img src="/assets/favicon.png" alt="Logo" className="w-full h-full object-contain" />
+                                            </div>
+                                            <span className="font-bold text-[#0B1221] text-sm sm:text-base">{plan.name}</span>
+                                        </div>
+                                    </td>
+
+                                    {/* Categoria */}
+                                    <td className="py-5 px-6 text-center">
+                                        <span className={`inline-block text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider ${plan.categoryColor}`}>
+                                            {plan.category}
+                                        </span>
+                                    </td>
+
+                                    {/* Adesão */}
+                                    <td className="py-5 px-6 text-center">
+                                        <span className="font-black text-[#0B1221] text-sm">{plan.adesao}</span>
+                                    </td>
+
+                                    {/* Mensalidade */}
+                                    <td className="py-5 px-6 text-center">
+                                        <span className="font-bold text-slate-600 text-sm">{plan.mensalidade}</span>
+                                    </td>
+
+                                    {/* Comissão Adesão */}
+                                    <td className="py-5 px-6 text-center">
+                                        <span className="inline-block font-black text-emerald-600 text-base bg-emerald-50/70 px-3 py-1 rounded-xl border border-emerald-100">
+                                            {plan.comissaoAdesao}
+                                        </span>
+                                    </td>
+
+                                    {/* Comissão Mensal */}
+                                    <td className="py-5 px-6 text-center">
+                                        <span className="inline-block font-black text-emerald-600 text-base bg-emerald-50/70 px-3 py-1 rounded-xl border border-emerald-100">
+                                            {plan.comissaoMensal}
+                                        </span>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between flex-wrap gap-4 text-xs text-slate-500 font-medium">
+                    <p className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                        As comissões de adesão são creditadas no primeiro pagamento e a comissão mensal permanece todo mês enquanto a assinatura estiver ativa.
+                    </p>
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Valores líquidos a receber</span>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-20">
