@@ -225,11 +225,13 @@ serve(async (req) => {
             // 3. Criar cobrança no Asaas (Checkout Asaas / invoiceUrl)
             console.log(`Criando cobrança de R$ ${order.total_amount} para cliente ${asaasCustomerId}...`);
             
-            // Gerar data de vencimento: hoje formatada em YYYY-MM-DD
+            // Gerar data de vencimento: para boleto, 3 dias de prazo; para pix/cartão, hoje
             const dateSP = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-            const year = dateSP.getFullYear();
-            const month = String(dateSP.getMonth() + 1).padStart(2, '0');
-            const day = String(dateSP.getDate()).padStart(2, '0');
+            const daysToAdd = targetPaymentMethod === 'boleto' ? 3 : 0;
+            const targetDate = new Date(dateSP.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
+            const year = targetDate.getFullYear();
+            const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+            const day = String(targetDate.getDate()).padStart(2, '0');
             const dueDate = `${year}-${month}-${day}`;
 
             // --- CÁLCULO DE COMISSÃO DIRETA (NÍVEL ÚNICO) ---
@@ -526,6 +528,8 @@ serve(async (req) => {
                     addressComplement: body.creditCardHolderInfo.addressComplement || undefined,
                     phone: (body.creditCardHolderInfo.phone || order.customer_phone || "").replace(/\D/g, ""),
                 };
+            } else if (targetPaymentMethod === 'boleto') {
+                paymentData.billingType = "BOLETO";
             } else {
                 paymentData.billingType = "UNDEFINED";
                 paymentData.callback = {
@@ -550,7 +554,7 @@ serve(async (req) => {
                 console.warn(`Primeira tentativa de cobrança falhou: ${paymentErrText}`);
                 
                 // Se o erro for de callback/domínio inválido, tenta criar novamente sem as opções de callback
-                if (targetPaymentMethod !== 'pix' && targetPaymentMethod !== 'credit' && (paymentErrText.includes("callback") || paymentErrText.includes("domínio") || paymentErrText.includes("dominio"))) {
+                if (targetPaymentMethod !== 'pix' && targetPaymentMethod !== 'credit' && targetPaymentMethod !== 'boleto' && (paymentErrText.includes("callback") || paymentErrText.includes("domínio") || paymentErrText.includes("dominio"))) {
                     console.log("Tentando criar cobrança novamente sem as configurações de callback...");
                     const { callback: _, ...paymentDataFallback } = paymentData;
 
@@ -610,14 +614,41 @@ serve(async (req) => {
                 }
             }
 
+            // Se for BOLETO, buscar linha digitável e código de barras
+            if (targetPaymentMethod === 'boleto') {
+                console.log(`Buscando linha digitável do Boleto para cobrança ${paymentResult.id}...`);
+                try {
+                    const idFieldResponse = await fetch(`${baseUrl}/payments/${paymentResult.id}/identificationField`, {
+                        method: "GET",
+                        headers: {
+                            "access_token": asaasToken,
+                            "Content-Type": "application/json",
+                            "User-Agent": "ClubeDoSeuBolsoIntegration"
+                        }
+                    });
+
+                    if (idFieldResponse.ok) {
+                        const idFieldData = await idFieldResponse.json();
+                        paymentResult.identificationField = idFieldData.identificationField;
+                        paymentResult.nossoNumero = idFieldData.nossoNumero;
+                        paymentResult.barCode = idFieldData.barCode;
+                        console.log(`Linha digitável obtida: ${paymentResult.identificationField}`);
+                    } else {
+                        console.warn('Não foi possível obter linha digitável do Asaas:', await idFieldResponse.text());
+                    }
+                } catch (e: any) {
+                    console.error('Erro ao buscar identificationField:', e.message);
+                }
+            }
+
             const isCreditCardApproved = targetPaymentMethod === 'credit' && (paymentResult.status === 'CONFIRMED' || paymentResult.status === 'RECEIVED');
 
-            // 4. Salvar o payment_id do Asaas, split, split_details e a URL da fatura (invoiceUrl) no pedido
+            // 4. Salvar o payment_id do Asaas, split, split_details e a URL da fatura/boleto no pedido
             await supabase.from("orders").update({
                 payment_id: paymentResult.id,
-                payment_preference_id: targetPaymentMethod === 'credit' ? null : paymentResult.invoiceUrl,
+                payment_preference_id: targetPaymentMethod === 'credit' ? null : (paymentResult.bankSlipUrl || paymentResult.invoiceUrl),
                 pix_qr_code_base64: paymentResult.pixQrCodeBase64 || null,
-                pix_copy_paste: paymentResult.pixCopyPaste || null,
+                pix_copy_paste: paymentResult.identificationField || paymentResult.pixCopyPaste || null,
                 status: isCreditCardApproved ? 'Pago' : 'Pendente',
                 payment_status: isCreditCardApproved ? 'paid' : 'pending',
                 split_wallet_id: splitWalletId,
@@ -631,10 +662,14 @@ serve(async (req) => {
                 payment_id: paymentResult.id,
                 status: isCreditCardApproved ? 'Pago' : 'Pendente',
                 pix_qr_code_base64: paymentResult.pixQrCodeBase64 || null,
-                pix_copy_paste: paymentResult.pixCopyPaste || null,
+                pix_copy_paste: paymentResult.identificationField || paymentResult.pixCopyPaste || null,
+                bankSlipUrl: paymentResult.bankSlipUrl || null,
+                identificationField: paymentResult.identificationField || null,
+                barCode: paymentResult.barCode || null,
+                dueDate: paymentResult.dueDate || dueDate,
                 invoiceUrl: paymentResult.invoiceUrl || null,
-                init_point: paymentResult.invoiceUrl || null,
-                ticket_url: paymentResult.invoiceUrl || null
+                init_point: paymentResult.bankSlipUrl || paymentResult.invoiceUrl || null,
+                ticket_url: paymentResult.bankSlipUrl || paymentResult.invoiceUrl || null
             }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
 

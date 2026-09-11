@@ -17,7 +17,8 @@ import {
   Eye,
   EyeOff,
   Lock,
-  CreditCard
+  CreditCard,
+  FileText
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
@@ -591,8 +592,81 @@ const CheckoutSuccess: React.FC = () => {
               </div>
             </div>
 
-            {/* Asaas Payment Link Section (if Pending and has payment_preference_id and not PIX) */}
-            {!isPaid && !order.payment_method?.toLowerCase().includes('pix') && order.payment_preference_id && (
+            {/* Boleto Bancário Section */}
+            {!isPaid && order.payment_method?.toLowerCase().includes('boleto') && (
+              <div className="bg-slate-50 border-t border-slate-100 p-8 md:p-12">
+                <div className="bg-white rounded-[2rem] p-8 md:p-10 shadow-sm border border-slate-200 max-w-2xl mx-auto space-y-8">
+                  <div className="text-center space-y-3">
+                    <div className="w-16 h-16 bg-[#2980B9]/10 rounded-2xl flex items-center justify-center mx-auto text-[#2980B9] shadow-sm">
+                      <FileText className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-black text-[#0B1221]">Boleto Bancário Gerado</h3>
+                      <p className="text-slate-500 text-sm font-medium mt-1">
+                        Pague pelo aplicativo do seu banco ou imprima para pagar em qualquer agência ou lotérica.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Botão de Visualização / Impressão do Boleto */}
+                  {order.payment_preference_id && (
+                    <div>
+                      <a 
+                        href={order.payment_preference_id}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full bg-[#2980B9] hover:bg-[#1f6391] text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest text-center shadow-xl shadow-[#2980B9]/20 flex items-center justify-center gap-3 transition-all transform hover:-translate-y-0.5"
+                      >
+                        <FileText className="w-5 h-5" />
+                        Visualizar / Imprimir Boleto (PDF)
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Linha Digitável (Código de Barras) */}
+                  {(order.pix_copy_paste || (location.state as any)?.identificationField || (location.state as any)?.copyPaste) && (
+                    <div className="space-y-2 text-left">
+                      <label className="text-[11px] font-black uppercase text-slate-400 tracking-wider pl-1">
+                        Linha Digitável (Código de Barras)
+                      </label>
+                      <div className="flex gap-2">
+                        <input 
+                          readOnly 
+                          value={order.pix_copy_paste || (location.state as any)?.identificationField || (location.state as any)?.copyPaste || ''} 
+                          className="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-mono font-bold text-slate-700 outline-none select-all"
+                        />
+                        <button 
+                          onClick={() => {
+                            const code = order.pix_copy_paste || (location.state as any)?.identificationField || (location.state as any)?.copyPaste || '';
+                            navigator.clipboard.writeText(code);
+                            toast.success('Linha digitável copiada!');
+                          }}
+                          className="px-5 py-3 bg-[#0B1221] hover:bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 shadow-sm"
+                        >
+                          <Copy className="w-4 h-4" />
+                          Copiar
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Informações de Prazo */}
+                  <div className="p-4 bg-amber-50/80 border border-amber-200/80 rounded-2xl flex items-start gap-3.5 text-left">
+                    <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="text-xs space-y-1">
+                      <p className="font-bold text-amber-900">Prazo de Compensação Bancária:</p>
+                      <p className="text-amber-800 leading-relaxed font-medium">
+                        O pagamento por boleto bancário é compensado em até <b>1 a 2 dias úteis</b> após o pagamento. Assim que o banco confirmar a liquidação, o seu acesso ao clube será liberado de forma 100% automática.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Asaas Payment Link Section (if Pending and has payment_preference_id and not PIX and not Boleto) */}
+            {!isPaid && !order.payment_method?.toLowerCase().includes('pix') && !order.payment_method?.toLowerCase().includes('boleto') && order.payment_preference_id && (
               <div className="bg-slate-50 border-t border-slate-100 p-8 md:p-12">
                 <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-slate-200 text-center max-w-xl mx-auto space-y-6">
                   <div className="w-16 h-16 bg-[#2980B9]/10 rounded-2xl flex items-center justify-center mx-auto text-[#2980B9]">

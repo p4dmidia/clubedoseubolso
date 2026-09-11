@@ -27,7 +27,7 @@ const CheckoutPage: React.FC = () => {
     const { user } = useAuth();
     const hasProcessedDirectBuy = React.useRef(false);
     const [acceptedConsorcio, setAcceptedConsorcio] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState<'credit' | 'pix'>('credit');
+    const [paymentMethod, setPaymentMethod] = useState<'credit' | 'pix' | 'boleto'>('credit');
     const [isLoading, setIsLoading] = useState(false);
     const [pixData, setPixData] = useState<any>(null);
 
@@ -364,7 +364,7 @@ const CheckoutPage: React.FC = () => {
                         shipping_cost: shipping,
                         shipping_method: cart.every(item => item.category === 'Consórcio' || item.name.includes('CONSÓRCIO')) ? 'Isento - Digital' : 'Não informado',
                         status: 'Pendente',
-                        payment_method: paymentMethod === 'credit' ? 'Cartão de Crédito' : 'Pix'
+                        payment_method: paymentMethod === 'credit' ? 'Cartão de Crédito' : paymentMethod === 'boleto' ? 'Boleto Bancário' : 'Pix'
                     }]);
 
                 if (orderError) throw orderError;
@@ -465,6 +465,18 @@ const CheckoutPage: React.FC = () => {
                     state: {
                         qrCodeBase64: paymentResult.pix_qr_code_base64,
                         copyPaste: paymentResult.pix_copy_paste
+                    }
+                });
+            } else if (paymentMethod === 'boleto') {
+                toast.success('Boleto bancário gerado com sucesso!');
+                navigate(`/checkout/success/${orderId}`, {
+                    state: {
+                        bankSlipUrl: paymentResult.bankSlipUrl,
+                        identificationField: paymentResult.identificationField,
+                        barCode: paymentResult.barCode,
+                        invoiceUrl: paymentResult.invoiceUrl,
+                        dueDate: paymentResult.dueDate,
+                        copyPaste: paymentResult.identificationField
                     }
                 });
             } else {
@@ -682,22 +694,46 @@ const CheckoutPage: React.FC = () => {
                                 <CreditCard className="w-6 h-6 text-[#2980B9]" />
                                 Pagamento
                             </h3>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <button
+                                    type="button"
                                     onClick={() => setPaymentMethod('credit')}
                                     className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${paymentMethod === 'credit' ? 'border-[#2980B9] bg-amber-50/30' : 'border-slate-100 hover:border-slate-200'}`}
                                 >
                                     <CreditCard className={`w-8 h-8 ${paymentMethod === 'credit' ? 'text-[#2980B9]' : 'text-slate-300'}`} />
-                                    <span className="text-xs font-black uppercase tracking-widest">Cartão de Crédito</span>
+                                    <span className="text-xs font-black uppercase tracking-widest text-center">Cartão de Crédito</span>
                                 </button>
                                 <button
+                                    type="button"
                                     onClick={() => setPaymentMethod('pix')}
                                     className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${paymentMethod === 'pix' ? 'border-[#2980B9] bg-amber-50/30' : 'border-slate-100 hover:border-slate-200'}`}
                                 >
                                     <div className={`w-8 h-8 flex items-center justify-center font-black rounded-lg ${paymentMethod === 'pix' ? 'bg-[#2980B9] text-[#0B1221]' : 'bg-slate-100 text-slate-300'}`}>PIX</div>
-                                    <span className="text-xs font-black uppercase tracking-widest">Pix</span>
+                                    <span className="text-xs font-black uppercase tracking-widest text-center">Pix</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setPaymentMethod('boleto')}
+                                    className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 ${paymentMethod === 'boleto' ? 'border-[#2980B9] bg-amber-50/30' : 'border-slate-100 hover:border-slate-200'}`}
+                                >
+                                    <FileText className={`w-8 h-8 ${paymentMethod === 'boleto' ? 'text-[#2980B9]' : 'text-slate-300'}`} />
+                                    <span className="text-xs font-black uppercase tracking-widest text-center">Boleto Bancário</span>
                                 </button>
                             </div>
+                            {paymentMethod === 'boleto' && (
+                                <div className="mt-8 p-6 bg-slate-50 border border-slate-200 rounded-2xl space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <div className="flex items-center gap-2 font-black text-sm text-[#0B1221]">
+                                        <FileText className="w-5 h-5 text-[#2980B9]" />
+                                        <span>Pagamento via Boleto Bancário</span>
+                                    </div>
+                                    <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                                        Ao finalizar o pedido, o boleto será gerado com vencimento em 3 dias úteis. Você poderá visualizar o documento em PDF ou copiar a linha digitável para pagar no aplicativo do seu banco.
+                                    </p>
+                                    <p className="text-[11px] text-amber-700 bg-amber-50 p-2.5 rounded-xl border border-amber-200/60 font-semibold">
+                                        ℹ️ A compensação bancária pode levar de 1 a 2 dias úteis. Seu acesso será liberado automaticamente após a confirmação do pagamento.
+                                    </p>
+                                </div>
+                            )}
                             {paymentMethod === 'credit' && (
                                 <div className="mt-8 space-y-6 pt-8 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
                                     <div className="space-y-2">
