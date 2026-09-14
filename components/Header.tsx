@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingCart, Menu, X } from 'lucide-react';
+import { ShoppingCart, Menu, X, Activity, ExternalLink } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useCart } from './CartContext';
 import CartDrawer from './CartDrawer';
@@ -30,7 +30,7 @@ const Header: React.FC = () => {
         </nav>
 
         {/* Controls */}
-        <div className="flex items-center gap-2 md:gap-4">
+        <div className="flex items-center gap-2 md:gap-3">
           {/* Cart Icon */}
           {!isHome && (
             <button 
@@ -45,6 +45,20 @@ const Header: React.FC = () => {
               )}
             </button>
           )}
+
+          {/* Telemedicina Mais Unidos Login */}
+          <a
+            href="https://app.maisunidos.com.br/Conta/Entrar"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:inline-flex items-center gap-1.5 bg-sky-50 border border-sky-200 text-[#2980B9] font-bold px-3.5 py-2 rounded-lg hover:bg-[#2980B9] hover:text-white transition-all text-xs lg:text-sm group shadow-sm"
+            title="Acessar Telemedicina Mais Unidos"
+          >
+            <Activity className="w-4 h-4 text-[#2980B9] group-hover:text-white transition-colors" />
+            <span className="hidden xl:inline">Telemedicina Mais Unidos</span>
+            <span className="xl:hidden">Telemedicina</span>
+            <ExternalLink className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 transition-opacity" />
+          </a>
 
           {/* Member Login (Secondary) */}
           <Link 
@@ -113,6 +127,17 @@ const Header: React.FC = () => {
           </a>
           
           <div className="pt-2 space-y-2">
+            <a 
+              href="https://app.maisunidos.com.br/Conta/Entrar" 
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setIsMenuOpen(false)} 
+              className="flex items-center justify-center gap-2 bg-sky-50 border border-sky-200 text-[#2980B9] font-bold text-center px-4 py-2.5 rounded-lg hover:bg-[#2980B9] hover:text-white transition-all"
+            >
+              <Activity className="w-4 h-4" />
+              <span>Telemedicina Mais Unidos</span>
+              <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+            </a>
             <Link 
               to="/login" 
               onClick={() => setIsMenuOpen(false)} 
