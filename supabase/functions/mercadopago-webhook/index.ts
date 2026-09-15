@@ -60,6 +60,49 @@ async function sendConfirmationEmail(order: any) {
   }
 }
 
+const ZAPI_INSTANCE_ID = Deno.env.get("ZAPI_INSTANCE_ID") ?? "3F9362BF22FA72B42ECBBE7DD852ABAB";
+const ZAPI_TOKEN = Deno.env.get("ZAPI_TOKEN") ?? "38CBE288FE1233E6885D646B";
+const ZAPI_CLIENT_TOKEN = Deno.env.get("ZAPI_CLIENT_TOKEN") ?? "Ffd792d37c5674e08bff13e0a6e568cf9S";
+
+async function sendWhatsAppNotification(order: any, isTelemedicinePending: boolean) {
+    if (!order || !order.customer_phone) return;
+
+    try {
+        let cleanPhone = order.customer_phone.replace(/\D/g, "");
+        if (!cleanPhone) return;
+
+        if ((cleanPhone.length === 10 || cleanPhone.length === 11) && !cleanPhone.startsWith("55")) {
+            cleanPhone = `55${cleanPhone}`;
+        }
+
+        const firstName = (order.customer_name || "Cliente").trim().split(" ")[0];
+        const successUrl = `https://www.clubedoseubolso.com.br/checkout/success?order_id=${encodeURIComponent(order.id)}`;
+
+        let message = "";
+        if (isTelemedicinePending) {
+            message = `Olá, *${firstName}*! 🎉\n\nConfirmamos o pagamento do seu plano de *Telemedicina Mais Unidos* no Clube do Seu Bolso com sucesso!\n\nPara concluir seu cadastro de paciente e liberar seu acesso imediato às consultas médicas, clique no link seguro abaixo:\n\n👉 ${successUrl}\n\nO preenchimento leva menos de 1 minuto! Se precisar de ajuda, estamos à disposição.`;
+        } else {
+            message = `Olá, *${firstName}*! 🎉\n\nConfirmamos o pagamento do seu pedido (*#${order.id}*) no Clube do Seu Bolso com sucesso!\n\nVocê pode acompanhar e gerenciar seu pedido pelo link seguro abaixo:\n\n👉 ${successUrl}\n\nObrigado pela preferência!`;
+        }
+
+        const zapiUrl = `https://api.z-api.io/instances/${ZAPI_INSTANCE_ID}/token/${ZAPI_TOKEN}/send-text`;
+
+        await fetch(zapiUrl, {
+            method: "POST",
+            headers: {
+                "Client-Token": ZAPI_CLIENT_TOKEN,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                phone: cleanPhone,
+                message: message
+            })
+        });
+    } catch (err) {
+        console.error("[Z-API] Erro no envio do WhatsApp:", err.message);
+    }
+}
+
 async function processAffiliateAndCommissions(order: any, supabaseClient: any) {
     // 1. Upgrade de Plano (Heurística: Se comprou algo de R$ 197)
     if (Number(order.total_amount) === 197) {
@@ -185,6 +228,7 @@ serve(async (req) => {
                     await processAffiliateAndCommissions(order, supabase);
                     
                     // Sincronizar com telemedicina (Mais Unidos)
+                    let isTelemedicinePending = false;
                     try {
                         console.log(`[Webhook] Disparando sincronização de telemedicina para pedido ${orderId}...`);
                         const { data: syncRes, error: syncErr } = await supabase.functions.invoke('telemedicine-sync', {
@@ -194,10 +238,16 @@ serve(async (req) => {
                             console.error(`[Webhook] Erro no invoke da telemedicina para pedido ${orderId}:`, syncErr);
                         } else {
                             console.log(`[Webhook] Sincronização concluída com sucesso para pedido ${orderId}:`, syncRes);
+                            if (syncRes?.pending_registration) {
+                                isTelemedicinePending = true;
+                            }
                         }
                     } catch (err) {
                         console.error(`[Webhook] Erro ao disparar sincronização da telemedicina para pedido ${orderId}:`, err.message);
                     }
+
+                    // Disparar WhatsApp via Z-API
+                    await sendWhatsAppNotification(order, isTelemedicinePending);
                     
                     // E-mail desativado a pedido do usuário (Mercado Pago faz isso nativamente)
                     // await sendConfirmationEmail(order);

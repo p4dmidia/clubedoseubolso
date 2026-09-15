@@ -22,6 +22,70 @@ async function processAffiliateAndCommissions(order: any, supabaseClient: any) {
     }
 
 
+const ZAPI_INSTANCE_ID = Deno.env.get("ZAPI_INSTANCE_ID") ?? "3F9362BF22FA72B42ECBBE7DD852ABAB";
+const ZAPI_TOKEN = Deno.env.get("ZAPI_TOKEN") ?? "38CBE288FE1233E6885D646B";
+const ZAPI_CLIENT_TOKEN = Deno.env.get("ZAPI_CLIENT_TOKEN") ?? "Ffd792d37c5674e08bff13e0a6e568cf9S";
+
+async function sendWhatsAppNotification(order: any, isTelemedicinePending: boolean) {
+    if (!order || !order.customer_phone) {
+        console.log("[Z-API] Telefone do cliente não encontrado. Ignorando WhatsApp.");
+        return;
+    }
+
+    try {
+        let cleanPhone = order.customer_phone.replace(/\D/g, "");
+        if (!cleanPhone) return;
+
+        if ((cleanPhone.length === 10 || cleanPhone.length === 11) && !cleanPhone.startsWith("55")) {
+            cleanPhone = `55${cleanPhone}`;
+        }
+
+        const firstName = (order.customer_name || "Cliente").trim().split(" ")[0];
+        const successUrl = `https://www.clubedoseubolso.com.br/checkout/success?order_id=${encodeURIComponent(order.id)}`;
+
+        let message = "";
+        if (isTelemedicinePending) {
+            message = `Olá, *${firstName}*! 🎉\n\nConfirmamos o pagamento do seu plano de *Telemedicina Mais Unidos* no Clube do Seu Bolso com sucesso!\n\nPara concluir seu cadastro de paciente e liberar seu acesso imediato às consultas médicas, clique no link seguro abaixo:\n\n👉 ${successUrl}\n\nO preenchimento leva menos de 1 minuto! Se precisar de ajuda, estamos à disposição.`;
+        } else {
+            message = `Olá, *${firstName}*! 🎉\n\nConfirmamos o pagamento do seu pedido (*#${order.id}*) no Clube do Seu Bolso com sucesso!\n\nVocê pode acompanhar e gerenciar seu pedido pelo link seguro abaixo:\n\n👉 ${successUrl}\n\nObrigado pela preferência!`;
+        }
+
+        const zapiUrl = `https://api.z-api.io/instances/${ZAPI_INSTANCE_ID}/token/${ZAPI_TOKEN}/send-text`;
+
+        console.log(`[Z-API] Enviando WhatsApp para ${cleanPhone} (Pedido: ${order.id})...`);
+
+        const response = await fetch(zapiUrl, {
+            method: "POST",
+            headers: {
+                "Client-Token": ZAPI_CLIENT_TOKEN,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                phone: cleanPhone,
+                message: message
+            })
+        });
+
+        const respText = await response.text();
+        console.log(`[Z-API] Resposta (${response.status}):`, respText);
+
+        try {
+            await supabase.from("debug_logs").insert({
+                operation: "whatsapp_notification_sent",
+                message: `WhatsApp de confirmação enviado para ${cleanPhone} (Pedido: ${order.id})`,
+                metadata: {
+                    order_id: order.id,
+                    phone: cleanPhone,
+                    status_code: response.status,
+                    response: respText
+                }
+            });
+        } catch (dbErr) {
+            console.error("[Z-API] Erro ao salvar log no DB:", dbErr.message);
+        }
+    } catch (err) {
+        console.error("[Z-API] Erro no envio do WhatsApp:", err.message);
+    }
 }
 
 serve(async (req) => {
@@ -196,6 +260,7 @@ serve(async (req) => {
                 await processAffiliateAndCommissions(order, supabase);
 
                 // Sincronizar com telemedicina (Mais Unidos)
+                let isTelemedicinePending = false;
                 try {
                     console.log(`[Asaas Webhook] Disparando sincronização de telemedicina para pedido ${order.id}...`);
                     const { data: syncRes, error: syncErr } = await supabase.functions.invoke('telemedicine-sync', {
@@ -205,10 +270,16 @@ serve(async (req) => {
                         console.error(`[Asaas Webhook] Erro no invoke da telemedicina para pedido ${order.id}:`, syncErr);
                     } else {
                         console.log(`[Asaas Webhook] Sincronização concluída com sucesso para pedido ${order.id}:`, syncRes);
+                        if (syncRes?.pending_registration) {
+                            isTelemedicinePending = true;
+                        }
                     }
                 } catch (err) {
                     console.error(`[Asaas Webhook] Erro ao disparar sincronização da telemedicina para pedido ${order.id}:`, err.message);
                 }
+
+                // Disparar notificação no WhatsApp via Z-API
+                await sendWhatsAppNotification(order, isTelemedicinePending);
             } else {
                 console.warn(`[Asaas Webhook] Pedido ${safeOrderId} (Asaas ID: ${paymentId}) não encontrado no banco de dados.`);
                 
