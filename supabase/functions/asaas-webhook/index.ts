@@ -19,8 +19,27 @@ async function processAffiliateAndCommissions(order: any, supabaseClient: any) {
            subscription_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
        }).eq('email', order.customer_email);
        console.log(`[Webhook] Usuário ${order.customer_email} promovido a Afiliado com sucesso.`);
-    }
 
+       if (order.customer_phone) {
+           const firstName = (order.customer_name || "Parceiro").trim().split(" ")[0];
+           const referralCode = order.customer_email ? order.customer_email.split("@")[0].replace(/[^a-z0-9]/gi, '') : "";
+           const refLink = `https://www.clubedoseubolso.com.br/?ref=${referralCode}`;
+           const panelLink = `https://www.clubedoseubolso.com.br/affiliate`;
+           const welcomeMsg = `🚀 *BEM-VINDO AO CLUBE DO SEU BOLSO!* 🏆\n\nOlá, *${firstName}*! Parabéns por se juntar a nós! Sua conta de Afiliado já está ativa e seu Escritório Virtual está liberado.\n\n🔗 *Seu link exclusivo para divulgar e ganhar comissões:*\n👉 ${refLink}\n\n⚠️ *PASSO OBRIGATÓRIO PARA RECEBER SUAS COMISSÕES:*\nPara que suas comissões possam ser transferidas diretamente para você via Pix, configure sua chave/Wallet Asaas no seu painel:\n👉 ${panelLink}\n\nBoas vendas e conte conosco nessa jornada de crescimento! 💼✨`;
+           
+           let cleanPhone = order.customer_phone.replace(/\D/g, "");
+           if ((cleanPhone.length === 10 || cleanPhone.length === 11) && !cleanPhone.startsWith("55")) {
+               cleanPhone = `55${cleanPhone}`;
+           }
+           const zapiUrl = `https://api.z-api.io/instances/${ZAPI_INSTANCE_ID}/token/${ZAPI_TOKEN}/send-text`;
+           fetch(zapiUrl, {
+               method: "POST",
+               headers: { "Client-Token": ZAPI_CLIENT_TOKEN, "Content-Type": "application/json" },
+               body: JSON.stringify({ phone: cleanPhone, message: welcomeMsg })
+           }).catch(e => console.warn("[Z-API] Erro ao enviar boas-vindas do upgrade:", e));
+       }
+    }
+}
 
 const ZAPI_INSTANCE_ID = Deno.env.get("ZAPI_INSTANCE_ID") ?? "3F9362BF22FA72B42ECBBE7DD852ABAB";
 const ZAPI_TOKEN = Deno.env.get("ZAPI_TOKEN") ?? "38CBE288FE1233E6885D646B";
@@ -85,6 +104,139 @@ async function sendWhatsAppNotification(order: any, isTelemedicinePending: boole
         }
     } catch (err) {
         console.error("[Z-API] Erro no envio do WhatsApp:", err.message);
+    }
+}
+
+async function sendAffiliateCommissionWhatsApp(order: any, supabaseClient: any) {
+    if (!order) return;
+
+    try {
+        // 1. Tentar buscar comissões geradas na tabela commissions
+        const { data: commissions, error: commError } = await supabaseClient
+            .from("commissions")
+            .select("user_id, amount")
+            .eq("order_id", order.id);
+
+        let affiliateEarnings: Array<{ userId: string; amount: number }> = [];
+
+        if (!commError && commissions && commissions.length > 0) {
+            for (const c of commissions) {
+                if (Number(c.amount) > 0 && c.user_id) {
+                    affiliateEarnings.push({ userId: c.user_id, amount: Number(c.amount) });
+                }
+            }
+        }
+
+        // 2. Se não encontrou em commissions, verificar split_details
+        if (affiliateEarnings.length === 0 && order.split_details && Array.isArray(order.split_details)) {
+            for (const item of order.split_details) {
+                if (item.user_id && Number(item.amount) > 0) {
+                    affiliateEarnings.push({ userId: item.user_id, amount: Number(item.amount) });
+                }
+            }
+        }
+
+        // 3. Fallback: Se tem referral_code e split_amount
+        if (affiliateEarnings.length === 0 && order.referral_code && Number(order.split_amount) > 0) {
+            const { data: aff } = await supabaseClient
+                .from("affiliates")
+                .select("user_id")
+                .ilike("referral_code", order.referral_code)
+                .maybeSingle();
+
+            if (aff?.user_id) {
+                affiliateEarnings.push({ userId: aff.user_id, amount: Number(order.split_amount) });
+            }
+        }
+
+        if (affiliateEarnings.length === 0) {
+            console.log(`[Z-API] Nenhuma comissão de afiliado para notificar no pedido ${order.id}.`);
+            return;
+        }
+
+        const clientFirstName = (order.customer_name || "Seu indicado").trim().split(" ")[0];
+        const shortOrderId = order.id.split("-").slice(0, 2).join("-");
+
+        // 4. Para cada afiliado comissionado, disparar via Z-API
+        for (const earning of affiliateEarnings) {
+            let affName = "Parceiro";
+            let affPhone = "";
+
+            const { data: profile } = await supabaseClient
+                .from("user_profiles")
+                .select("full_name, whatsapp")
+                .eq("id", earning.userId)
+                .maybeSingle();
+
+            if (profile?.whatsapp) {
+                affPhone = profile.whatsapp;
+                affName = profile.full_name || affName;
+            } else {
+                const { data: affData } = await supabaseClient
+                    .from("affiliates")
+                    .select("full_name, whatsapp")
+                    .eq("user_id", earning.userId)
+                    .maybeSingle();
+
+                if (affData?.whatsapp) {
+                    affPhone = affData.whatsapp;
+                    affName = affData.full_name || affName;
+                }
+            }
+
+            if (!affPhone) {
+                console.log(`[Z-API] Afiliado ${earning.userId} não possui WhatsApp cadastrado.`);
+                continue;
+            }
+
+            let cleanPhone = affPhone.replace(/\D/g, "");
+            if ((cleanPhone.length === 10 || cleanPhone.length === 11) && !cleanPhone.startsWith("55")) {
+                cleanPhone = `55${cleanPhone}`;
+            }
+
+            const affFirstName = affName.trim().split(" ")[0];
+            const formattedAmount = earning.amount.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            const message = `💰 *PIX NA CONTA! NOVA COMISSÃO!* 🚀\n\nOlá, *${affFirstName}*!\n\nVocê acabou de receber uma comissão de *R$ ${formattedAmount}* pela compra realizada pelo seu indicado (*${clientFirstName}*)!\n\n📦 *Resumo:*\n• Pedido: ${shortOrderId}\n• Status: Pago e Confirmado ✅\n\nAcesse seu escritório virtual para ver seu extrato e saldo atualizado:\n👉 https://www.clubedoseubolso.com.br/affiliate`;
+
+            const zapiUrl = `https://api.z-api.io/instances/${ZAPI_INSTANCE_ID}/token/${ZAPI_TOKEN}/send-text`;
+
+            console.log(`[Z-API] Enviando notificação de comissão para ${cleanPhone} (Afiliado: ${affFirstName}, Valor: R$ ${formattedAmount})...`);
+
+            const resp = await fetch(zapiUrl, {
+                method: "POST",
+                headers: {
+                    "Client-Token": ZAPI_CLIENT_TOKEN,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    phone: cleanPhone,
+                    message: message
+                })
+            });
+
+            const respText = await resp.text();
+            console.log(`[Z-API] Resposta comissão (${resp.status}):`, respText);
+
+            try {
+                await supabaseClient.from("debug_logs").insert({
+                    operation: "whatsapp_commission_notification_sent",
+                    message: `Comissão de R$ ${formattedAmount} notificada via WhatsApp para ${cleanPhone} (${affFirstName})`,
+                    metadata: {
+                        order_id: order.id,
+                        affiliate_id: earning.userId,
+                        phone: cleanPhone,
+                        amount: earning.amount,
+                        status_code: resp.status,
+                        response: respText
+                    }
+                });
+            } catch (dbErr) {
+                console.error("[Z-API] Erro ao gravar log de comissão no DB:", dbErr.message);
+            }
+        }
+    } catch (err) {
+        console.error("[Z-API] Erro no envio de notificação de comissão:", err.message);
     }
 }
 
@@ -278,8 +430,11 @@ serve(async (req) => {
                     console.error(`[Asaas Webhook] Erro ao disparar sincronização da telemedicina para pedido ${order.id}:`, err.message);
                 }
 
-                // Disparar notificação no WhatsApp via Z-API
+                // Disparar notificação no WhatsApp via Z-API (Cliente)
                 await sendWhatsAppNotification(order, isTelemedicinePending);
+
+                // Disparar notificação de comissão no WhatsApp via Z-API (Afiliado / Patrocinador)
+                await sendAffiliateCommissionWhatsApp(order, supabase);
             } else {
                 console.warn(`[Asaas Webhook] Pedido ${safeOrderId} (Asaas ID: ${paymentId}) não encontrado no banco de dados.`);
                 

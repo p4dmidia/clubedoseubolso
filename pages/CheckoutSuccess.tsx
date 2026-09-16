@@ -18,7 +18,8 @@ import {
   EyeOff,
   Lock,
   CreditCard,
-  FileText
+  FileText,
+  Smartphone
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
@@ -477,6 +478,18 @@ const CheckoutSuccess: React.FC = () => {
             sex: formInfo.sex
           })
           .eq('user_id', activeUserId);
+
+        // Disparar WhatsApp de Boas-Vindas com Link e Alerta Asaas
+        if (order.customer_phone) {
+          supabase.functions.invoke('send-whatsapp', {
+            body: {
+              type: 'affiliate_welcome',
+              phone: order.customer_phone,
+              name: order.customer_name,
+              referralCode: generatedLogin || order.customer_email?.split('@')[0]
+            }
+          }).catch(e => console.warn('[WhatsApp] Erro ao enviar boas-vindas:', e));
+        }
       }
 
       // 4. Formatar o shipping_address do pedido
@@ -504,6 +517,18 @@ const CheckoutSuccess: React.FC = () => {
 
       toast.success('Cadastro integrado com sucesso!');
       
+      // Disparar WhatsApp com instruções de acesso à telemedicina
+      if (order.customer_phone) {
+        supabase.functions.invoke('send-whatsapp', {
+          body: {
+            type: 'telemedicine_access',
+            phone: order.customer_phone,
+            name: order.customer_name,
+            cpf: order.customer_cpf
+          }
+        }).catch(e => console.warn('[WhatsApp] Erro ao enviar instruções de telemedicina:', e));
+      }
+
       // Atualizar o estado local do pedido para refletir a conclusão
       setOrder((prev: any) => ({ ...prev, shipping_address: formattedAddress }));
       
@@ -773,6 +798,15 @@ const CheckoutSuccess: React.FC = () => {
                     Acessar Telemedicina Mais Unidos
                     <ExternalLink className="w-4 h-4" />
                   </a>
+
+                  <div className="mt-4 p-3.5 bg-blue-50/70 border border-blue-100/80 rounded-2xl flex items-center gap-3 text-left">
+                    <div className="w-8 h-8 rounded-xl bg-blue-100/80 flex items-center justify-center flex-shrink-0 text-[#2980B9]">
+                      <Smartphone className="w-4 h-4" />
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                      <strong className="text-[#0B1221]">Dica no celular:</strong> No topo do portal, clique no botão azul <strong>"INSTALAR APP"</strong> para adicionar o ícone direto na sua tela inicial!
+                    </p>
+                  </div>
                 </div>
               </div>
             )}

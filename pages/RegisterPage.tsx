@@ -395,6 +395,44 @@ const RegisterPage: React.FC = () => {
                 const newUser = data.user;
                 console.log('User created successfully:', newUser.id);
 
+                // Disparo de Boas-Vindas no WhatsApp via Z-API se for afiliado
+                if (regType === 'affiliate' && formData.whatsapp) {
+                    supabase.functions.invoke('send-whatsapp', {
+                        body: {
+                            type: 'affiliate_welcome',
+                            phone: formData.whatsapp,
+                            name: formData.nomeCompleto,
+                            referralCode: finalLogin
+                        }
+                    }).catch(e => console.warn('[WhatsApp] Falha ao enviar boas-vindas:', e));
+                }
+
+                // Notificar o Patrocinador que um novo indicado se cadastrou (Lead)
+                if (sponsorCode) {
+                    (async () => {
+                        try {
+                            const { data: sponsorAff } = await supabase
+                                .from('affiliates')
+                                .select('full_name, whatsapp')
+                                .ilike('referral_code', sponsorCode)
+                                .maybeSingle();
+
+                            if (sponsorAff?.whatsapp) {
+                                supabase.functions.invoke('send-whatsapp', {
+                                    body: {
+                                        type: 'new_lead',
+                                        phone: sponsorAff.whatsapp,
+                                        name: sponsorAff.full_name,
+                                        leadName: formData.nomeCompleto.trim()
+                                    }
+                                }).catch(e => console.warn('[WhatsApp] Erro ao avisar patrocinador:', e));
+                            }
+                        } catch (sErr) {
+                            console.warn('[WhatsApp] Falha ao buscar patrocinador:', sErr);
+                        }
+                    })();
+                }
+
                 // Fallback de Segurança pós-cadastro
                 setTimeout(async () => {
                     try {
