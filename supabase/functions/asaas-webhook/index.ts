@@ -10,36 +10,7 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-async function processAffiliateAndCommissions(order: any, supabaseClient: any) {
-    // 1. Upgrade de Plano (Heurística: Se comprou algo de R$ 197)
-    if (Number(order.total_amount) === 197) {
-       await supabaseClient.from('user_profiles').update({
-           role: 'affiliate',
-           subscription_status: 'active',
-           subscription_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-       }).eq('email', order.customer_email);
-       console.log(`[Webhook] Usuário ${order.customer_email} promovido a Afiliado com sucesso.`);
 
-       if (order.customer_phone) {
-           const firstName = (order.customer_name || "Parceiro").trim().split(" ")[0];
-           const referralCode = order.customer_email ? order.customer_email.split("@")[0].replace(/[^a-z0-9]/gi, '') : "";
-           const refLink = `https://www.clubedoseubolso.com.br/?ref=${referralCode}`;
-           const panelLink = `https://www.clubedoseubolso.com.br/affiliate`;
-           const welcomeMsg = `🚀 *BEM-VINDO AO CLUBE DO SEU BOLSO!* 🏆\n\nOlá, *${firstName}*! Parabéns por se juntar a nós! Sua conta de Afiliado já está ativa e seu Escritório Virtual está liberado.\n\n🔗 *Seu link exclusivo para divulgar e ganhar comissões:*\n👉 ${refLink}\n\n⚠️ *PASSO OBRIGATÓRIO PARA RECEBER SUAS COMISSÕES:*\nPara que suas comissões possam ser transferidas diretamente para você via Pix, configure sua chave/Wallet Asaas no seu painel:\n👉 ${panelLink}\n\nBoas vendas e conte conosco nessa jornada de crescimento! 💼✨`;
-           
-           let cleanPhone = order.customer_phone.replace(/\D/g, "");
-           if ((cleanPhone.length === 10 || cleanPhone.length === 11) && !cleanPhone.startsWith("55")) {
-               cleanPhone = `55${cleanPhone}`;
-           }
-           const zapiUrl = `https://api.z-api.io/instances/${ZAPI_INSTANCE_ID}/token/${ZAPI_TOKEN}/send-text`;
-           fetch(zapiUrl, {
-               method: "POST",
-               headers: { "Client-Token": ZAPI_CLIENT_TOKEN, "Content-Type": "application/json" },
-               body: JSON.stringify({ phone: cleanPhone, message: welcomeMsg })
-           }).catch(e => console.warn("[Z-API] Erro ao enviar boas-vindas do upgrade:", e));
-       }
-    }
-}
 
 const ZAPI_INSTANCE_ID = Deno.env.get("ZAPI_INSTANCE_ID") ?? "3F9362BF22FA72B42ECBBE7DD852ABAB";
 const ZAPI_TOKEN = Deno.env.get("ZAPI_TOKEN") ?? "38CBE288FE1233E6885D646B";
@@ -408,8 +379,6 @@ serve(async (req) => {
                     console.error("[Asaas Webhook] Erro ao gravar log de sucesso no DB:", logErr.message);
                 }
 
-                // Processar Upgrade e Comissões
-                await processAffiliateAndCommissions(order, supabase);
 
                 // Sincronizar com telemedicina (Mais Unidos)
                 let isTelemedicinePending = false;
