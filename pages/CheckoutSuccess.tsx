@@ -55,8 +55,9 @@ const CheckoutSuccess: React.FC = () => {
     sex: ''
   });
 
-  // Determinar o ID do pedido
-  const effectiveOrderId = orderId;
+  // Determinar o ID do pedido (via URL param ou query string)
+  const queryParams = new URLSearchParams(location.search);
+  const effectiveOrderId = orderId || queryParams.get('order_id') || queryParams.get('orderId') || '';
 
   const isOrderOwner = !!(currentUser && order && currentUser.email?.toLowerCase() === order.customer_email?.toLowerCase());
 

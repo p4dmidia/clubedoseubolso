@@ -31,7 +31,7 @@ async function sendWhatsAppNotification(order: any, isTelemedicinePending: boole
         }
 
         const firstName = (order.customer_name || "Cliente").trim().split(" ")[0];
-        const successUrl = `https://www.clubedoseubolso.com.br/checkout/success?order_id=${encodeURIComponent(order.id)}`;
+        const successUrl = `https://www.clubedoseubolso.com.br/checkout/success/${encodeURIComponent(order.id)}`;
 
         let message = "";
         if (isTelemedicinePending) {
@@ -338,7 +338,7 @@ serve(async (req) => {
 
             // Atualizar status do pedido para 'Pago'
             // O filtro .or() agora busca por id do pedido OR id do pedido sem hash OR payment_id do Asaas
-            const { data: order, error: orderError } = await supabase
+            const { data: updatedOrder, error: orderError } = await supabase
                 .from("orders")
                 .update({
                     status: "Pago",
@@ -352,18 +352,16 @@ serve(async (req) => {
 
             if (orderError) {
                 console.error(`[Asaas Webhook] Erro ao atualizar pedido ${safeOrderId}:`, orderError);
-                
-                try {
-                    await supabase.from("debug_logs").insert({
-                        operation: "asaas_webhook_update_db_error",
-                        message: `Erro ao atualizar pedido '${safeOrderId}' (Asaas ID: '${paymentId}'): ${orderError.message}`,
-                        metadata: { orderError, safeOrderId, paymentId }
-                    });
-                } catch (logErr) {
-                    console.error("[Asaas Webhook] Erro ao gravar log de erro de banco no DB:", logErr.message);
-                }
-                
-                throw orderError;
+            }
+
+            let order = updatedOrder;
+            if (!order) {
+                const { data: existingOrder } = await supabase
+                    .from("orders")
+                    .select()
+                    .or(`id.eq.${safeOrderId},id.eq.#${safeOrderId.replace(/^#/, '')},payment_id.eq.${paymentId}`)
+                    .maybeSingle();
+                order = existingOrder;
             }
 
             if (order) {
