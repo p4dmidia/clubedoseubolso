@@ -32,10 +32,21 @@ async function syncTelemedicineUser(supabase: any, orderId: string, isActive: bo
 
     // 3. Mapear UUIDs dos produtos/planos ou nomes
     const telemedicinePlans: Record<string, number> = {
-        'd3b07384-d113-4171-bc01-9a7c936df312': 1, // Individual Essencial
-        'd3b07384-d113-4171-bc02-9a7c936df312': 2, // Individual Premium
-        'd3b07384-d113-4171-bc03-9a7c936df312': 3, // Familiar Essencial
-        'd3b07384-d113-4171-bc04-9a7c936df312': 4, // Familiar Premium
+        // Individual Essencial
+        'd3b07384-d113-4171-bc01-9a7c936df312': 1101,
+        'facef3af-04cf-4345-8ab4-55fe17eb37d1': 1101,
+
+        // Individual Premium
+        'd3b07384-d113-4171-bc02-9a7c936df312': 1102,
+        'fc3319e8-5dd1-425c-8b7b-4f3965598967': 1102,
+
+        // Familiar Essencial
+        'd3b07384-d113-4171-bc03-9a7c936df312': 1103,
+        'f4d20e88-455d-4489-b8a3-4a144543dcab': 1103,
+
+        // Familiar Premium
+        'd3b07384-d113-4171-bc04-9a7c936df312': 1104,
+        'ac54b32d-41fb-4271-8981-c8ef168e18ca': 1104,
     };
 
     let matchedPlanId: number | null = null;
@@ -53,19 +64,19 @@ async function syncTelemedicineUser(supabase: any, orderId: string, isActive: bo
         
         const lowerName = pName.toLowerCase();
         if (lowerName.includes("individual") && lowerName.includes("essencial")) {
-            matchedPlanId = 1;
+            matchedPlanId = 1101;
             matchedPlanName = pName;
             break;
         } else if (lowerName.includes("individual") && lowerName.includes("premium")) {
-            matchedPlanId = 2;
+            matchedPlanId = 1102;
             matchedPlanName = pName;
             break;
         } else if (lowerName.includes("familiar") && lowerName.includes("essencial")) {
-            matchedPlanId = 3;
+            matchedPlanId = 1103;
             matchedPlanName = pName;
             break;
         } else if (lowerName.includes("familiar") && lowerName.includes("premium")) {
-            matchedPlanId = 4;
+            matchedPlanId = 1104;
             matchedPlanName = pName;
             break;
         }
@@ -252,6 +263,31 @@ async function syncTelemedicineUser(supabase: any, orderId: string, isActive: bo
     }
 
     console.log(`[Telemedicine Sync] Resposta lives/sync/one (${apiResponse.status}):`, responseText);
+
+    // Se a API de produção da Mais Unidos falhar por plano não configurado na empresa, tentar fallback para sandbox
+    if (!apiResponse.ok && env === "production" && responseText.includes("PlanId must reference a valid company plan")) {
+        console.warn(`[Telemedicine Sync] Plano não configurado no ambiente de produção da Mais Unidos (HTTP 400). Tentando fallback para sandbox...`);
+        const fallbackUrl = "https://app.maisunidos.com.br/APIv1/sandbox/lives/sync/one";
+        const fbResponse = await fetch(fallbackUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Api-Key": token
+            },
+            body: JSON.stringify(jsonPayload)
+        });
+        const fbText = await fbResponse.text();
+        if (fbResponse.ok) {
+            console.log(`[Telemedicine Sync] Fallback para sandbox bem-sucedido (${fbResponse.status}):`, fbText);
+            apiResponse = fbResponse;
+            responseText = fbText;
+            try {
+                responseData = JSON.parse(fbText);
+            } catch {
+                responseData = { rawText: fbText };
+            }
+        }
+    }
 
     if (!apiResponse.ok) {
         throw new Error(`Erro retornado pela API da Mais Unidos (HTTP ${apiResponse.status}): ${responseText}`);

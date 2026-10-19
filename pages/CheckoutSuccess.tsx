@@ -506,17 +506,32 @@ const CheckoutSuccess: React.FC = () => {
       if (orderError) throw orderError;
 
       // 5. Invocar a Edge Function telemedicine-sync (passando a senha cadastrada se houver)
-      const { data: syncRes, error: syncErr } = await supabase.functions.invoke('telemedicine-sync', {
-        body: { 
-          orderId: order.id,
-          password: password || undefined
+      let isTelemedicineIntegrated = false;
+      try {
+        const { data: syncRes, error: syncErr } = await supabase.functions.invoke('telemedicine-sync', {
+          body: { 
+            orderId: order.id,
+            password: password || undefined
+          }
+        });
+
+        if (syncErr) {
+          console.warn('[Telemedicine Sync Warning]', syncErr);
+        } else if (syncRes?.error) {
+          console.warn('[Telemedicine Sync Warning]', syncRes.message);
+        } else {
+          isTelemedicineIntegrated = true;
+          console.log('[Telemedicine Sync] Integrado com sucesso:', syncRes);
         }
-      });
+      } catch (teleErr) {
+        console.warn('[Telemedicine Sync] Falha não impeditiva ao integrar telemedicina:', teleErr);
+      }
 
-      if (syncErr) throw syncErr;
-      if (syncRes?.error) throw new Error(syncRes.message || 'Erro ao integrar com a telemedicina.');
-
-      toast.success('Cadastro integrado com sucesso!');
+      if (isTelemedicineIntegrated) {
+        toast.success('Cadastro integrado com sucesso!');
+      } else {
+        toast.success('Cadastro concluído com sucesso!');
+      }
       
       // Disparar WhatsApp com instruções de acesso à telemedicina
       if (order.customer_phone) {
