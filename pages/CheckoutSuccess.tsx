@@ -79,11 +79,7 @@ const CheckoutSuccess: React.FC = () => {
 
   useEffect(() => {
     if (order && !hasInitializedPasswordFields) {
-      if (currentUser && currentUser.email?.toLowerCase() === order.customer_email?.toLowerCase()) {
-        setShowPasswordFields(false);
-      } else {
-        setShowPasswordFields(true);
-      }
+      setShowPasswordFields(true);
       setHasInitializedPasswordFields(true);
     }
   }, [order, currentUser, hasInitializedPasswordFields]);
@@ -405,19 +401,19 @@ const CheckoutSuccess: React.FC = () => {
           setCurrentUser(signUpData.user);
           console.log('User created successfully:', activeUserId);
         }
+      }
 
-        // Associar o usuário ao pedido
-        if (activeUserId) {
-          const { error: orderLinkError } = await supabase
-            .from('orders')
-            .update({
-              user_id: activeUserId
-            })
-            .eq('id', order.id);
+      // Associar o usuário ao pedido caso ainda não esteja vinculado
+      if (activeUserId && order.user_id !== activeUserId) {
+        const { error: orderLinkError } = await supabase
+          .from('orders')
+          .update({
+            user_id: activeUserId
+          })
+          .eq('id', order.id);
 
-          if (orderLinkError) {
-            console.error('Error linking user to order:', orderLinkError);
-          }
+        if (orderLinkError) {
+          console.error('Error linking user to order:', orderLinkError);
         }
       }
 

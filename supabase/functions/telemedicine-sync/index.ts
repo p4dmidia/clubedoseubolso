@@ -194,58 +194,56 @@ async function syncTelemedicineUser(supabase: any, orderId: string, isActive: bo
     if (isNaN(companyId)) {
         companyId = 19;
     }
-    const env = Deno.env.get("TELEMEDICINE_ENV") ?? "sandbox";
+    const env = Deno.env.get("TELEMEDICINE_ENV") ?? "production";
 
-    const baseUrl = env === "production" 
-        ? "https://app.maisunidos.com.br/APIv1" 
-        : "https://app.maisunidos.com.br/APIv1/sandbox";
+    const baseUrl = env === "sandbox" 
+        ? "https://app.maisunidos.com.br/APIv1/sandbox" 
+        : "https://app.maisunidos.com.br/APIv1";
     
     const requestUrl = `${baseUrl}/lives/sync/one`;
+
+    let cleanPhone = (order.customer_phone || "").replace(/\D/g, "");
+    if (cleanPhone.length > 11 && cleanPhone.startsWith("55")) {
+        cleanPhone = cleanPhone.substring(2);
+    }
 
     const jsonPayload = {
         Item: {
             Name: name,
-            Nome: name,
-            Email: order.customer_email || "",
+            Email: order.customer_email || undefined,
             CPFCNPJ: cleanCpf,
-            CPF: cleanCpf,
-            Cpf: cleanCpf,
-            Phone: order.customer_phone ? order.customer_phone.replace(/\D/g, "") : "",
-            Telefone: order.customer_phone ? order.customer_phone.replace(/\D/g, "") : "",
-            Celular: order.customer_phone ? order.customer_phone.replace(/\D/g, "") : "",
-            ZipCode: addressData.cep,
-            CEP: addressData.cep,
-            Address: addressData.street,
-            Endereco: addressData.street,
-            Logradouro: addressData.street,
-            HouseNumber: addressData.number,
-            Numero: addressData.number,
-            Neighborhood: addressData.neighborhood,
-            Bairro: addressData.neighborhood,
-            City: addressData.city,
-            Cidade: addressData.city,
-            State: addressData.state,
-            Estado: addressData.state,
+            Phone: cleanPhone || undefined,
+            ZipCode: addressData.cep || undefined,
+            Address: addressData.street || undefined,
+            HouseNumber: addressData.number || undefined,
+            Complement: addressData.complement || undefined,
+            Neighborhood: addressData.neighborhood || undefined,
+            City: addressData.city || undefined,
+            State: addressData.state || undefined,
             CompanyId: companyId,
-            EmpresaId: companyId,
             PlanId: matchedPlanId,
-            PlanoId: matchedPlanId,
             IsActive: isActive,
-            Ativo: isActive,
+            EmailConfirmed: true,
+            ...(plainPassword ? { Password: plainPassword } : {}),
             ...(addressData.birth_date ? { 
-                BirthDate: formatBirthDate(addressData.birth_date),
-                DataNascimento: formatBirthDate(addressData.birth_date)
+                BirthDate: formatBirthDate(addressData.birth_date)
             } : {}),
             ...(addressData.sex ? { 
-                Sex: sexFormatted,
-                Sexo: sexFormatted
+                Sex: sexFormatted
             } : {})
         }
     };
 
-    console.log(`[Telemedicine Sync] Enviando requisição JSON para ${requestUrl} com dados:`, JSON.stringify(jsonPayload));
+    const logPayload = {
+        Item: {
+            ...jsonPayload.Item,
+            ...(plainPassword ? { Password: "***" } : {})
+        }
+    };
 
-    let apiResponse = await fetch(requestUrl, {
+    console.log(`[Telemedicine Sync] Enviando requisição JSON para ${requestUrl} com dados:`, JSON.stringify(logPayload));
+
+    const apiResponse = await fetch(requestUrl, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -254,7 +252,7 @@ async function syncTelemedicineUser(supabase: any, orderId: string, isActive: bo
         body: JSON.stringify(jsonPayload)
     });
 
-    let responseText = await apiResponse.text();
+    const responseText = await apiResponse.text();
     let responseData;
     try {
         responseData = JSON.parse(responseText);
@@ -264,37 +262,17 @@ async function syncTelemedicineUser(supabase: any, orderId: string, isActive: bo
 
     console.log(`[Telemedicine Sync] Resposta lives/sync/one (${apiResponse.status}):`, responseText);
 
-    // Se a API de produção da Mais Unidos falhar por plano não configurado na empresa, tentar fallback para sandbox
-    if (!apiResponse.ok && env === "production" && responseText.includes("PlanId must reference a valid company plan")) {
-        console.warn(`[Telemedicine Sync] Plano não configurado no ambiente de produção da Mais Unidos (HTTP 400). Tentando fallback para sandbox...`);
-        const fallbackUrl = "https://app.maisunidos.com.br/APIv1/sandbox/lives/sync/one";
-        const fbResponse = await fetch(fallbackUrl, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-Api-Key": token
-            },
-            body: JSON.stringify(jsonPayload)
-        });
-        const fbText = await fbResponse.text();
-        if (fbResponse.ok) {
-            console.log(`[Telemedicine Sync] Fallback para sandbox bem-sucedido (${fbResponse.status}):`, fbText);
-            apiResponse = fbResponse;
-            responseText = fbText;
-            try {
-                responseData = JSON.parse(fbText);
-            } catch {
-                responseData = { rawText: fbText };
-            }
-        }
-    }
-
-    if (!apiResponse.ok) {
+    if (!apiResponse.ok || responseData?.Success === false) {
         throw new Error(`Erro retornado pela API da Mais Unidos (HTTP ${apiResponse.status}): ${responseText}`);
     }
 
+    if (Array.isArray(responseData?.Errors) && responseData.Errors.length > 0) {
+        console.warn(`[Telemedicine Sync Warning] Avisos/erros no provisionamento da conta Mais Unidos:`, JSON.stringify(responseData.Errors));
+    }
+
+    // Fallback para /customers/register apenas se a senha foi enviada mas o sync não provisionou/retornou UserId nem AccountAction
     let registerResponseData = null;
-    if (plainPassword && isActive) {
+    if (plainPassword && isActive && !responseData?.UserId && !responseData?.AccountAction) {
         const registerUrl = `${baseUrl}/customers/register`;
         
         const formatCpfStr = (cpf: string): string => {
@@ -306,11 +284,6 @@ async function syncTelemedicineUser(supabase: any, orderId: string, isActive: bo
         };
         
         const formattedCpf = formatCpfStr(order.customer_cpf || "");
-        
-        let cleanPhone = (order.customer_phone || "").replace(/\D/g, "");
-        if (cleanPhone.length > 11 && cleanPhone.startsWith("55")) {
-            cleanPhone = cleanPhone.substring(2);
-        }
 
         const formatBirthDateISO = (dateStr: string): string => {
             if (!dateStr) return "";
@@ -344,7 +317,7 @@ async function syncTelemedicineUser(supabase: any, orderId: string, isActive: bo
             PlanId: matchedPlanId || undefined
         };
 
-        console.log(`[Telemedicine Sync] Cadastrando usuário em ${registerUrl} via JSON...`);
+        console.log(`[Telemedicine Sync] Fallback: cadastrando usuário em ${registerUrl} via JSON...`);
         const regResponse = await fetch(registerUrl, {
             method: "POST",
             headers: {
@@ -361,21 +334,7 @@ async function syncTelemedicineUser(supabase: any, orderId: string, isActive: bo
             registerResponseData = { rawText: regResponseText };
         }
 
-        console.log(`[Telemedicine Sync] Resposta do cadastro (${regResponse.status}):`, regResponseText);
-
-        if (!regResponse.ok) {
-            const errorStr = regResponseText.toLowerCase();
-            const isAlreadyRegistered = errorStr.includes("already registered") || 
-                                        errorStr.includes("já existe") || 
-                                        errorStr.includes("já cadastrado") ||
-                                        errorStr.includes("already exists");
-            
-            if (!isAlreadyRegistered) {
-                console.warn(`[Telemedicine Sync Warning] Erro no cadastro da Mais Unidos (HTTP ${regResponse.status}): ${regResponseText}`);
-            } else {
-                console.log("[Telemedicine Sync] Usuário já possui conta cadastrada na Mais Unidos. Ignorando.");
-            }
-        }
+        console.log(`[Telemedicine Sync] Resposta do cadastro fallback (${regResponse.status}):`, regResponseText);
     }
 
     if (order.user_id) {
