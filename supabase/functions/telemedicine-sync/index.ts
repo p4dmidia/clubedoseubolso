@@ -6,7 +6,7 @@ const corsHeaders = {
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-async function syncTelemedicineUser(supabase: any, orderId: string, isActive: boolean, plainPassword = "") {
+async function syncTelemedicineUser(supabase: any, orderId: string, isActive: boolean, plainPassword = "", overrideAddressData?: any) {
     // 1. Buscar detalhes do pedido
     const { data: order, error: orderError } = await supabase
         .from("orders")
@@ -170,6 +170,20 @@ async function syncTelemedicineUser(supabase: any, orderId: string, isActive: bo
                 sex: profile.sex || ""
             };
         }
+    }
+
+    if (overrideAddressData && typeof overrideAddressData === "object") {
+        addressData = {
+            cep: overrideAddressData.cep || addressData.cep || "",
+            street: overrideAddressData.street || overrideAddressData.address || addressData.street || "",
+            number: overrideAddressData.number || addressData.number || "",
+            complement: overrideAddressData.complement !== undefined ? overrideAddressData.complement : (addressData.complement || ""),
+            neighborhood: overrideAddressData.neighborhood || addressData.neighborhood || "",
+            city: overrideAddressData.city || addressData.city || "",
+            state: overrideAddressData.state || addressData.state || "",
+            birth_date: overrideAddressData.birthDate || overrideAddressData.birth_date || addressData.birth_date || "",
+            sex: overrideAddressData.sex || addressData.sex || ""
+        };
     }
 
     if (isActive && (!addressData.cep || !addressData.street)) {
@@ -565,6 +579,7 @@ serve(async (req) => {
         // 2. FLUXO NORMAL: Sincronização individual de pedido
         const orderId = body.orderId;
         const plainPassword = body.password || "";
+        const overrideAddressData = body.addressData || body.formInfo || undefined;
 
         if (!orderId) {
             throw new Error("orderId não fornecido na requisição.");
@@ -595,7 +610,7 @@ serve(async (req) => {
 
         console.log(`[Telemedicine Sync] Iniciando sincronização individual para pedido: ${orderId} (Ativo: ${isActive})`);
         
-        const result = await syncTelemedicineUser(supabase, orderId, isActive, plainPassword);
+        const result = await syncTelemedicineUser(supabase, orderId, isActive, plainPassword, overrideAddressData);
 
         return new Response(JSON.stringify(result), {
             headers: { ...corsHeaders, "Content-Type": "application/json" }

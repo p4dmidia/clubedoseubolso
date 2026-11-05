@@ -507,7 +507,8 @@ const CheckoutSuccess: React.FC = () => {
         const { data: syncRes, error: syncErr } = await supabase.functions.invoke('telemedicine-sync', {
           body: { 
             orderId: order.id,
-            password: password || undefined
+            password: password || undefined,
+            addressData: formInfo
           }
         });
 
