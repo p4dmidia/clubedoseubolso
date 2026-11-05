@@ -226,6 +226,158 @@ serve(async (req) => {
     const urlObj = new URL(req.url);
     const debugAction = urlObj.searchParams.get("debug_action");
 
+    if (debugAction === "run_billing_routine") {
+        if ((!configuredToken || asaasToken !== configuredToken) && !isAnonAuthorized) {
+            return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+        }
+
+        try {
+            console.log("[Billing Routine] Iniciando checagem de régua de cobrança e suspensão...");
+
+            // Buscar token Asaas da organização
+            const { data: orgs, error: orgErr } = await supabase
+                .from("organizations")
+                .select("asaas_access_token, asaas_environment")
+                .eq("id", "5111af72-27a5-41fd-8ed9-8c51b78b4fdd")
+                .limit(1);
+
+            if (orgErr || !orgs || orgs.length === 0) {
+                throw new Error("Token do Asaas não encontrado.");
+            }
+
+            const asaasApiKey = orgs[0].asaas_access_token;
+            const asaasEnv = orgs[0].asaas_environment;
+            const baseUrl = asaasEnv === "production" ? "https://api.asaas.com/v3" : "https://sandbox.asaas.com/api/v3";
+
+            // Buscar pagamentos pendentes e vencidos
+            const paymentsResp = await fetch(`${baseUrl}/payments?status=PENDING,OVERDUE&limit=100`, {
+                headers: { "access_token": asaasApiKey }
+            });
+
+            if (!paymentsResp.ok) {
+                throw new Error(`Erro ao buscar pagamentos no Asaas: ${await paymentsResp.text()}`);
+            }
+
+            const paymentsData = await paymentsResp.json();
+            const paymentsList = paymentsData.data || [];
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const summary = {
+                totalChecked: paymentsList.length,
+                dMinus5Reminders: 0,
+                dZeroReminders: 0,
+                preBlockAlerts: 0,
+                autoBlocked: 0
+            };
+
+            for (const p of paymentsList) {
+                const dueDateStr = p.dueDate;
+                if (!dueDateStr) continue;
+
+                const [year, month, day] = dueDateStr.split("-").map(Number);
+                const dueDate = new Date(year, month - 1, day);
+                dueDate.setHours(0, 0, 0, 0);
+
+                const diffTime = dueDate.getTime() - today.getTime();
+                const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)); // >0 futuro, <0 atraso
+
+                const externalRef = p.externalReference || "";
+                const baseOrderId = externalRef.replace(/-M\d+$/i, "").trim().replace(/^#/, "");
+
+                const { data: order } = await supabase
+                    .from("orders")
+                    .select("*")
+                    .or(`id.eq.${baseOrderId},id.eq.#${baseOrderId},payment_id.eq.${p.id}`)
+                    .maybeSingle();
+
+                if (!order) continue;
+
+                const customerName = (order.customer_name || p.customerName || "Cliente").trim().split(" ")[0];
+                const invoiceUrl = p.invoiceUrl || order.payment_preference_id || `https://www.asaas.com/i/${p.id}`;
+                let phone = order.customer_phone || p.mobilePhone || "";
+
+                if (phone) {
+                    phone = phone.replace(/\D/g, "");
+                    if ((phone.length === 10 || phone.length === 11) && !phone.startsWith("55")) {
+                        phone = `55${phone}`;
+                    }
+                }
+
+                // 1. D-5: 5 dias antes do vencimento
+                if (diffDays === 5 && phone) {
+                    const msg = `Olá, *${customerName}*! Tudo bem? 😊\n\nPassando para lembrar que a mensalidade do seu plano no *Clube do Seu Bolso* vence em *5 dias* (${dueDate.toLocaleDateString('pt-BR')}).\n\nPara facilitar o pagamento e manter suas consultas médicas ativas, acesse o link seguro abaixo:\n👉 ${invoiceUrl}\n\nVocê pode pagar via Pix ou Boleto. Qualquer dúvida, conte conosco!`;
+                    await fetch(`https://api.z-api.io/instances/${ZAPI_INSTANCE_ID}/token/${ZAPI_TOKEN}/send-text`, {
+                        method: "POST",
+                        headers: { "Client-Token": ZAPI_CLIENT_TOKEN, "Content-Type": "application/json" },
+                        body: JSON.stringify({ phone, message: msg })
+                    });
+                    summary.dMinus5Reminders++;
+                }
+
+                // 2. D-0: No dia do vencimento
+                if (diffDays === 0 && phone) {
+                    const msg = `Olá, *${customerName}*! 🔔\n\nA sua mensalidade do *Clube do Seu Bolso* vence *hoje* (${dueDate.toLocaleDateString('pt-BR')}).\n\nGaranta a continuidade do seu acesso à telemedicina 24h sem interrupções:\n👉 ${invoiceUrl}\n\nO pagamento via Pix compensa na hora!`;
+                    await fetch(`https://api.z-api.io/instances/${ZAPI_INSTANCE_ID}/token/${ZAPI_TOKEN}/send-text`, {
+                        method: "POST",
+                        headers: { "Client-Token": ZAPI_CLIENT_TOKEN, "Content-Type": "application/json" },
+                        body: JSON.stringify({ phone, message: msg })
+                    });
+                    summary.dZeroReminders++;
+                }
+
+                // 3. D+2 ou D+3: Alerta pré-bloqueio (2 a 3 dias de atraso)
+                if ((diffDays === -2 || diffDays === -3) && phone) {
+                    const msg = `⚠️ *Aviso Importante: Mensalidade em Aberto*\n\nOlá, *${customerName}*, identificamos que a mensalidade do seu plano no *Clube do Seu Bolso* venceu em ${dueDate.toLocaleDateString('pt-BR')} e ainda não foi compensada.\n\nEvite a suspensão do seu plano e bloqueio das consultas de telemedicina regularizando sua fatura:\n👉 ${invoiceUrl}\n\nApós 5 dias de atraso o acesso médico é revogado automaticamente pelo sistema.`;
+                    await fetch(`https://api.z-api.io/instances/${ZAPI_INSTANCE_ID}/token/${ZAPI_TOKEN}/send-text`, {
+                        method: "POST",
+                        headers: { "Client-Token": ZAPI_CLIENT_TOKEN, "Content-Type": "application/json" },
+                        body: JSON.stringify({ phone, message: msg })
+                    });
+                    summary.preBlockAlerts++;
+                }
+
+                // 4. D+5 ou mais: Bloqueio automático de acesso
+                if (diffDays <= -5 && order.status !== "Cancelado") {
+                    console.log(`[Billing Routine] Bloqueando ${order.customer_name} por atraso de ${Math.abs(diffDays)} dias...`);
+                    
+                    await supabase
+                        .from("orders")
+                        .update({ status: "Cancelado", payment_status: "overdue", updated_at: new Date().toISOString() })
+                        .eq("id", order.id);
+
+                    try {
+                        await supabase.functions.invoke("telemedicine-sync", { body: { orderId: order.id } });
+                    } catch (e: any) {
+                        console.error("Erro ao revogar na telemedicina:", e.message);
+                    }
+
+                    if (phone) {
+                        const msg = `❌ *Acesso à Telemedicina Suspenso*\n\nOlá, *${customerName}*, informamos que o seu acesso médico na plataforma foi suspenso devido ao atraso superior a 5 dias no pagamento da sua mensalidade.\n\nPara reativar seu plano e consultas imediatamente, realize o pagamento pelo link seguro:\n👉 ${invoiceUrl}\n\nAssim que o pagamento for identificado, seu acesso será reativado de forma 100% automática!`;
+                        await fetch(`https://api.z-api.io/instances/${ZAPI_INSTANCE_ID}/token/${ZAPI_TOKEN}/send-text`, {
+                            method: "POST",
+                            headers: { "Client-Token": ZAPI_CLIENT_TOKEN, "Content-Type": "application/json" },
+                            body: JSON.stringify({ phone, message: msg })
+                        });
+                    }
+
+                    summary.autoBlocked++;
+                }
+            }
+
+            return new Response(JSON.stringify({ success: true, summary }), {
+                status: 200,
+                headers: { ...corsHeaders, "Content-Type": "application/json" }
+            });
+        } catch (err: any) {
+            return new Response(JSON.stringify({ error: err.message }), {
+                status: 500,
+                headers: { ...corsHeaders, "Content-Type": "application/json" }
+            });
+        }
+    }
+
     if (debugAction === "get_recent_logs") {
         if ((!configuredToken || asaasToken !== configuredToken) && !isAnonAuthorized) {
             return new Response("Unauthorized", { status: 401, headers: corsHeaders });
@@ -334,10 +486,14 @@ serve(async (req) => {
                 return new Response("No orderId or paymentId associated", { status: 200 });
             }
 
-            const safeOrderId = orderId ? String(orderId) : "";
+            const safeOrderId = orderId ? String(orderId).trim() : "";
+            // Tratar sufixos de renovação (ex: -M2, -M3, etc.)
+            const baseOrderId = safeOrderId.replace(/-M\d+$/i, '').trim();
+            const cleanOrderId = baseOrderId.replace(/^#/, '');
+
+            const searchFilter = `id.eq.${safeOrderId},id.eq.${baseOrderId},id.eq.#${cleanOrderId},id.eq.${cleanOrderId},payment_id.eq.${paymentId}`;
 
             // Atualizar status do pedido para 'Pago'
-            // O filtro .or() agora busca por id do pedido OR id do pedido sem hash OR payment_id do Asaas
             const { data: updatedOrder, error: orderError } = await supabase
                 .from("orders")
                 .update({
@@ -346,7 +502,7 @@ serve(async (req) => {
                     payment_id: paymentId,
                     updated_at: new Date().toISOString()
                 })
-                .or(`id.eq.${safeOrderId},id.eq.#${safeOrderId.replace(/^#/, '')},payment_id.eq.${paymentId}`)
+                .or(searchFilter)
                 .select()
                 .maybeSingle();
 
@@ -359,7 +515,7 @@ serve(async (req) => {
                 const { data: existingOrder } = await supabase
                     .from("orders")
                     .select()
-                    .or(`id.eq.${safeOrderId},id.eq.#${safeOrderId.replace(/^#/, '')},payment_id.eq.${paymentId}`)
+                    .or(searchFilter)
                     .maybeSingle();
                 order = existingOrder;
             }
