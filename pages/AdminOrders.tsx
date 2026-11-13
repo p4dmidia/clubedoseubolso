@@ -51,7 +51,6 @@ const AdminOrders: React.FC = () => {
     const { profile } = useAuth();
     const [orders, setOrders] = useState<Order[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isSyncing, setIsSyncing] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'suspended' | 'cancelled'>('all');
     const [currentPage, setCurrentPage] = useState(1);
@@ -234,57 +233,6 @@ const AdminOrders: React.FC = () => {
         }
     };
 
-    const handleSyncTelemedicineRoutine = async () => {
-        setIsSyncing(true);
-        try {
-            toast.loading('Sincronizando inadimplência e telemedicina...', { id: 'sync-telemed' });
-            
-            // 1. Invocar a rotina geral no backend
-            await supabase.functions.invoke('telemedicine-sync', {
-                body: { action: 'process_overdue' }
-            }).catch(e => console.warn('Aviso process_overdue:', e));
-
-            // 2. Verificar pedidos vencidos há mais de 35 dias (30 dias + 5 carência)
-            const now = new Date();
-            let autoSuspendedCount = 0;
-
-            for (const order of orders) {
-                if (order.status === 'Pago' || order.status === 'completed' || order.status === 'Entregue') {
-                    const createdDate = new Date(order.created_at);
-                    const diffDays = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
-                    if (diffDays >= 35) {
-                        try {
-                            await supabase.functions.invoke('telemedicine-sync', {
-                                body: { orderId: order.id, isActive: false }
-                            });
-                            await supabase
-                                .from('orders')
-                                .update({ status: 'Cancelado', updated_at: new Date().toISOString() })
-                                .eq('id', order.id);
-                            autoSuspendedCount++;
-                        } catch (err) {
-                            console.error(`Erro ao sincronizar suspensão do pedido ${order.id}:`, err);
-                        }
-                    }
-                }
-            }
-
-            toast.success(
-                autoSuspendedCount > 0 
-                    ? `Sincronização concluída! ${autoSuspendedCount} plano(s) vencido(s) suspenso(s).` 
-                    : 'Sincronização concluída! Todas as assinaturas estão atualizadas.',
-                { id: 'sync-telemed' }
-            );
-
-            await fetchOrders();
-        } catch (error: any) {
-            console.error('Erro na sincronização:', error);
-            toast.error('Erro ao executar sincronização.', { id: 'sync-telemed' });
-        } finally {
-            setIsSyncing(false);
-        }
-    };
-
     const filteredOrders = orders.filter(order => {
         const matchesSearch = order.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                             order.id.toLowerCase().includes(searchTerm.toLowerCase());
@@ -354,17 +302,6 @@ const AdminOrders: React.FC = () => {
                         <h1 className="text-2xl md:text-3xl font-black text-[#05080F]">Gestão de Assinaturas</h1>
                         <p className="text-slate-500 font-medium text-sm md:text-base">Acompanhe os planos de assinatura e status de pagamento em tempo real.</p>
                     </div>
-                    {profile?.role !== 'admin_op' && (
-                        <button
-                            onClick={handleSyncTelemedicineRoutine}
-                            disabled={isSyncing}
-                            className="flex items-center gap-2 px-5 py-3 bg-[#0B1221] hover:bg-[#2980B9] text-white rounded-2xl text-xs font-black uppercase tracking-wider transition-all shadow-md disabled:opacity-50 shrink-0"
-                            title="Verifica atrasos superiores a 5 dias e sincroniza o bloqueio no Mais Unidos"
-                        >
-                            <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-[#2980B9]' : ''}`} />
-                            {isSyncing ? 'Sincronizando...' : 'Sincronizar Inadimplência'}
-                        </button>
-                    )}
                 </div>
 
                 {/* KPI Cards */}
