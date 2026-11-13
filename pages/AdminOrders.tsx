@@ -21,7 +21,8 @@ import {
     Copy,
     QrCode,
     FileText,
-    AlertTriangle
+    AlertTriangle,
+    RefreshCw
 } from 'lucide-react';
 import { ORGANIZATION_ID } from '../lib/config';
 import AdminLayout from '../components/AdminLayout';
@@ -50,8 +51,9 @@ const AdminOrders: React.FC = () => {
     const { profile } = useAuth();
     const [orders, setOrders] = useState<Order[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isSyncing, setIsSyncing] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'cancelled'>('all');
+    const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'completed' | 'suspended' | 'cancelled'>('all');
     const [currentPage, setCurrentPage] = useState(1);
     const ordersPerPage = 10;
 
@@ -116,12 +118,13 @@ const AdminOrders: React.FC = () => {
         const dueDate = new Date(createdDate.getTime() + 30 * 24 * 60 * 60 * 1000);
 
         if (status === 'Cancelado' || status === 'cancelled') {
-            return { isExpired: true, text: 'Cancelado', detail: 'Plano revogado', color: 'text-slate-400', bg: 'bg-slate-50', border: 'border-slate-200', dueDate };
+            return { isExpired: true, isSuspended: false, text: 'Cancelado', detail: 'Plano revogado', color: 'text-slate-400', bg: 'bg-slate-50', border: 'border-slate-200', dueDate };
         }
 
         if (remainingDays > 0) {
             return {
                 isExpired: false,
+                isSuspended: false,
                 text: `${remainingDays}d restantes`,
                 detail: `Renovação em ${dueDate.toLocaleDateString('pt-BR')}`,
                 color: 'text-emerald-700',
@@ -131,13 +134,15 @@ const AdminOrders: React.FC = () => {
             };
         } else {
             const overdueDays = Math.abs(remainingDays);
+            const isSuspended = overdueDays >= 5;
             return {
                 isExpired: true,
+                isSuspended,
                 text: overdueDays === 0 ? 'Vence hoje' : `Vencido há ${overdueDays}d`,
-                detail: `Venceu em ${dueDate.toLocaleDateString('pt-BR')}`,
-                color: 'text-amber-700',
-                bg: 'bg-amber-50/80',
-                border: 'border-amber-200',
+                detail: isSuspended ? `Suspenso por atraso (> 5 dias)` : `Venceu em ${dueDate.toLocaleDateString('pt-BR')}`,
+                color: isSuspended ? 'text-red-700' : 'text-amber-700',
+                bg: isSuspended ? 'bg-red-50/80' : 'bg-amber-50/80',
+                border: isSuspended ? 'border-red-200' : 'border-amber-200',
                 dueDate
             };
         }
@@ -229,16 +234,72 @@ const AdminOrders: React.FC = () => {
         }
     };
 
+    const handleSyncTelemedicineRoutine = async () => {
+        setIsSyncing(true);
+        try {
+            toast.loading('Sincronizando inadimplência e telemedicina...', { id: 'sync-telemed' });
+            
+            // 1. Invocar a rotina geral no backend
+            await supabase.functions.invoke('telemedicine-sync', {
+                body: { action: 'process_overdue' }
+            }).catch(e => console.warn('Aviso process_overdue:', e));
+
+            // 2. Verificar pedidos vencidos há mais de 35 dias (30 dias + 5 carência)
+            const now = new Date();
+            let autoSuspendedCount = 0;
+
+            for (const order of orders) {
+                if (order.status === 'Pago' || order.status === 'completed' || order.status === 'Entregue') {
+                    const createdDate = new Date(order.created_at);
+                    const diffDays = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+                    if (diffDays >= 35) {
+                        try {
+                            await supabase.functions.invoke('telemedicine-sync', {
+                                body: { orderId: order.id, isActive: false }
+                            });
+                            await supabase
+                                .from('orders')
+                                .update({ status: 'Cancelado', updated_at: new Date().toISOString() })
+                                .eq('id', order.id);
+                            autoSuspendedCount++;
+                        } catch (err) {
+                            console.error(`Erro ao sincronizar suspensão do pedido ${order.id}:`, err);
+                        }
+                    }
+                }
+            }
+
+            toast.success(
+                autoSuspendedCount > 0 
+                    ? `Sincronização concluída! ${autoSuspendedCount} plano(s) vencido(s) suspenso(s).` 
+                    : 'Sincronização concluída! Todas as assinaturas estão atualizadas.',
+                { id: 'sync-telemed' }
+            );
+
+            await fetchOrders();
+        } catch (error: any) {
+            console.error('Erro na sincronização:', error);
+            toast.error('Erro ao executar sincronização.', { id: 'sync-telemed' });
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
     const filteredOrders = orders.filter(order => {
         const matchesSearch = order.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                             order.id.toLowerCase().includes(searchTerm.toLowerCase());
         
         let matchesStatus = true;
         if (statusFilter !== 'all') {
+            const cycle = getCycleInfo(order.created_at, order.status);
+            const isPaid = order.status === 'completed' || order.status === 'Pago' || order.status === 'Entregue';
+
             if (statusFilter === 'pending') {
                 matchesStatus = order.status === 'pending' || order.status === 'Pendente';
             } else if (statusFilter === 'completed') {
-                matchesStatus = order.status === 'completed' || order.status === 'Pago' || order.status === 'Entregue';
+                matchesStatus = isPaid && !cycle.isSuspended;
+            } else if (statusFilter === 'suspended') {
+                matchesStatus = isPaid && cycle.isSuspended;
             } else if (statusFilter === 'cancelled') {
                 matchesStatus = order.status === 'cancelled' || order.status === 'Cancelado';
             }
@@ -256,8 +317,21 @@ const AdminOrders: React.FC = () => {
     const stats = {
         total: orders.length,
         pending: orders.filter(o => o.status === 'pending' || o.status === 'Pendente').length,
-        active: orders.filter(o => o.status === 'completed' || o.status === 'Pago' || o.status === 'Entregue').length,
-        revenue: orders.filter(o => o.status === 'completed' || o.status === 'Pago' || o.status === 'Entregue').reduce((acc, curr) => acc + curr.total_amount, 0),
+        active: orders.filter(o => {
+            const isPaid = o.status === 'completed' || o.status === 'Pago' || o.status === 'Entregue';
+            const cycle = getCycleInfo(o.created_at, o.status);
+            return isPaid && !cycle.isSuspended;
+        }).length,
+        suspended: orders.filter(o => {
+            const isPaid = o.status === 'completed' || o.status === 'Pago' || o.status === 'Entregue';
+            const cycle = getCycleInfo(o.created_at, o.status);
+            return isPaid && cycle.isSuspended;
+        }).length,
+        revenue: orders.filter(o => {
+            const isPaid = o.status === 'completed' || o.status === 'Pago' || o.status === 'Entregue';
+            const cycle = getCycleInfo(o.created_at, o.status);
+            return isPaid && !cycle.isSuspended;
+        }).reduce((acc, curr) => acc + curr.total_amount, 0),
     };
 
     if (isLoading) {
@@ -280,15 +354,27 @@ const AdminOrders: React.FC = () => {
                         <h1 className="text-2xl md:text-3xl font-black text-[#05080F]">Gestão de Assinaturas</h1>
                         <p className="text-slate-500 font-medium text-sm md:text-base">Acompanhe os planos de assinatura e status de pagamento em tempo real.</p>
                     </div>
+                    {profile?.role !== 'admin_op' && (
+                        <button
+                            onClick={handleSyncTelemedicineRoutine}
+                            disabled={isSyncing}
+                            className="flex items-center gap-2 px-5 py-3 bg-[#0B1221] hover:bg-[#2980B9] text-white rounded-2xl text-xs font-black uppercase tracking-wider transition-all shadow-md disabled:opacity-50 shrink-0"
+                            title="Verifica atrasos superiores a 5 dias e sincroniza o bloqueio no Mais Unidos"
+                        >
+                            <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-[#2980B9]' : ''}`} />
+                            {isSyncing ? 'Sincronizando...' : 'Sincronizar Inadimplência'}
+                        </button>
+                    )}
                 </div>
 
                 {/* KPI Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-6">
                     {[
                         { label: 'Total Assinaturas', value: stats.total, icon: ShoppingBag, color: 'text-blue-500', bg: 'bg-blue-50' },
+                        { label: 'Ativas em Dia', value: stats.active, icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+                        { label: 'Suspensas (>5d)', value: stats.suspended, icon: AlertTriangle, color: 'text-rose-500', bg: 'bg-rose-50' },
                         { label: 'Pendentes', value: stats.pending, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
-                        { label: 'Ativas', value: stats.active, icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-                        { label: 'Receita Total', value: `R$ ${stats.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+                        { label: 'Receita Ativa', value: `R$ ${stats.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-50' },
                     ].map((card, i) => (
                         <div key={i} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
                             <div className={`w-12 h-12 ${card.bg} rounded-2xl flex items-center justify-center mb-4`}>
@@ -318,13 +404,13 @@ const AdminOrders: React.FC = () => {
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                                 </div>
                                 <div className="flex bg-slate-50 p-1 rounded-xl border border-slate-100 overflow-x-auto no-scrollbar">
-                                    {(['all', 'pending', 'completed', 'cancelled'] as const).map(f => (
+                                    {(['all', 'completed', 'suspended', 'pending', 'cancelled'] as const).map(f => (
                                         <button
                                             key={f}
                                             onClick={() => setStatusFilter(f)}
                                             className={`whitespace-nowrap px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === f ? 'bg-white shadow-sm text-[#05080F]' : 'text-slate-400 hover:text-slate-600'}`}
                                         >
-                                            {f === 'all' ? 'Ver Todas' : f === 'pending' ? 'Pendentes' : f === 'completed' ? 'Ativas' : 'Canceladas'}
+                                            {f === 'all' ? 'Ver Todas' : f === 'completed' ? 'Ativas' : f === 'suspended' ? 'Suspensas' : f === 'pending' ? 'Pendentes' : 'Canceladas'}
                                         </button>
                                     ))}
                                 </div>
@@ -386,17 +472,34 @@ const AdminOrders: React.FC = () => {
                                             <p className="text-[10px] font-bold text-slate-400">{order.items_count} Itens</p>
                                         </td>
                                         <td className="py-6 px-4">
-                                            <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                                                order.status === 'completed' || order.status === 'Pago' || order.status === 'Entregue' ? 'bg-emerald-50 text-emerald-600' :
-                                                order.status === 'Cancelado' || order.status === 'cancelled' ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'
-                                            }`}>
-                                                <div className={`w-1.5 h-1.5 rounded-full ${
-                                                    order.status === 'completed' || order.status === 'Pago' || order.status === 'Entregue' ? 'bg-emerald-500' :
-                                                    order.status === 'Cancelado' || order.status === 'cancelled' ? 'bg-red-500' : 'bg-amber-500'
-                                                }`}></div>
-                                                {order.status === 'pending' || order.status === 'Pendente' ? 'Pendente' :
-                                                 order.status === 'completed' || order.status === 'Pago' || order.status === 'Entregue' ? 'Ativa' : 'Cancelada'}
-                                            </span>
+                                            {(() => {
+                                                const cycle = getCycleInfo(order.created_at, order.status);
+                                                const isPaid = order.status === 'completed' || order.status === 'Pago' || order.status === 'Entregue';
+                                                const isCancelled = order.status === 'Cancelado' || order.status === 'cancelled';
+                                                const isPending = order.status === 'pending' || order.status === 'Pendente';
+
+                                                if (isPaid && cycle.isSuspended) {
+                                                    return (
+                                                        <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200 shadow-2xs">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse"></div>
+                                                            Suspensa
+                                                        </span>
+                                                    );
+                                                }
+
+                                                return (
+                                                    <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                                                        isPaid ? 'bg-emerald-50 text-emerald-600' :
+                                                        isCancelled ? 'bg-slate-100 text-slate-500' : 'bg-amber-50 text-amber-600'
+                                                    }`}>
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${
+                                                            isPaid ? 'bg-emerald-500' :
+                                                            isCancelled ? 'bg-slate-400' : 'bg-amber-500'
+                                                        }`}></div>
+                                                        {isPending ? 'Pendente' : isPaid ? 'Ativa' : 'Cancelada'}
+                                                    </span>
+                                                );
+                                            })()}
                                         </td>
                                         <td className="py-6 px-6 text-right">
                                             <div className="flex flex-col gap-2">

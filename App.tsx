@@ -128,6 +128,7 @@ const AppContent: React.FC = () => {
           {/* Fallback para rotas antigas de dashboard */}
           <Route path="/dashboard" element={<Navigate to="/afiliado/dashboard" replace />} />
           <Route path="/dashboard/*" element={<Navigate to="/afiliado/dashboard" replace />} />
+          <Route path="/network" element={<Navigate to="/afiliado/referrals" replace />} />
 
           {/* Admin Routes */}
           <Route path="/admin/login" element={<AdminLoginPage />} />

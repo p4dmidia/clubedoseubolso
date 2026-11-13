@@ -344,7 +344,44 @@ const CheckoutPage: React.FC = () => {
             // 1. Create order in Supabase
             const orderId = `ORD-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
             createdOrderId = orderId;
-            const referralCode = Cookies.get('classea_ref');
+            let referralCode = Cookies.get('classea_ref') || null;
+
+            // Fallback inteligente: se não tem cookie, buscar pelo patrocinador no perfil do cliente
+            if (!referralCode) {
+                try {
+                    let sponsorId: string | null = null;
+                    if (user?.id) {
+                        const { data: prof } = await supabase
+                            .from('user_profiles')
+                            .select('sponsor_id')
+                            .eq('id', user.id)
+                            .maybeSingle();
+                        sponsorId = prof?.sponsor_id || null;
+                    } else if (customerInfo.cpf) {
+                        const cleanCpf = customerInfo.cpf.replace(/\D/g, '');
+                        const { data: prof } = await supabase
+                            .from('user_profiles')
+                            .select('sponsor_id')
+                            .eq('cpf', cleanCpf)
+                            .maybeSingle();
+                        sponsorId = prof?.sponsor_id || null;
+                    }
+
+                    if (sponsorId) {
+                        const { data: aff } = await supabase
+                            .from('affiliates')
+                            .select('referral_code')
+                            .eq('user_id', sponsorId)
+                            .maybeSingle();
+                        if (aff?.referral_code) {
+                            referralCode = aff.referral_code;
+                            console.log('[Checkout] Referral code recuperado via patrocinador:', referralCode);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[Checkout] Erro ao recuperar sponsor de fallback:', e);
+                }
+            }
             
                 const fullAddressString = 'Assinatura Digital';
 

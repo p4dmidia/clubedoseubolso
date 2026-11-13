@@ -118,9 +118,14 @@ const AffiliateDashboard: React.FC = () => {
                     if (!walletErr && walletDataList && walletDataList.length > 0) setWalletData(walletDataList[0]);
 
                     // Buscar se o afiliado está ativo mensalmente
-                    const { data: activeRes } = await supabase
-                        .rpc('is_affiliate_active', { p_user_id: user.id });
-                    setIsActive(activeRes ?? false);
+                    const isExempt = user.id === '9938d236-cffc-4e0e-b97b-e9b08086f111' || user.email?.toLowerCase().includes('valentina');
+                    if (isExempt) {
+                        setIsActive(true);
+                    } else {
+                        const { data: activeRes } = await supabase
+                            .rpc('is_affiliate_active', { p_user_id: user.id });
+                        setIsActive(activeRes ?? false);
+                    }
 
                     // 3. Buscar status do Consórcio (removido - apenas assinaturas)
 
@@ -643,7 +648,7 @@ const AffiliateDashboard: React.FC = () => {
                             </div>
                         </div>
                         <button 
-                            onClick={() => navigate('/network')}
+                            onClick={() => navigate('/afiliado/referrals')}
                             className="w-full mt-10 bg-[#0B1221] text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200"
                         >
                             MINHA REDE
