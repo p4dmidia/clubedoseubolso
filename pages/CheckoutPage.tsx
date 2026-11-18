@@ -344,9 +344,22 @@ const CheckoutPage: React.FC = () => {
             // 1. Create order in Supabase
             const orderId = `ORD-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
             createdOrderId = orderId;
-            let referralCode = Cookies.get('classea_ref') || null;
 
-            // Fallback inteligente: se não tem cookie, buscar pelo patrocinador no perfil do cliente
+            // 1.1 Recuperação Multi-Camadas do Código de Afiliado (URL, Cookie, LocalStorage, SessionStorage)
+            let referralCode = 
+                new URLSearchParams(window.location.search).get('ref') ||
+                new URLSearchParams(window.location.search).get('r') ||
+                new URLSearchParams(window.location.search).get('indicacao') ||
+                Cookies.get('classea_ref') ||
+                localStorage.getItem('classea_ref') ||
+                sessionStorage.getItem('classea_ref') ||
+                null;
+
+            if (referralCode) {
+                referralCode = referralCode.toLowerCase().trim();
+            }
+
+            // Fallback inteligente: se não tem cookie/storage, buscar pelo patrocinador no perfil do cliente
             if (!referralCode) {
                 try {
                     let sponsorId: string | null = null;
@@ -374,7 +387,7 @@ const CheckoutPage: React.FC = () => {
                             .eq('user_id', sponsorId)
                             .maybeSingle();
                         if (aff?.referral_code) {
-                            referralCode = aff.referral_code;
+                            referralCode = aff.referral_code.toLowerCase().trim();
                             console.log('[Checkout] Referral code recuperado via patrocinador:', referralCode);
                         }
                     }
@@ -408,13 +421,31 @@ const CheckoutPage: React.FC = () => {
 
                 // 1.5 Update user profile if logged in
                 if (user) {
+                    const profileUpdate: any = {
+                        full_name: customerInfo.name,
+                        whatsapp: customerInfo.phone,
+                        cpf: customerInfo.cpf.replace(/\D/g, '')
+                    };
+
+                    if (referralCode) {
+                        try {
+                            const { data: affData } = await supabase
+                                .from('affiliates')
+                                .select('user_id')
+                                .ilike('referral_code', referralCode)
+                                .eq('organization_id', ORGANIZATION_ID)
+                                .maybeSingle();
+                            if (affData?.user_id) {
+                                profileUpdate.sponsor_id = affData.user_id;
+                            }
+                        } catch (affErr) {
+                            console.warn('[Checkout] Erro ao associar sponsor ao perfil:', affErr);
+                        }
+                    }
+
                     await supabase
                         .from('user_profiles')
-                        .update({
-                            full_name: customerInfo.name,
-                            whatsapp: customerInfo.phone,
-                            cpf: customerInfo.cpf.replace(/\D/g, '')
-                        })
+                        .update(profileUpdate)
                         .eq('id', user.id);
                 }
 

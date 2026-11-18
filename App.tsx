@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import Cookies from 'js-cookie';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
@@ -86,6 +87,42 @@ const PixelTracker: React.FC = () => {
   return null;
 };
 
+// Componente para rastrear globalmente links de indicação em qualquer URL (?ref=, ?r=, /ref/...)
+const AffiliateTracker: React.FC = () => {
+  const { search, pathname } = useLocation();
+
+  React.useEffect(() => {
+    try {
+      const params = new URLSearchParams(search);
+      const refCode = params.get('ref') || params.get('r') || params.get('indicacao') || params.get('afiliado');
+      
+      let cleanCode = refCode ? refCode.toLowerCase().trim() : null;
+
+      if (!cleanCode && pathname.startsWith('/ref/')) {
+        const parts = pathname.split('/');
+        if (parts[2]) {
+          cleanCode = parts[2].toLowerCase().trim();
+        }
+      }
+
+      if (cleanCode) {
+        Cookies.set('classea_ref', cleanCode, { expires: 30, path: '/', sameSite: 'lax' });
+        try {
+          localStorage.setItem('classea_ref', cleanCode);
+          sessionStorage.setItem('classea_ref', cleanCode);
+        } catch (storageErr) {
+          console.warn('[AffiliateTracker] Storage indisponível:', storageErr);
+        }
+        console.log('[AffiliateTracker] Código de afiliado gravado globalmente:', cleanCode);
+      }
+    } catch (e) {
+      console.warn('[AffiliateTracker] Erro ao rastrear referência:', e);
+    }
+  }, [search, pathname]);
+
+  return null;
+};
+
 const AppContent: React.FC = () => {
   const location = useLocation();
   const isDashboard = location.pathname.startsWith('/afiliado') || location.pathname.startsWith('/admin') || location.pathname.startsWith('/cliente') || location.pathname === '/home-test';
@@ -158,6 +195,7 @@ const App: React.FC = () => {
     <Router>
       <ScrollToTop />
       <PixelTracker />
+      <AffiliateTracker />
       <CartProvider>
         <AuthProvider>
           <Toaster position="top-right" reverseOrder={false} />

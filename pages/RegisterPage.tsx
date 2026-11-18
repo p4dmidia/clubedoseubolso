@@ -154,10 +154,14 @@ const RegisterPage: React.FC = () => {
     };
 
     useEffect(() => {
-        // Tenta capturar o código do patrocinador do cookie
-        const ref = Cookies.get('classea_ref');
+        // Tenta capturar o código do patrocinador do cookie, localStorage ou sessionStorage
+        const ref = 
+            Cookies.get('classea_ref') || 
+            localStorage.getItem('classea_ref') || 
+            sessionStorage.getItem('classea_ref');
+            
         if (ref) {
-            console.log('Sponsor detected from cookie:', ref);
+            console.log('Sponsor detected from storage/cookie:', ref);
             setSponsorCode(ref);
             fetchSponsorName(ref);
         }
