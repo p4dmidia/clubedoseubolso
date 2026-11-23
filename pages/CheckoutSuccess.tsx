@@ -273,6 +273,19 @@ const CheckoutSuccess: React.FC = () => {
       }
     }
 
+    if (formInfo.birthDate) {
+      const birth = new Date(formInfo.birthDate);
+      const today = new Date();
+      if (birth > today || birth.getFullYear() > today.getFullYear()) {
+        toast.error('A data de nascimento não pode ser no futuro.');
+        return;
+      }
+      if (birth.getFullYear() < 1900) {
+        toast.error('Data de nascimento inválida.');
+        return;
+      }
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -936,6 +949,8 @@ const CheckoutSuccess: React.FC = () => {
                         <input
                           type="date"
                           required
+                          max={new Date().toISOString().split('T')[0]}
+                          min="1900-01-01"
                           className="w-full bg-white border border-slate-200 rounded-xl p-4 pl-12 text-sm font-bold outline-none focus:border-[#2980B9] transition-all"
                           value={formInfo.birthDate}
                           onChange={(e) => setFormInfo({ ...formInfo, birthDate: e.target.value })}

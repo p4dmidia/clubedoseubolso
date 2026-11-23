@@ -333,6 +333,18 @@ const RegisterPage: React.FC = () => {
             setError('Por favor, informe o seu CPF.');
             return;
         }
+        if (formData.dataNascimento) {
+            const birth = new Date(formData.dataNascimento);
+            const today = new Date();
+            if (birth > today || birth.getFullYear() > today.getFullYear()) {
+                setError('A data de nascimento não pode ser no futuro.');
+                return;
+            }
+            if (birth.getFullYear() < 1900) {
+                setError('Data de nascimento inválida.');
+                return;
+            }
+        }
 
         setLoading(true);
         try {
@@ -835,6 +847,8 @@ const RegisterPage: React.FC = () => {
                                                 <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2980B9]" />
                                                 <input
                                                     type="date" name="dataNascimento" required
+                                                    max={new Date().toISOString().split('T')[0]}
+                                                    min="1900-01-01"
                                                     value={formData.dataNascimento} onChange={handleChange}
                                                     className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 font-bold text-[#05080F] outline-none focus:border-[#2980B9] transition-all"
                                                 />

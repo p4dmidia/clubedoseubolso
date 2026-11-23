@@ -132,6 +132,41 @@ serve(async (req) => {
                 results.dZeroSent++;
             }
 
+            // Caso esteja em atraso (diffDays < 0), verificar se o cliente possui outro pedido pago recente (últimos 30 dias)
+            // Ex: o cliente gerou várias tentativas de pagamento no checkout e pagou apenas uma delas
+            if (diffDays < 0) {
+                const cleanCpf = order.customer_cpf ? order.customer_cpf.replace(/\D/g, "") : "";
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+                let paidQuery = supabase
+                    .from("orders")
+                    .select("id, status")
+                    .in("status", ["Pago", "completed", "Entregue"])
+                    .gte("created_at", thirtyDaysAgo.toISOString())
+                    .neq("id", order.id);
+
+                if (order.user_id && cleanCpf) {
+                    paidQuery = paidQuery.or(`user_id.eq.${order.user_id},customer_cpf.eq.${cleanCpf},customer_cpf.eq.${order.customer_cpf}`);
+                } else if (order.user_id) {
+                    paidQuery = paidQuery.eq("user_id", order.user_id);
+                } else if (cleanCpf) {
+                    paidQuery = paidQuery.or(`customer_cpf.eq.${cleanCpf},customer_cpf.eq.${order.customer_cpf}`);
+                }
+
+                const { data: activePaidOrders } = await paidQuery.limit(1);
+                if (activePaidOrders && activePaidOrders.length > 0) {
+                    console.log(`[Subscription Billing Cron] Cliente ${order.customer_name} possui plano ativo pago (${activePaidOrders[0].id}). Ignorando cobrança antiga/abandonada ${order.id}.`);
+                    if (order.status !== "Cancelado") {
+                        await supabase
+                            .from("orders")
+                            .update({ status: "Cancelado" })
+                            .eq("id", order.id);
+                    }
+                    continue;
+                }
+            }
+
             // 3. D+2 ou D+3: Alerta pré-bloqueio (2 a 3 dias de atraso)
             if (diffDays === -2 || diffDays === -3) {
                 const msg = `⚠️ *Aviso Importante: Mensalidade em Aberto*\n\nOlá, *${customerName}*, identificamos que a mensalidade do seu plano no *Clube do Seu Bolso* venceu em ${dueDate.toLocaleDateString('pt-BR')} e ainda não foi compensada.\n\nEvite a suspensão do seu plano e bloqueio das consultas de telemedicina regularizando sua fatura:\n👉 ${invoiceUrl}\n\nApós 5 dias de atraso o acesso médico é revogado automaticamente pelo sistema.`;

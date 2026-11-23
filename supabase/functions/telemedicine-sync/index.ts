@@ -195,6 +195,12 @@ async function syncTelemedicineUser(supabase: any, orderId: string, isActive: bo
         if (!dateStr) return "";
         if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
             const [year, month, day] = dateStr.split("-");
+            const y = parseInt(year, 10);
+            const currentYear = new Date().getFullYear();
+            if (y > currentYear || y < 1900) {
+                console.warn(`[Telemedicine Sync] Data de nascimento com ano inválido (${dateStr}). Não enviando para Mais Unidos.`);
+                return "";
+            }
             return `${day}/${month}/${year}`;
         }
         return dateStr;
@@ -239,7 +245,7 @@ async function syncTelemedicineUser(supabase: any, orderId: string, isActive: bo
             IsActive: isActive,
             EmailConfirmed: true,
             ...(plainPassword ? { Password: plainPassword } : {}),
-            ...(addressData.birth_date ? { 
+            ...(addressData.birth_date && formatBirthDate(addressData.birth_date) ? { 
                 BirthDate: formatBirthDate(addressData.birth_date)
             } : {}),
             ...(addressData.sex ? { 
@@ -425,6 +431,38 @@ serve(async (req) => {
             let blockedCount = 0;
 
             for (const order of overdueOrders) {
+                // Trava de Segurança: Verificar se o cliente possui QUALQUER pedido com status Pago nos últimos 30 dias
+                // Isso evita bloquear clientes que geraram tentativas de checkout abandonadas antes de pagar
+                const cleanCpf = order.customer_cpf ? order.customer_cpf.replace(/\D/g, "") : "";
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+                let paidQuery = supabase
+                    .from("orders")
+                    .select("id, status, created_at")
+                    .in("status", ["Pago", "completed", "Entregue"])
+                    .gte("created_at", thirtyDaysAgo.toISOString())
+                    .neq("id", order.id);
+
+                if (order.user_id && cleanCpf) {
+                    paidQuery = paidQuery.or(`user_id.eq.${order.user_id},customer_cpf.eq.${cleanCpf},customer_cpf.eq.${order.customer_cpf}`);
+                } else if (order.user_id) {
+                    paidQuery = paidQuery.eq("user_id", order.user_id);
+                } else if (cleanCpf) {
+                    paidQuery = paidQuery.or(`customer_cpf.eq.${cleanCpf},customer_cpf.eq.${order.customer_cpf}`);
+                }
+
+                const { data: activePaidOrders } = await paidQuery.limit(1);
+
+                if (activePaidOrders && activePaidOrders.length > 0) {
+                    console.log(`[Telemedicine Sync] Pedido ${order.id} em atraso, porém cliente ${order.customer_name} possui plano ativo recente (${activePaidOrders[0].id}). Não bloqueando cliente! Cancelando tentativa abandonada.`);
+                    await supabase
+                        .from("orders")
+                        .update({ status: "Cancelado" })
+                        .eq("id", order.id);
+                    continue;
+                }
+
                 // Verificar se o usuário já está bloqueado no perfil
                 if (order.user_id) {
                     const { data: profile } = await supabase
