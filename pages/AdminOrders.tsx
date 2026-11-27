@@ -108,23 +108,31 @@ const AdminOrders: React.FC = () => {
         }
     };
 
-    const getCycleInfo = (createdAt: string, status: string) => {
+    const getCycleInfo = (createdAt: string, status: string, paymentDueDate?: string) => {
         const createdDate = new Date(createdAt);
         const now = new Date();
-        const diffTime = now.getTime() - createdDate.getTime();
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        const remainingDays = 30 - diffDays;
-        const dueDate = new Date(createdDate.getTime() + 30 * 24 * 60 * 60 * 1000);
 
         if (status === 'Cancelado' || status === 'cancelled') {
+            const dueDate = paymentDueDate ? new Date(paymentDueDate) : new Date(createdDate.getTime() + 30 * 24 * 60 * 60 * 1000);
             return { isExpired: true, isSuspended: false, text: 'Cancelado', detail: 'Plano revogado', color: 'text-slate-400', bg: 'bg-slate-50', border: 'border-slate-200', dueDate };
         }
 
-        if (remainingDays > 0) {
+        let dueDate: Date;
+        if (paymentDueDate) {
+            const parsedDue = new Date(paymentDueDate);
+            dueDate = isNaN(parsedDue.getTime()) ? new Date(createdDate.getTime() + 30 * 24 * 60 * 60 * 1000) : parsedDue;
+        } else {
+            dueDate = new Date(createdDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+        }
+
+        const diffTime = dueDate.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays >= 0) {
             return {
                 isExpired: false,
                 isSuspended: false,
-                text: `${remainingDays}d restantes`,
+                text: diffDays === 0 ? 'Vence hoje' : `${diffDays}d restantes`,
                 detail: `Renovação em ${dueDate.toLocaleDateString('pt-BR')}`,
                 color: 'text-emerald-700',
                 bg: 'bg-emerald-50/80',
@@ -132,12 +140,12 @@ const AdminOrders: React.FC = () => {
                 dueDate
             };
         } else {
-            const overdueDays = Math.abs(remainingDays);
+            const overdueDays = Math.abs(diffDays);
             const isSuspended = overdueDays >= 5;
             return {
                 isExpired: true,
                 isSuspended,
-                text: overdueDays === 0 ? 'Vence hoje' : `Vencido há ${overdueDays}d`,
+                text: `Vencido há ${overdueDays}d`,
                 detail: isSuspended ? `Suspenso por atraso (> 5 dias)` : `Venceu em ${dueDate.toLocaleDateString('pt-BR')}`,
                 color: isSuspended ? 'text-red-700' : 'text-amber-700',
                 bg: isSuspended ? 'bg-red-50/80' : 'bg-amber-50/80',
@@ -239,7 +247,7 @@ const AdminOrders: React.FC = () => {
         
         let matchesStatus = true;
         if (statusFilter !== 'all') {
-            const cycle = getCycleInfo(order.created_at, order.status);
+            const cycle = getCycleInfo(order.created_at, order.status, order.payment_due_date);
             const isPaid = order.status === 'completed' || order.status === 'Pago' || order.status === 'Entregue';
 
             if (statusFilter === 'pending') {
@@ -267,17 +275,17 @@ const AdminOrders: React.FC = () => {
         pending: orders.filter(o => o.status === 'pending' || o.status === 'Pendente').length,
         active: orders.filter(o => {
             const isPaid = o.status === 'completed' || o.status === 'Pago' || o.status === 'Entregue';
-            const cycle = getCycleInfo(o.created_at, o.status);
+            const cycle = getCycleInfo(o.created_at, o.status, o.payment_due_date);
             return isPaid && !cycle.isSuspended;
         }).length,
         suspended: orders.filter(o => {
             const isPaid = o.status === 'completed' || o.status === 'Pago' || o.status === 'Entregue';
-            const cycle = getCycleInfo(o.created_at, o.status);
+            const cycle = getCycleInfo(o.created_at, o.status, o.payment_due_date);
             return isPaid && cycle.isSuspended;
         }).length,
         revenue: orders.filter(o => {
             const isPaid = o.status === 'completed' || o.status === 'Pago' || o.status === 'Entregue';
-            const cycle = getCycleInfo(o.created_at, o.status);
+            const cycle = getCycleInfo(o.created_at, o.status, o.payment_due_date);
             return isPaid && !cycle.isSuspended;
         }).reduce((acc, curr) => acc + curr.total_amount, 0),
     };
@@ -390,7 +398,7 @@ const AdminOrders: React.FC = () => {
                                                     {renderPaymentMethodBadge(order.payment_method)}
                                                 </div>
                                                 {order.payment_status === 'paid' && (() => {
-                                                    const cycle = getCycleInfo(order.created_at, order.status);
+                                                    const cycle = getCycleInfo(order.created_at, order.status, order.payment_due_date);
                                                     return (
                                                         <div className="flex items-center gap-1">
                                                             <span 
@@ -410,7 +418,7 @@ const AdminOrders: React.FC = () => {
                                         </td>
                                         <td className="py-6 px-4">
                                             {(() => {
-                                                const cycle = getCycleInfo(order.created_at, order.status);
+                                                const cycle = getCycleInfo(order.created_at, order.status, order.payment_due_date);
                                                 const isPaid = order.status === 'completed' || order.status === 'Pago' || order.status === 'Entregue';
                                                 const isCancelled = order.status === 'Cancelado' || order.status === 'cancelled';
                                                 const isPending = order.status === 'pending' || order.status === 'Pendente';
@@ -632,7 +640,7 @@ const AdminOrders: React.FC = () => {
 
                                     {/* Bloco de Ciclo de 30 dias */}
                                     {(() => {
-                                        const cycle = getCycleInfo(viewingOrder.created_at, viewingOrder.status);
+                                        const cycle = getCycleInfo(viewingOrder.created_at, viewingOrder.status, viewingOrder.payment_due_date);
                                         return (
                                             <div className="pt-3 border-t border-slate-50 flex flex-col gap-2">
                                                 <div className="flex items-center justify-between">
